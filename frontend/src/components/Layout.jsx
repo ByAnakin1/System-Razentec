@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, Package, Users, LogOut, Menu } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, Users, LogOut, Menu, Tag } from 'lucide-react';
 
 const Layout = ({ children }) => {
   const navigate = useNavigate();
@@ -28,6 +28,7 @@ const Layout = ({ children }) => {
           <BotonMenu to="/productos" icon={<Package size={20} />} text="Inventario" isOpen={sidebarOpen} currentPath={location.pathname} />
           <BotonMenu to="/ventas" icon={<ShoppingCart size={20} />} text="Ventas" isOpen={sidebarOpen} currentPath={location.pathname} />
           <BotonMenu to="/clientes" icon={<Users size={20} />} text="Clientes" isOpen={sidebarOpen} currentPath={location.pathname} />
+          <BotonMenu to="/categorias" icon={<Tag size={20} />} text="Categorías" isOpen={sidebarOpen} currentPath={location.pathname} />
         </nav>
 
         <div className="p-4 border-t border-slate-700">
