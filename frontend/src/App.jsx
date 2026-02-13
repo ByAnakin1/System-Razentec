@@ -2,7 +2,8 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Auth/Login';
 import Dashboard from './pages/Dashboard';
-import Productos from './pages/Productos'; // <--- IMPORTAR
+import Productos from './pages/Productos';
+import Ventas from './pages/Ventas';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -15,8 +16,8 @@ function App() {
         {/* Rutas Protegidas */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         
-        {/* 👇 NUEVA RUTA DE PRODUCTOS 👇 */}
         <Route path="/productos" element={<ProtectedRoute><Productos /></ProtectedRoute>} />
+        <Route path="/ventas" element={<ProtectedRoute><Ventas /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );
