@@ -4,7 +4,6 @@ import Login from './pages/Auth/Login';
 import Dashboard from './pages/Dashboard';
 import Productos from './pages/Productos';
 import Ventas from './pages/Ventas';
-import Productos from './pages/Productos';
 import Categorias from './pages/Categorias';
 import ProtectedRoute from './components/ProtectedRoute';
 
