@@ -21,8 +21,17 @@ const Login = () => {
       localStorage.setItem('token', token);
       localStorage.setItem('usuario', JSON.stringify(usuario));
 
-      // 3. Redirigimos al Dashboard
-      navigate('/dashboard');
+      // 3. Redirigir: Admin → Dashboard; vendedor (solo Ventas) → Ventas; resto → primer módulo
+      const cat = (usuario.categorias || []).filter(c => c !== 'Modificador');
+      const destino = usuario.rol === 'Administrador' ? '/dashboard'
+        : cat.includes('Inventario') ? '/productos'
+        : cat.includes('Ventas') ? '/ventas'
+        : cat.includes('Compras') ? '/compras'
+        : cat.includes('Clientes') ? '/clientes'
+        : cat.includes('Proveedores') ? '/proveedores'
+        : cat.includes('Usuarios') ? '/usuarios'
+        : '/dashboard';
+      navigate(destino);
       
     } catch (err) {
       // 4. Si falla, mostramos el error
