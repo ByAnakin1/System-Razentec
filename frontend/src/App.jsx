@@ -9,6 +9,7 @@ import Clientes from './pages/Clientes';
 import Proveedores from './pages/Proveedores';
 import Usuarios from './pages/Usuarios';
 import Logs from './pages/Logs';
+import Categorias from './pages/Categorias';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
         <Route path="/login" element={<Login />} />
 
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+
         <Route path="/productos" element={<ProtectedRoute><Productos /></ProtectedRoute>} />
         <Route path="/ventas" element={<ProtectedRoute><Ventas /></ProtectedRoute>} />
         <Route path="/compras" element={<ProtectedRoute><Compras /></ProtectedRoute>} />
@@ -26,6 +28,7 @@ function App() {
         <Route path="/proveedores" element={<ProtectedRoute><Proveedores /></ProtectedRoute>} />
         <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
         <Route path="/logs" element={<ProtectedRoute><Logs /></ProtectedRoute>} />
+        <Route path="/categorias" element={<ProtectedRoute><Categorias /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );
