@@ -1,12 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, Package, Users, LogOut, Menu, Tag } from 'lucide-react';
+import { LayoutDashboard, LogOut, Menu, Activity } from 'lucide-react';
+import api from '../services/api';
+import { CATEGORIA_A_RUTA } from '../config/menuConfig';
 
 const Layout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const usuario = JSON.parse(localStorage.getItem('usuario') || '{"nombre": "Usuario"}');
+  const [usuario, setUsuario] = useState(JSON.parse(localStorage.getItem('usuario') || '{"nombre": "Usuario"}'));
+  const [menuItems, setMenuItems] = useState([]);
+
+  useEffect(() => {
+    const loadMenu = async () => {
+      try {
+        const res = await api.get('/auth/me');
+        const u = res.data;
+        setUsuario(u);
+
+        // Menú 100% dinámico: procesa el array de categorías (sin Dashboard fijo)
+        // Si vendedor solo tiene Ventas → menú muestra solo "Ventas" + "Cerrar Sesión"
+        const categorias = u.categorias || [];
+        const items = [];
+
+        // Dashboard solo para Administrador; resto ve solo sus categorías
+        if (u.rol === 'Administrador') {
+          items.push({ path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard });
+        }
+
+        // Módulos según categorías (excluir Modificador y Modificador_X - no son dashboards)
+        const categoriasDashboard = categorias.filter(c => c !== 'Modificador' && !c.startsWith('Modificador_'));
+        categoriasDashboard.forEach(cat => {
+          const config = CATEGORIA_A_RUTA[cat];
+          if (config) {
+            items.push(config);
+          }
+        });
+
+        // Auditoría solo para Administrador
+        if (u.rol === 'Administrador') {
+          items.push({ path: '/logs', label: 'Auditoría', Icon: Activity });
+        }
+
+        setMenuItems(items);
+      } catch {
+        const u = JSON.parse(localStorage.getItem('usuario') || '{}');
+        setUsuario(u);
+        const cat = u.categorias || [];
+        const fallback = [];
+        if (u.rol === 'Administrador') fallback.push({ path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard });
+        cat.filter(c => c !== 'Modificador' && !c?.startsWith?.('Modificador_')).forEach(c => {
+          const cfg = CATEGORIA_A_RUTA[c];
+          if (cfg) fallback.push(cfg);
+        });
+        setMenuItems(fallback.length ? fallback : [{ path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard }]);
+      }
+    };
+    loadMenu();
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -15,8 +66,8 @@ const Layout = ({ children }) => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* SIDEBAR */}
+    <div className="flex h-screen bg-white">
+      {/* SIDEBAR - Azul oscuro */}
       <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-slate-900 text-white transition-all duration-300 flex flex-col`}>
         <div className="h-16 flex items-center justify-center border-b border-slate-700">
           <h1 className={`font-bold text-xl ${!sidebarOpen && 'hidden'}`}>Razentec SaaS</h1>
@@ -24,11 +75,16 @@ const Layout = ({ children }) => {
         </div>
 
         <nav className="flex-1 py-6 space-y-2 px-3">
-          <BotonMenu to="/dashboard" icon={<LayoutDashboard size={20} />} text="Dashboard" isOpen={sidebarOpen} currentPath={location.pathname} />
-          <BotonMenu to="/productos" icon={<Package size={20} />} text="Inventario" isOpen={sidebarOpen} currentPath={location.pathname} />
-          <BotonMenu to="/ventas" icon={<ShoppingCart size={20} />} text="Ventas" isOpen={sidebarOpen} currentPath={location.pathname} />
-          <BotonMenu to="/clientes" icon={<Users size={20} />} text="Clientes" isOpen={sidebarOpen} currentPath={location.pathname} />
-          <BotonMenu to="/categorias" icon={<Tag size={20} />} text="Categorías" isOpen={sidebarOpen} currentPath={location.pathname} />
+          {menuItems.map((item) => (
+            <BotonMenu
+              key={item.path}
+              to={item.path}
+              icon={<item.Icon size={20} />}
+              text={item.label}
+              isOpen={sidebarOpen}
+              currentPath={location.pathname}
+            />
+          ))}
         </nav>
 
         <div className="p-4 border-t border-slate-700">
@@ -48,20 +104,19 @@ const Layout = ({ children }) => {
           <div className="flex items-center gap-4">
             <span className="text-sm font-semibold text-gray-800">{usuario.nombre}</span>
             <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
-              {usuario.nombre.charAt(0)}
+              {usuario.nombre?.charAt(0) || 'U'}
             </div>
           </div>
         </header>
 
         <main className="flex-1 overflow-auto p-6">
-          {children} {/* <--- Aquí se inyectará cada página diferente */}
+          {children}
         </main>
       </div>
     </div>
   );
 };
 
-// Componente pequeño para los botones del menú
 const BotonMenu = ({ to, icon, text, isOpen, currentPath }) => {
   const active = currentPath === to;
   return (

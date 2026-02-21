@@ -7,6 +7,7 @@ const Categorias = () => {
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtroEstado, setFiltroEstado] = useState('activos');
+  const [puedeModificar, setPuedeModificar] = useState(true);
 
   // Estados Modales
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -16,7 +17,20 @@ const Categorias = () => {
   const [formData, setFormData] = useState({ id: null, nombre: '' });
   const [catToDelete, setCatToDelete] = useState(null);
 
-  // Cargar
+  useEffect(() => {
+    const loadMe = async () => {
+      try {
+        const res = await api.get('/auth/me');
+        const u = res.data;
+        const cat = u.categorias || [];
+        setPuedeModificar(u.rol === 'Administrador' || (Array.isArray(cat) && cat.includes('Modificador')));
+      } catch {
+        setPuedeModificar(true);
+      }
+    };
+    loadMe();
+  }, []);
+
   const fetchCategorias = async () => {
     setLoading(true);
     try {
@@ -88,9 +102,11 @@ const Categorias = () => {
               <option value="todos">Todas</option>
             </select>
           </div>
-          <button onClick={() => openModal()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-            <Plus size={20} /> Nueva
-          </button>
+          {puedeModificar && (
+            <button onClick={() => openModal()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+              <Plus size={20} /> Nueva
+            </button>
+          )}
         </div>
       </div>
 
@@ -117,9 +133,15 @@ const Categorias = () => {
                   }
                 </td>
                 <td className="px-6 py-4 flex justify-center gap-3">
-                  <button onClick={() => openModal(cat)} className="text-blue-600 hover:text-blue-800"><Edit size={18} /></button>
-                  {cat.estado && (
-                    <button onClick={() => {setCatToDelete(cat); setDeleteModalOpen(true);}} className="text-red-500 hover:text-red-700"><Trash2 size={18} /></button>
+                  {puedeModificar ? (
+                    <>
+                      <button onClick={() => openModal(cat)} className="text-blue-600 hover:text-blue-800"><Edit size={18} /></button>
+                      {cat.estado && (
+                        <button onClick={() => {setCatToDelete(cat); setDeleteModalOpen(true);}} className="text-red-500 hover:text-red-700"><Trash2 size={18} /></button>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-gray-400 text-xs">Solo lectura</span>
                   )}
                 </td>
               </tr>
