@@ -11,6 +11,8 @@ import Usuarios from './pages/Usuarios';
 import Logs from './pages/Logs';
 import Categorias from './pages/Categorias';
 import ProtectedRoute from './components/ProtectedRoute';
+import Perfil from './pages/Perfil';
+import DirectorioAdmin from './pages/DirectorioAdmin';
 
 function App() {
   return (
@@ -29,6 +31,8 @@ function App() {
         <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
         <Route path="/logs" element={<ProtectedRoute><Logs /></ProtectedRoute>} />
         <Route path="/categorias" element={<ProtectedRoute><Categorias /></ProtectedRoute>} />
+        <Route path="/perfil" element={<ProtectedRoute> <Perfil /></ProtectedRoute>} />
+        <Route path="/directorio" element={<ProtectedRoute><DirectorioAdmin /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );

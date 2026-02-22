@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, LogOut, Menu, Activity } from 'lucide-react';
+import { LayoutDashboard, LogOut, Menu, Activity, User, Contact } from 'lucide-react';
 import api from '../services/api';
 import { CATEGORIA_A_RUTA } from '../config/menuConfig';
 
@@ -10,6 +10,7 @@ const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [usuario, setUsuario] = useState(JSON.parse(localStorage.getItem('usuario') || '{"nombre": "Usuario"}'));
   const [menuItems, setMenuItems] = useState([]);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   useEffect(() => {
     const loadMenu = async () => {
@@ -18,46 +19,32 @@ const Layout = ({ children }) => {
         const u = res.data;
         setUsuario(u);
 
-        // Menú 100% dinámico: procesa el array de categorías (sin Dashboard fijo)
-        // Si vendedor solo tiene Ventas → menú muestra solo "Ventas" + "Cerrar Sesión"
         const categorias = u.categorias || [];
         const items = [];
 
-        // Dashboard solo para Administrador; resto ve solo sus categorías
         if (u.rol === 'Administrador') {
           items.push({ path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard });
+          items.push({ path: '/directorio', label: 'Directorio Staff', Icon: Contact });
         }
 
-        // Módulos según categorías (excluir Modificador y Modificador_X - no son dashboards)
         const categoriasDashboard = categorias.filter(c => c !== 'Modificador' && !c.startsWith('Modificador_'));
         categoriasDashboard.forEach(cat => {
           const config = CATEGORIA_A_RUTA[cat];
-          if (config) {
-            items.push(config);
-          }
+          if (config) items.push(config);
         });
 
-        // Auditoría solo para Administrador
         if (u.rol === 'Administrador') {
           items.push({ path: '/logs', label: 'Auditoría', Icon: Activity });
         }
 
         setMenuItems(items);
       } catch {
-        const u = JSON.parse(localStorage.getItem('usuario') || '{}');
-        setUsuario(u);
-        const cat = u.categorias || [];
-        const fallback = [];
-        if (u.rol === 'Administrador') fallback.push({ path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard });
-        cat.filter(c => c !== 'Modificador' && !c?.startsWith?.('Modificador_')).forEach(c => {
-          const cfg = CATEGORIA_A_RUTA[c];
-          if (cfg) fallback.push(cfg);
-        });
-        setMenuItems(fallback.length ? fallback : [{ path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard }]);
+        const fallback = [{ path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard }];
+        setMenuItems(fallback);
       }
     };
     loadMenu();
-  }, []);
+  }, [location.pathname]); // Refresca si cambiamos de ruta
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -67,49 +54,63 @@ const Layout = ({ children }) => {
 
   return (
     <div className="flex h-screen bg-white">
-      {/* SIDEBAR - Azul oscuro */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-slate-900 text-white transition-all duration-300 flex flex-col`}>
+      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-slate-900 text-white transition-all duration-300 flex flex-col z-20`}>
         <div className="h-16 flex items-center justify-center border-b border-slate-700">
           <h1 className={`font-bold text-xl ${!sidebarOpen && 'hidden'}`}>Razentec SaaS</h1>
           {!sidebarOpen && <span className="font-bold text-xl">R</span>}
         </div>
 
-        <nav className="flex-1 py-6 space-y-2 px-3">
+        <nav className="flex-1 py-6 space-y-2 px-3 overflow-y-auto">
           {menuItems.map((item) => (
-            <BotonMenu
-              key={item.path}
-              to={item.path}
-              icon={<item.Icon size={20} />}
-              text={item.label}
-              isOpen={sidebarOpen}
-              currentPath={location.pathname}
-            />
+            <BotonMenu key={item.path} to={item.path} icon={<item.Icon size={20} />} text={item.label} isOpen={sidebarOpen} currentPath={location.pathname} />
           ))}
         </nav>
-
-        <div className="p-4 border-t border-slate-700">
-          <button onClick={handleLogout} className="flex items-center gap-3 w-full p-2 text-red-400 hover:bg-slate-800 rounded transition-colors">
-            <LogOut size={20} />
-            <span className={`${!sidebarOpen && 'hidden'}`}>Cerrar Sesión</span>
-          </button>
-        </div>
       </aside>
 
-      {/* CONTENIDO PRINCIPAL */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 bg-white shadow flex items-center justify-between px-6">
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded">
-            <Menu size={24} className="text-gray-600" />
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        <header className="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10">
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded text-gray-600 transition-colors">
+            <Menu size={24} />
           </button>
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-semibold text-gray-800">{usuario.nombre}</span>
-            <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
-              {usuario.nombre?.charAt(0) || 'U'}
+          
+          <div className="relative flex items-center gap-3">
+            <div className="text-right hidden md:block">
+              <p className="text-sm font-bold text-gray-800 leading-tight">{usuario.nombre || 'Usuario'}</p>
+              <p className="text-xs text-gray-500">{usuario.rol || 'Empleado'}</p>
             </div>
+            
+            <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="focus:outline-none transition-transform hover:scale-105">
+              <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-md ring-2 ring-transparent hover:ring-blue-200 overflow-hidden">
+                {/* LÓGICA DE AVATAR */}
+                {usuario.avatar ? (
+                  <img src={usuario.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  usuario.nombre?.charAt(0)?.toUpperCase() || 'U'
+                )}
+              </div>
+            </button>
+
+            {profileMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setProfileMenuOpen(false)}></div>
+                <div className="absolute right-0 top-14 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 z-40 overflow-hidden animate-fade-in-down">
+                  <div className="p-4 border-b border-gray-50 md:hidden">
+                     <p className="text-sm font-bold text-gray-800">{usuario.nombre}</p>
+                     <p className="text-xs text-gray-500">{usuario.rol}</p>
+                  </div>
+                  <Link to="/perfil" onClick={() => setProfileMenuOpen(false)} className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                    <User size={16} /> Mi Perfil
+                  </Link>
+                  <button onClick={handleLogout} className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                    <LogOut size={16} /> Cerrar Sesión
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-6 bg-slate-50">
           {children}
         </main>
       </div>
@@ -120,9 +121,9 @@ const Layout = ({ children }) => {
 const BotonMenu = ({ to, icon, text, isOpen, currentPath }) => {
   const active = currentPath === to;
   return (
-    <Link to={to} className={`flex items-center gap-3 w-full p-3 rounded-lg transition-colors ${active ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-slate-800 hover:text-white'}`}>
+    <Link to={to} className={`flex items-center gap-3 w-full p-3 rounded-lg transition-all ${active ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:bg-slate-800 hover:text-white'}`}>
       {icon}
-      <span className={`${!isOpen && 'hidden'}`}>{text}</span>
+      <span className={`${!isOpen && 'hidden'} whitespace-nowrap`}>{text}</span>
     </Link>
   );
 };
