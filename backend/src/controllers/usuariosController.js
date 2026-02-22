@@ -2,7 +2,14 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../config/db');
 
 const ROLES_ASIGNABLES = ['Supervisor', 'Empleado'];
-const MODULOS = ['Inventario', 'Ventas', 'Compras', 'Clientes', 'Proveedores', 'Usuarios'];
+// ✨ SE AGREGARON 'Dashboard' y 'Categorias' a la lista oficial de módulos
+const MODULOS = ['Dashboard', 'Inventario', 'Categorias', 'Ventas', 'Compras', 'Clientes', 'Proveedores', 'Usuarios'];
+const CATEGORIAS = [...MODULOS, 'Modificador', ...MODULOS.map(m => `Modificador_${m}`)];
+
+const validarCategorias = (arr) => {
+  if (!Array.isArray(arr)) return [];
+  return arr.filter(c => CATEGORIAS.includes(c));
+};
 
 const usuariosController = {
   listar: async (req, res) => {
@@ -64,7 +71,7 @@ const usuariosController = {
       if (!await bcrypt.compare(admin_password, adminRes.rows[0].password_hash)) return res.status(401).json({ error: 'Contraseña incorrecta' });
 
       await pool.query('UPDATE usuarios SET email = $1, rol = $2, area_cargo = $3, categorias = $4 WHERE id = $5 AND empresa_id = $6', 
-        [email, rol, area_cargo, JSON.stringify(categorias), id, req.user.empresa_id]);
+        [email, rol, area_cargo, JSON.stringify(validarCategorias(categorias)), id, req.user.empresa_id]);
 
       if (nueva_password) {
         const hash = await bcrypt.hash(nueva_password, await bcrypt.genSalt(10));

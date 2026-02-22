@@ -1,11 +1,20 @@
-const CategoriaModel = require('../models/categoriaModel');
+const { pool } = require('../config/db');
 
 const categoriasController = {
   listar: async (req, res) => {
     try {
       const { estado } = req.query;
-      const lista = await CategoriaModel.findAllByEmpresa(req.user.empresa_id, estado);
-      res.json(lista);
+      let query = 'SELECT * FROM categorias WHERE empresa_id = $1';
+      
+      if (estado === 'activos') {
+        query += ' AND estado = true';
+      } else if (estado === 'inactivos') {
+        query += ' AND estado = false';
+      }
+      query += ' ORDER BY nombre ASC';
+
+      const { rows } = await pool.query(query, [req.user.empresa_id]);
+      res.json(rows);
     } catch (error) {
       res.status(500).json({ error: 'Error al listar categorías' });
     }
@@ -16,8 +25,11 @@ const categoriasController = {
       const { nombre } = req.body;
       if (!nombre) return res.status(400).json({ error: 'Nombre obligatorio' });
       
-      const nueva = await CategoriaModel.create(req.user.empresa_id, nombre);
-      res.status(201).json(nueva);
+      const { rows } = await pool.query(
+        'INSERT INTO categorias (empresa_id, nombre) VALUES ($1, $2) RETURNING *',
+        [req.user.empresa_id, nombre]
+      );
+      res.status(201).json(rows[0]);
     } catch (error) {
       res.status(500).json({ error: 'Error al crear categoría' });
     }
@@ -27,9 +39,12 @@ const categoriasController = {
     try {
       const { id } = req.params;
       const { nombre } = req.body;
-      const editada = await CategoriaModel.update(id, req.user.empresa_id, nombre);
-      if (!editada) return res.status(404).json({ error: 'No encontrada' });
-      res.json(editada);
+      const { rowCount } = await pool.query(
+        'UPDATE categorias SET nombre = $1 WHERE id = $2 AND empresa_id = $3',
+        [nombre, id, req.user.empresa_id]
+      );
+      if (rowCount === 0) return res.status(404).json({ error: 'No encontrada' });
+      res.json({ message: 'Actualizada' });
     } catch (error) {
       res.status(500).json({ error: 'Error al editar' });
     }
@@ -38,8 +53,12 @@ const categoriasController = {
   eliminar: async (req, res) => {
     try {
       const { id } = req.params;
-      const eliminada = await CategoriaModel.delete(id, req.user.empresa_id);
-      if (!eliminada) return res.status(404).json({ error: 'No encontrada' });
+      // Eliminación lógica
+      const { rowCount } = await pool.query(
+        'UPDATE categorias SET estado = false WHERE id = $1 AND empresa_id = $2',
+        [id, req.user.empresa_id]
+      );
+      if (rowCount === 0) return res.status(404).json({ error: 'No encontrada' });
       res.json({ message: 'Categoría eliminada' });
     } catch (error) {
       res.status(500).json({ error: 'Error al eliminar' });
