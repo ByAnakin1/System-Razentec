@@ -34,9 +34,22 @@ const Perfil = () => {
   if (loading) return <Layout><div className="flex justify-center items-center h-full text-gray-500 font-medium">Cargando perfil...</div></Layout>;
   if (!userData) return <Layout><div className="text-center text-red-500 mt-10">Error al cargar datos.</div></Layout>;
 
-  const categorias = Array.isArray(userData.categorias) ? userData.categorias : [];
-  const permisosVista = categorias.filter(c => c !== 'Modificador' && !c.startsWith('Modificador_'));
-  const permisosEdicion = categorias.filter(c => c === 'Modificador' || c.startsWith('Modificador_')).map(c => c.replace('Modificador_', '').replace('Modificador', 'Acceso Global'));
+  // 🐛 PROTECCIÓN ANTI-CRASH PARA EL PERFIL PROPIO
+  let catsSeguras = [];
+  try {
+    if (Array.isArray(userData.categorias)) {
+      catsSeguras = userData.categorias;
+    } else if (typeof userData.categorias === 'string') {
+      let parsed = JSON.parse(userData.categorias);
+      if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+      catsSeguras = Array.isArray(parsed) ? parsed : [];
+    }
+  } catch (error) {
+    catsSeguras = [];
+  }
+
+  const permisosVista = catsSeguras.filter(c => c !== 'Modificador' && !c.startsWith('Modificador_'));
+  const permisosEdicion = catsSeguras.filter(c => c === 'Modificador' || c.startsWith('Modificador_')).map(c => c.replace('Modificador_', '').replace('Modificador', 'Acceso Global'));
 
   return (
     <Layout>

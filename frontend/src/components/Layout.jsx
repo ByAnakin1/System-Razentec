@@ -19,32 +19,40 @@ const Layout = ({ children }) => {
         const u = res.data;
         setUsuario(u);
 
-        const categorias = u.categorias || [];
-        const items = [];
-
         if (u.rol === 'Administrador') {
-          items.push({ path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard });
-          items.push({ path: '/directorio', label: 'Directorio Staff', Icon: Contact });
+          const adminItems = [...Object.values(CATEGORIA_A_RUTA)];
+          adminItems.push({ path: '/directorio', label: 'Directorio Staff', Icon: Contact });
+          adminItems.push({ path: '/logs', label: 'Auditoría', Icon: Activity });
+          setMenuItems(adminItems);
+        } else {
+          // 🐛 PROTECCIÓN ANTI-CRASH: Convertimos los permisos de forma segura sin importar cómo vengan de la DB
+          let catsSeguras = [];
+          try {
+            if (Array.isArray(u.categorias)) {
+              catsSeguras = u.categorias;
+            } else if (typeof u.categorias === 'string') {
+              let parsed = JSON.parse(u.categorias);
+              if (typeof parsed === 'string') parsed = JSON.parse(parsed); // Doble parseo preventivo
+              catsSeguras = Array.isArray(parsed) ? parsed : [];
+            }
+          } catch (error) {
+            catsSeguras = [];
+          }
+
+          const categoriasDashboard = catsSeguras.filter(c => c !== 'Modificador' && !c.startsWith('Modificador_'));
+          const items = [];
+          categoriasDashboard.forEach(cat => {
+            if (CATEGORIA_A_RUTA[cat]) items.push(CATEGORIA_A_RUTA[cat]);
+          });
+          
+          setMenuItems(items.length > 0 ? items : [{ path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard }]);
         }
-
-        const categoriasDashboard = categorias.filter(c => c !== 'Modificador' && !c.startsWith('Modificador_'));
-        categoriasDashboard.forEach(cat => {
-          const config = CATEGORIA_A_RUTA[cat];
-          if (config) items.push(config);
-        });
-
-        if (u.rol === 'Administrador') {
-          items.push({ path: '/logs', label: 'Auditoría', Icon: Activity });
-        }
-
-        setMenuItems(items);
       } catch {
-        const fallback = [{ path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard }];
-        setMenuItems(fallback);
+        setMenuItems([{ path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard }]);
       }
     };
     loadMenu();
-  }, [location.pathname]); // Refresca si cambiamos de ruta
+  }, [location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -81,12 +89,7 @@ const Layout = ({ children }) => {
             
             <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="focus:outline-none transition-transform hover:scale-105">
               <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-md ring-2 ring-transparent hover:ring-blue-200 overflow-hidden">
-                {/* LÓGICA DE AVATAR */}
-                {usuario.avatar ? (
-                  <img src={usuario.avatar} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  usuario.nombre?.charAt(0)?.toUpperCase() || 'U'
-                )}
+                {usuario.avatar ? <img src={usuario.avatar} alt="Avatar" className="w-full h-full object-cover" /> : usuario.nombre?.charAt(0)?.toUpperCase() || 'U'}
               </div>
             </button>
 
@@ -98,12 +101,8 @@ const Layout = ({ children }) => {
                      <p className="text-sm font-bold text-gray-800">{usuario.nombre}</p>
                      <p className="text-xs text-gray-500">{usuario.rol}</p>
                   </div>
-                  <Link to="/perfil" onClick={() => setProfileMenuOpen(false)} className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
-                    <User size={16} /> Mi Perfil
-                  </Link>
-                  <button onClick={handleLogout} className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors">
-                    <LogOut size={16} /> Cerrar Sesión
-                  </button>
+                  <Link to="/perfil" onClick={() => setProfileMenuOpen(false)} className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"><User size={16} /> Mi Perfil</Link>
+                  <button onClick={handleLogout} className="flex items-center gap-2 w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"><LogOut size={16} /> Cerrar Sesión</button>
                 </div>
               </>
             )}

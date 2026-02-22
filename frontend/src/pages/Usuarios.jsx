@@ -32,7 +32,21 @@ const Usuarios = () => {
   const [errores, setErrores] = useState({});
 
   const esAdmin = () => usuarioActual?.rol === 'Administrador';
-  const categoriasArray = (u) => Array.isArray(u?.categorias) ? u.categorias : [];
+  
+  // 🐛 PROTECCIÓN ANTI-CRASH PARA VISUALIZAR PERMISOS
+  const categoriasArray = (u) => {
+    if (!u || !u.categorias) return [];
+    try {
+      if (Array.isArray(u.categorias)) return u.categorias;
+      if (typeof u.categorias === 'string') {
+        let parsed = JSON.parse(u.categorias);
+        if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch(e) {}
+    return [];
+  };
+
   const tieneView = (u, mod) => categoriasArray(u).includes(mod);
   const tieneModificador = (u, mod) => categoriasArray(u).includes('Modificador') || categoriasArray(u).includes(`Modificador_${mod}`);
 
@@ -101,7 +115,7 @@ const Usuarios = () => {
     if (!data.area_cargo.trim()) nuevosErrores.area_cargo = "El área/cargo es obligatorio para identificarlo.";
     if (!/^\S+@\S+\.\S+$/.test(data.email)) nuevosErrores.email = "Formato de correo no válido.";
     if (isCreate && data.password.length < 6) nuevosErrores.password = "Mínimo 6 caracteres.";
-    if (!isCreate && data.nueva_password && data.nueva_password.length < 6) nuevosErrores.nueva_password = "Mínimo 6 caracteres.";
+    if (!isCreate && data.nueva_password && data.nueva_password.length > 0 && data.nueva_password.length < 6) nuevosErrores.nueva_password = "Mínimo 6 caracteres.";
     if (!data.admin_password) nuevosErrores.admin_password = "Se requiere tu firma digital (contraseña).";
 
     setErrores(nuevosErrores);
@@ -212,7 +226,6 @@ const Usuarios = () => {
                        {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover"/> : (u.area_cargo || u.nombre_completo)?.charAt(0).toUpperCase()}
                      </div>
                      <div>
-                       {/* SOLUCIÓN: Forzar "Administrador" si su rol es Administrador */}
                        <p className="font-bold text-gray-900">
                          {u.rol === 'Administrador' ? 'Administrador' : (u.area_cargo || 'Sin designar')}
                        </p>
@@ -253,7 +266,6 @@ const Usuarios = () => {
               <div>
                 <label className="text-xs text-gray-500 font-bold uppercase">Identidad en Sistema (Cargo)</label>
                 <div className="bg-gray-50 p-2 rounded border font-bold text-blue-800 text-lg">
-                  {/* SOLUCIÓN: Forzar "Administrador" si su rol es Administrador */}
                   {usuarioSeleccionado.rol === 'Administrador' ? 'Administrador' : (usuarioSeleccionado.area_cargo || 'Sin designar')}
                 </div>
               </div>
@@ -377,12 +389,12 @@ const Usuarios = () => {
       {modalEliminar && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-all">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center border border-white/50">
-            <div className="h-16 w-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-5 text-red-600 shadow-inner border border-red-100"><AlertTriangle size={32} /></div>
+            <div className="h-16 w-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-5 text-red-600"><AlertTriangle size={32} /></div>
             <h3 className="text-2xl font-extrabold text-gray-800">¿Revocar Acceso?</h3>
-            <p className="text-sm text-gray-500 mt-3 font-medium px-4">Esta acción eliminará el usuario del sistema. <strong>El empleado y sus datos personales seguirán existiendo en el Directorio Staff.</strong></p>
+            <p className="text-sm text-gray-500 mt-3 font-medium px-4">Esta acción eliminará el usuario del sistema. <strong>El empleado seguirá en el Directorio Staff.</strong></p>
             <div className="flex gap-4 mt-8">
-              <button onClick={() => setModalEliminar(false)} className="flex-1 border border-gray-200 py-3 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition-colors">Cancelar</button>
-              <button onClick={handleEliminar} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-red-600/30 hover:bg-red-700 transition-colors">Sí, Revocar Acceso</button>
+              <button onClick={() => setModalEliminar(false)} className="flex-1 border border-gray-200 py-3 rounded-xl font-bold text-gray-600 hover:bg-gray-50">Cancelar</button>
+              <button onClick={handleEliminar} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700">Sí, Revocar Acceso</button>
             </div>
           </div>
         </div>
