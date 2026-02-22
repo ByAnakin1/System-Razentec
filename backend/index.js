@@ -1,28 +1,25 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const morgan = require('morgan');
-require('dotenv').config();
-const { connectDB } = require('./src/config/db');
-
-const routes = require('./src/routes/index');
 
 const app = express();
 
-// --- MIDDLEWARES (El orden importa MUCHO aquí) ---
+// Middlewares globales
 app.use(cors());
-app.use(express.json()); // <--- ¡ESTO DEBE IR PRIMERO!
-app.use(morgan('dev'));
+app.use(express.json()); // Permite recibir JSON en el body
 
-// --- RUTAS ---
-app.use('/api', routes); // <--- Las rutas van DESPUÉS de express.json()
+// ==========================================
+// 📌 RUTAS DE LA API
+// ==========================================
+app.use('/api/auth', require('./src/routes/authRoutes')); // Autenticación y Login
+app.use('/api/usuarios', require('./src/routes/usuariosRoutes')); // Gestión de credenciales y permisos
 
+// ✨ AQUÍ AGREGAMOS LA NUEVA RUTA DE EMPLEADOS ✨
+app.use('/api/empleados', require('./src/routes/empleadosRoutes')); 
+// ==========================================
+
+// Puerto y arranque del servidor
 const PORT = process.env.PORT || 3000;
-
-const startServer = async () => {
-  await connectDB();
-  app.listen(PORT, () => {
-    console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
-  });
-};
-
-startServer();
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+});
