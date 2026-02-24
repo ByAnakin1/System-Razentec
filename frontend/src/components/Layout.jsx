@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, LogOut, Menu, Activity, User, Contact } from 'lucide-react';
+import { LayoutDashboard, LogOut, Menu, Activity, User, Contact, History } from 'lucide-react';
 import api from '../services/api';
 import { CATEGORIA_A_RUTA } from '../config/menuConfig';
 
@@ -23,6 +23,7 @@ const Layout = ({ children }) => {
           const adminItems = [...Object.values(CATEGORIA_A_RUTA)];
           adminItems.push({ path: '/directorio', label: 'Directorio Staff', Icon: Contact });
           adminItems.push({ path: '/logs', label: 'Auditoría', Icon: Activity });
+          adminItems.push({ path: '/historial-ventas', label: 'Historial de Ventas', Icon: History });
           setMenuItems(adminItems);
         } else {
           // 🐛 PROTECCIÓN ANTI-CRASH: Convertimos los permisos de forma segura sin importar cómo vengan de la DB
@@ -39,10 +40,17 @@ const Layout = ({ children }) => {
             catsSeguras = [];
           }
 
-          const categoriasDashboard = catsSeguras.filter(c => c !== 'Modificador' && !c.startsWith('Modificador_'));
-          const items = [];
+          const categoriasDashboard = categorias.filter(c => c !== 'Modificador' && !c.startsWith('Modificador_'));
           categoriasDashboard.forEach(cat => {
-            if (CATEGORIA_A_RUTA[cat]) items.push(CATEGORIA_A_RUTA[cat]);
+            const config = CATEGORIA_A_RUTA[cat];
+            if (config) {
+              items.push(config);
+              
+              // 👇 Esta condición inyecta el Historial justo debajo de Ventas
+              if (cat === 'Ventas' || config.label === 'Ventas') {
+                items.push({ path: '/historial-ventas', label: 'Historial de Ventas', Icon: History });
+              }
+            }
           });
           
           setMenuItems(items.length > 0 ? items : [{ path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard }]);

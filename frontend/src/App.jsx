@@ -4,6 +4,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Auth/Login'; 
 import Dashboard from './pages/Dashboard';
 import Usuarios from './pages/Usuarios';
+import Ventas from './pages/Ventas/index.jsx';
+import HistorialVentas from './pages/Ventas/HistorialVentas';
+import DetalleVenta from './pages/Ventas/DetalleVenta';
 import Perfil from './pages/Perfil';
 import DirectorioAdmin from './pages/DirectorioAdmin';
 import Productos from './pages/Productos'; // Inventario
@@ -28,6 +31,9 @@ const App = () => {
         <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
         <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
         <Route path="/directorio" element={<ProtectedRoute><DirectorioAdmin /></ProtectedRoute>} />
+        <Route path="/ventas" element={<ProtectedRoute><Ventas /></ProtectedRoute>} />
+        <Route path="/ventas/:id/detalle" element={<ProtectedRoute><DetalleVenta /></ProtectedRoute>} />
+        <Route path="/historial-ventas" element={<ProtectedRoute><HistorialVentas /></ProtectedRoute>} />
         <Route path="/inventario" element={<ProtectedRoute><Productos /></ProtectedRoute>} />
         <Route path="/categorias" element={<ProtectedRoute><Categorias /></ProtectedRoute>} />
         

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
+import api from '../../services/api';
 
 /**
  * Modal de registro rápido: DNI, Nombre, Dirección.
@@ -10,6 +11,7 @@ const ClienteQuickRegisterModal = ({ open, onClose, onSave }) => {
   const [nombre, setNombre] = useState('');
   const [direccion, setDireccion] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const reset = () => {
     setDni('');
@@ -23,22 +25,43 @@ const ClienteQuickRegisterModal = ({ open, onClose, onSave }) => {
     onClose();
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const n = nombre.trim();
     if (!n) {
       setError('El nombre es obligatorio.');
       return;
     }
+    
+    setLoading(true);
     setError('');
-    onSave({
-      id: `nuevo-${Date.now()}`,
-      nombre: n,
-      dni: dni.trim() || null,
-      direccion: direccion.trim() || null,
-    });
-    reset();
-    onClose();
+
+    try {
+      // 1. Obtenemos el ID de tu empresa
+      const usuarioLocal = JSON.parse(localStorage.getItem('usuario') || '{}');
+      
+      // 2. Lo guardamos en la Base de Datos REAL
+      const response = await api.post('/clientes', {
+        nombre: n,
+        dni: dni.trim() || null,
+        empresa_id: usuarioLocal.empresa_id || null
+      });
+
+      // 3. Pasamos el ID real que nos devuelve la base de datos
+      onSave({
+        id: response.data.id, 
+        nombre: response.data.nombre,
+        dni: response.data.dni
+      });
+      
+      reset();
+      onClose();
+    } catch (err) {
+      console.error("Error al guardar cliente:", err);
+      setError('Hubo un error al guardar el cliente en el servidor.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!open) return null;

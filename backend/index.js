@@ -18,6 +18,8 @@ app.use('/api/usuarios', require('./src/routes/usuariosRoutes'));
 app.use('/api/empleados', require('./src/routes/empleadosRoutes'));
 app.use('/api/productos', require('./src/routes/productosRoutes')); 
 app.use('/api/categorias', require('./src/routes/categoriasRoutes'));
+app.use('/api/ventas', require('./src/routes/ventasRoutes'));
+app.use('/api/clientes', require('./src/routes/clientesRoutes'));
 
 // ==========================================
 // 📌 MANEJO INTELIGENTE DE PUERTOS
