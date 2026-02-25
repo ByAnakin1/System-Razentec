@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import CatalogSection from './CatalogSection';
 import CartSection from './CartSection';
 import PaymentModal from './PaymentModal';
 import ClienteQuickRegisterModal from './ClienteQuickRegisterModal';
+import DetalleVenta from './DetalleVenta';
+
 
 const CLIENTES_INICIALES = [
-  { id: '', nombre: 'Sin cliente', dni: null, direccion: null },
-  { id: '1', nombre: 'Cliente General', dni: null, direccion: null },
-  { id: '2', nombre: 'Juan Pérez', dni: '12345678', direccion: 'Av. Ejemplo 123' },
-  { id: '3', nombre: 'María García', dni: '87654321', direccion: 'Jr. Test 456' },
+  { id: '', nombre: 'Cliente General', dni: null, direccion: null }
 ];
 
 /**
@@ -26,27 +26,43 @@ const Ventas = () => {
   const [selectedCliente, setSelectedCliente] = useState(null);
   const [quickRegisterOpen, setQuickRegisterOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [boletaModalId, setBoletaModalId] = useState(null);
 
-  const loadProductos = useCallback(async () => {
+  const navigate = useNavigate();
+
+  const loadData = useCallback(async () => {
     try {
-      const res = await api.get('/productos');
-      setProductos(Array.isArray(res.data) ? res.data : []);
+      // Descargamos productos y clientes en paralelo para que sea más rápido
+      const [resProd, resCli] = await Promise.all([
+        api.get('/productos'),
+        api.get('/clientes')
+      ]);
+      setProductos(Array.isArray(resProd.data) ? resProd.data : []);
+      // Mezclamos el "Cliente General" con los que vienen de la base de datos
+      setClientes([...CLIENTES_INICIALES, ...resCli.data]); 
     } catch (err) {
-      console.error('Error cargando productos:', err);
-      setProductos([]);
+      console.error('Error cargando datos:', err);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadProductos();
-  }, [loadProductos]);
+    loadData(); // Cambiamos el nombre aquí también
+  }, [loadData]);
 
   const addToCart = (producto) => {
     const existing = cart.find((it) => it.id === producto.id);
+    const cantidadActual = existing ? existing.cantidad : 0;
+
+    // 👇 Validamos el stock antes de agregar
+    if (cantidadActual + 1 > producto.stock) {
+      alert(`¡Stock insuficiente! Solo te quedan ${producto.stock} unidades de este producto.`);
+      return;
+    }
+
     if (existing) {
-      setCart(cart.map((it) => (it.id === producto.id ? { ...it, cantidad: (it.cantidad || 1) + 1 } : it)));
+      setCart(cart.map((it) => (it.id === producto.id ? { ...it, cantidad: it.cantidad + 1 } : it)));
     } else {
       setCart([...cart, { ...producto, cantidad: 1 }]);
     }
@@ -54,6 +70,13 @@ const Ventas = () => {
 
   const updateQty = (item, nuevaCantidad) => {
     if (nuevaCantidad < 1) return;
+    
+    // 👇 Validamos el stock al usar los botones + y -
+    if (nuevaCantidad > item.stock) {
+      alert(`¡Límite alcanzado! Solo hay ${item.stock} en inventario.`);
+      return;
+    }
+    
     setCart(cart.map((it) => (it.id === item.id ? { ...it, cantidad: nuevaCantidad } : it)));
   };
 
@@ -74,30 +97,47 @@ const Ventas = () => {
     setPaymentModalOpen(true);
   };
 
-  const handleConfirmPayment = (paymentData) => {
-    if (cart.length === 0) {
-      return;
+  const handleConfirmPayment = async (paymentData) => {
+    if (cart.length === 0) return;
+
+    try {
+      // 1. Extraemos tu usuario del LocalStorage
+      const usuarioLocal = JSON.parse(localStorage.getItem('usuario') || '{}');
+      const idCliente = (selectedCliente?.id && selectedCliente.id !== '') ? selectedCliente.id : null;
+
+      // 2. Enviamos los UUIDs reales
+      const payload = {
+        empresa_id: usuarioLocal.empresa_id || null, 
+        usuario_id: usuarioLocal.id || null,         
+        cliente_id: idCliente,
+        productos: cart.map((it) => ({
+          id: it.id,
+          cantidad: it.cantidad || 1,
+          precio: parseFloat(it.precio || 0),
+        })),
+        metodo_pago: paymentData.metodo,
+        total: paymentData.total,
+      };
+
+      if (paymentData.metodo === 'efectivo') {
+        payload.monto_recibido = paymentData.montoRecibido;
+        payload.vuelto = paymentData.vuelto;
+      }
+      if (paymentData.metodo === 'yape_plin' && paymentData.numeroOperacion) {
+        payload.numero_operacion = paymentData.numeroOperacion;
+      }
+
+      const response = await api.post('/ventas', payload);
+
+      if (response.status === 201 || response.status === 200) {
+        setCart([]);
+        setPaymentModalOpen(false);
+        setBoletaModalId(response.data.id);
+      }
+    } catch (error) {
+      console.error('Error POST /ventas:', error);
+      alert('Hubo un error al guardar la venta en la base de datos.');
     }
-    const payload = {
-      cliente_id: selectedCliente?.id || null,
-      items: cart.map((it) => ({
-        id: it.id,
-        cantidad: it.cantidad || 1,
-        precio: parseFloat(it.precio || 0),
-      })),
-      metodo_pago: paymentData.metodo,
-      total: paymentData.total,
-    };
-    if (paymentData.metodo === 'efectivo') {
-      payload.monto_recibido = paymentData.montoRecibido;
-      payload.vuelto = paymentData.vuelto;
-    }
-    if (paymentData.metodo === 'yape_plin' && paymentData.numeroOperacion) {
-      payload.numero_operacion = paymentData.numeroOperacion;
-    }
-    console.log('POST /ventas (payload):', JSON.stringify(payload, null, 2));
-    setCart([]);
-    setPaymentModalOpen(false);
   };
 
   return (
@@ -143,6 +183,13 @@ const Ventas = () => {
         onClose={() => setQuickRegisterOpen(false)}
         onSave={handleSaveQuickCliente}
       />
+
+      {boletaModalId && (
+        <DetalleVenta 
+          ventaIdModal={boletaModalId} 
+          onClose={() => setBoletaModalId(null)} 
+        />
+      )}
     </Layout>
   );
 };

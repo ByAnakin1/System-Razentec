@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import Layout from '../components/Layout';
-import { Plus, Trash2, X, AlertTriangle, UserPlus, Eye, Edit, ShieldCheck, Zap } from 'lucide-react';
+import { Plus, Trash2, X, AlertTriangle, UserPlus, Eye, Edit, ShieldCheck, Zap, Search } from 'lucide-react';
 import { CATEGORIA_A_RUTA } from '../config/menuConfig';
 
 const ROLES = ['Supervisor', 'Empleado'];
@@ -18,6 +18,9 @@ const Usuarios = () => {
   const [empleadosDisponibles, setEmpleadosDisponibles] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [usuarioActual, setUsuarioActual] = useState(null);
+  
+  // ✨ NUEVO: Estado para el buscador
+  const [busqueda, setBusqueda] = useState('');
 
   const [modalCrear, setModalCrear] = useState(false);
   const [modalDetalles, setModalDetalles] = useState(false);
@@ -33,7 +36,6 @@ const Usuarios = () => {
 
   const esAdmin = () => usuarioActual?.rol === 'Administrador';
   
-  // 🐛 PROTECCIÓN ANTI-CRASH PARA VISUALIZAR PERMISOS
   const categoriasArray = (u) => {
     if (!u || !u.categorias) return [];
     try {
@@ -77,6 +79,13 @@ const Usuarios = () => {
   };
 
   useEffect(() => { fetchUsuarios(); }, []);
+
+  // ✨ NUEVO: Filtrado de usuarios en tiempo real
+  const usuariosFiltrados = usuarios.filter(u => 
+    (u.nombre_completo || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+    (u.area_cargo || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+    (u.email || '').toLowerCase().includes(busqueda.toLowerCase())
+  );
 
   const openModalDetalles = (u) => {
     setUsuarioSeleccionado(u);
@@ -196,13 +205,30 @@ const Usuarios = () => {
 
   return (
     <Layout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><UserPlus size={24} className="text-blue-600" /> Cuentas de Acceso al Sistema</h1>
-        {esAdmin() && (
-          <button onClick={handleOpenCrear} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
-            <Plus size={20} /> Crear Credencial a Empleado
-          </button>
-        )}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        {/* ✨ TÍTULO LIMPIO */}
+        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <UserPlus size={24} className="text-blue-600" /> Cuentas
+        </h1>
+        
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          {/* ✨ BUSCADOR */}
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-2.5 text-gray-400" size={16}/>
+            <input 
+              type="text" placeholder="Buscar usuario..." 
+              className="w-full bg-white border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 font-medium shadow-sm"
+              value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+            />
+          </div>
+          
+          {/* ✨ BOTÓN ACORTADO */}
+          {esAdmin() && (
+            <button onClick={handleOpenCrear} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-colors font-medium shadow-sm">
+              <Plus size={20} /> Credencial
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
@@ -217,8 +243,8 @@ const Usuarios = () => {
           </thead>
           <tbody className="divide-y divide-gray-200">
             {loading ? <tr><td colSpan="4" className="text-center py-8">Cargando...</td></tr> : 
-             usuarios.length === 0 ? <tr><td colSpan="4" className="text-center py-8">No hay usuarios registrados.</td></tr> :
-             usuarios.map((u) => (
+             usuariosFiltrados.length === 0 ? <tr><td colSpan="4" className="text-center py-8 text-gray-400">No se encontraron usuarios.</td></tr> :
+             usuariosFiltrados.map((u) => (
               <tr key={u.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">
                    <div className="flex items-center gap-3">
@@ -286,17 +312,17 @@ const Usuarios = () => {
 
       {/* MODAL EDITAR Y CREAR */}
       {(modalEditar || modalCrear) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-all">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-all p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-white/50">
             <div className="p-6 border-b flex justify-between items-center bg-white z-10 shadow-sm">
-              <h2 className="text-2xl font-extrabold text-gray-800 flex items-center gap-2">
+              <h2 className="text-xl md:text-2xl font-extrabold text-gray-800 flex items-center gap-2">
                 {modalCrear ? <UserPlus className="text-blue-600"/> : <Edit className="text-yellow-500"/>}
                 {modalCrear ? 'Generar Credencial a Empleado' : 'Editar Accesos y Permisos'}
               </h2>
               <button onClick={() => modalCrear ? setModalCrear(false) : setModalEditar(false)} className="bg-gray-100 hover:bg-gray-200 p-2 rounded-full text-gray-500"><X size={20}/></button>
             </div>
             
-            <form onSubmit={modalCrear ? handleCrear : handleGuardarEditarCompleto} className="overflow-y-auto p-8 bg-gray-50/50 space-y-8">
+            <form onSubmit={modalCrear ? handleCrear : handleGuardarEditarCompleto} className="overflow-y-auto p-4 md:p-8 bg-gray-50/50 space-y-8">
               
               <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                 <h3 className="font-bold text-gray-700 mb-5 border-b border-gray-100 pb-2">Identidad en el Sistema</h3>
@@ -374,9 +400,9 @@ const Usuarios = () => {
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-4 border-t border-gray-200">
-                <button type="button" onClick={() => modalCrear ? setModalCrear(false) : setModalEditar(false)} className="w-1/3 border border-gray-200 py-3.5 rounded-xl text-gray-600 font-bold hover:bg-gray-100">Cancelar</button>
-                <button type="submit" disabled={modalCrear && empleadosDisponibles.length === 0} className="w-2/3 bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/30 disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed">
+              <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-gray-200">
+                <button type="button" onClick={() => modalCrear ? setModalCrear(false) : setModalEditar(false)} className="w-full sm:w-1/3 border border-gray-200 py-3.5 rounded-xl text-gray-600 font-bold hover:bg-gray-100">Cancelar</button>
+                <button type="submit" disabled={modalCrear && empleadosDisponibles.length === 0} className="w-full sm:w-2/3 bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/30 disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed">
                   {modalCrear ? 'Otorgar Acceso y Crear Usuario' : 'Confirmar y Guardar Cambios'}
                 </button>
               </div>
@@ -387,7 +413,7 @@ const Usuarios = () => {
 
       {/* MODAL ELIMINAR */}
       {modalEliminar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-all">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-all p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center border border-white/50">
             <div className="h-16 w-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-5 text-red-600"><AlertTriangle size={32} /></div>
             <h3 className="text-2xl font-extrabold text-gray-800">¿Revocar Acceso?</h3>

@@ -1,0 +1,23 @@
+const express = require('express');
+const router = express.Router();
+const ventasController = require('../controllers/ventasController');
+const jwt = require('jsonwebtoken');
+
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader) return res.status(403).json({ error: 'Acceso denegado' });
+  try {
+    req.user = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+    next(); 
+  } catch (error) { 
+    return res.status(401).json({ error: 'Token inválido' }); 
+  }
+};
+
+router.use(verifyToken);
+router.get('/', ventasController.getVentas);
+router.post('/', ventasController.crearVenta);
+router.get('/:id', ventasController.getDetalleVenta);
+router.delete('/:id', ventasController.eliminarVenta);
+
+module.exports = router;
