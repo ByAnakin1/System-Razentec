@@ -49,6 +49,7 @@ const crearVenta = async (req, res) => {
       const cantidad = parseInt(item.cantidad) || 1;
       const precio = parseFloat(item.precio) || 0;
       await client.query(insertDetalle, [ventaId, item.id, cantidad, precio, cantidad * precio]);
+      await client.query('UPDATE inventario SET stock_actual = stock_actual - $1 WHERE producto_id = $2', [cantidad, item.id]);
     }
 
     await client.query('COMMIT');

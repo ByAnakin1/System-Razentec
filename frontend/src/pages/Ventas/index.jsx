@@ -6,6 +6,7 @@ import CatalogSection from './CatalogSection';
 import CartSection from './CartSection';
 import PaymentModal from './PaymentModal';
 import ClienteQuickRegisterModal from './ClienteQuickRegisterModal';
+import DetalleVenta from './DetalleVenta';
 
 
 const CLIENTES_INICIALES = [
@@ -25,6 +26,7 @@ const Ventas = () => {
   const [selectedCliente, setSelectedCliente] = useState(null);
   const [quickRegisterOpen, setQuickRegisterOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [boletaModalId, setBoletaModalId] = useState(null);
 
   const navigate = useNavigate();
 
@@ -51,8 +53,16 @@ const Ventas = () => {
 
   const addToCart = (producto) => {
     const existing = cart.find((it) => it.id === producto.id);
+    const cantidadActual = existing ? existing.cantidad : 0;
+
+    // 👇 Validamos el stock antes de agregar
+    if (cantidadActual + 1 > producto.stock) {
+      alert(`¡Stock insuficiente! Solo te quedan ${producto.stock} unidades de este producto.`);
+      return;
+    }
+
     if (existing) {
-      setCart(cart.map((it) => (it.id === producto.id ? { ...it, cantidad: (it.cantidad || 1) + 1 } : it)));
+      setCart(cart.map((it) => (it.id === producto.id ? { ...it, cantidad: it.cantidad + 1 } : it)));
     } else {
       setCart([...cart, { ...producto, cantidad: 1 }]);
     }
@@ -60,6 +70,13 @@ const Ventas = () => {
 
   const updateQty = (item, nuevaCantidad) => {
     if (nuevaCantidad < 1) return;
+    
+    // 👇 Validamos el stock al usar los botones + y -
+    if (nuevaCantidad > item.stock) {
+      alert(`¡Límite alcanzado! Solo hay ${item.stock} en inventario.`);
+      return;
+    }
+    
     setCart(cart.map((it) => (it.id === item.id ? { ...it, cantidad: nuevaCantidad } : it)));
   };
 
@@ -115,7 +132,7 @@ const Ventas = () => {
       if (response.status === 201 || response.status === 200) {
         setCart([]);
         setPaymentModalOpen(false);
-        navigate(`/ventas/${response.data.id}/detalle`);
+        setBoletaModalId(response.data.id);
       }
     } catch (error) {
       console.error('Error POST /ventas:', error);
@@ -166,6 +183,13 @@ const Ventas = () => {
         onClose={() => setQuickRegisterOpen(false)}
         onSave={handleSaveQuickCliente}
       />
+
+      {boletaModalId && (
+        <DetalleVenta 
+          ventaIdModal={boletaModalId} 
+          onClose={() => setBoletaModalId(null)} 
+        />
+      )}
     </Layout>
   );
 };

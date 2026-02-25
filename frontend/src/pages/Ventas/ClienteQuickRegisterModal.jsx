@@ -89,7 +89,7 @@ const ClienteQuickRegisterModal = ({ open, onClose, onSave }) => {
             <input
               type="text"
               value={dni}
-              onChange={(e) => setDni(e.target.value)}
+              onChange={(e) => setDni(e.target.value.replace(/\D/g, '').slice(0, 8))}
               placeholder="Ej. 12345678"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
             />
@@ -99,7 +99,7 @@ const ClienteQuickRegisterModal = ({ open, onClose, onSave }) => {
             <input
               type="text"
               value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
+              onChange={(e) => setNombre(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''))}
               placeholder="Nombre completo"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               required
