@@ -5,8 +5,6 @@ const cors = require('cors');
 const app = express();
 
 app.use(cors());
-
-// ✨ SOLUCIÓN AL PAYLOAD TOO LARGE: Aumentamos el límite a 50MB para permitir fotos
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -18,6 +16,9 @@ app.use('/api/usuarios', require('./src/routes/usuariosRoutes'));
 app.use('/api/empleados', require('./src/routes/empleadosRoutes'));
 app.use('/api/productos', require('./src/routes/productosRoutes')); 
 app.use('/api/categorias', require('./src/routes/categoriasRoutes'));
+app.use('/api/auditoria', require('./src/routes/auditoriaRoutes'));
+
+// ✨ RUTAS DEL MÓDULO DE VENTAS (Conexión Frontend - Backend)
 app.use('/api/ventas', require('./src/routes/ventasRoutes'));
 app.use('/api/clientes', require('./src/routes/clientesRoutes'));
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, LogOut, Menu, Activity, User, Contact, History } from 'lucide-react';
+import { LayoutDashboard, LogOut, Menu, Activity, User, Contact } from 'lucide-react';
 import api from '../services/api';
 import { CATEGORIA_A_RUTA } from '../config/menuConfig';
 
@@ -23,46 +23,39 @@ const Layout = ({ children }) => {
           const adminItems = [...Object.values(CATEGORIA_A_RUTA)];
           adminItems.push({ path: '/directorio', label: 'Directorio Staff', Icon: Contact });
           adminItems.push({ path: '/logs', label: 'Auditoría', Icon: Activity });
-          adminItems.push({ path: '/historial-ventas', label: 'Historial de Ventas', Icon: History });
           setMenuItems(adminItems);
         } else {
-          // 🐛 PROTECCIÓN ANTI-CRASH: Convertimos los permisos de forma segura sin importar cómo vengan de la DB
-          let catsSeguras = [];
-          try {
-            if (Array.isArray(u.categorias)) {
-              catsSeguras = u.categorias;
-            } else if (typeof u.categorias === 'string') {
-              let parsed = JSON.parse(u.categorias);
-              if (typeof parsed === 'string') parsed = JSON.parse(parsed); // Doble parseo preventivo
-              catsSeguras = Array.isArray(parsed) ? parsed : [];
-            }
-          } catch (error) {
-            catsSeguras = [];
-          }
-
+          // Gracias al Backend, u.categorias ya es una lista perfecta
+          const categorias = Array.isArray(u.categorias) ? u.categorias : [];
           const categoriasDashboard = categorias.filter(c => c !== 'Modificador' && !c.startsWith('Modificador_'));
+          
+          // ✨ Forzamos que siempre tengan acceso al Dashboard como pantalla de inicio
+          const items = [{ path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard }];
+          
           categoriasDashboard.forEach(cat => {
-            const config = CATEGORIA_A_RUTA[cat];
-            if (config) {
-              items.push(config);
-              
-              // 👇 Esta condición inyecta el Historial justo debajo de Ventas
-              if (cat === 'Ventas' || config.label === 'Ventas') {
-                items.push({ path: '/historial-ventas', label: 'Historial de Ventas', Icon: History });
-              }
+            if (cat !== 'Dashboard' && CATEGORIA_A_RUTA[cat]) {
+              items.push(CATEGORIA_A_RUTA[cat]);
             }
           });
           
-          setMenuItems(items.length > 0 ? items : [{ path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard }]);
+          setMenuItems(items);
         }
-      } catch {
+      } catch (err) {
+        console.error("Error al cargar menú:", err);
         setMenuItems([{ path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard }]);
       }
     };
     loadMenu();
   }, [location.pathname]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Le avisamos al backend que estamos saliendo para guardarlo en la Auditoría
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error("No se pudo registrar la salida", error);
+    }
+    // Borramos datos del navegador y redirigimos
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
     navigate('/login');

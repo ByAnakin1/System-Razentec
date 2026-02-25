@@ -30,6 +30,16 @@ const HistorialVentas = () => {
     }
   };
 
+  // ✨ FUNCIÓN DE HORA DE PERÚ APLICADA AL CÓDIGO DE OSVALDO
+  const formatearFecha = (fechaISO) => {
+    if (!fechaISO) return '';
+    const date = fechaISO.endsWith('Z') ? new Date(fechaISO) : new Date(`${fechaISO}Z`);
+    return date.toLocaleString('es-PE', { 
+        timeZone: 'America/Lima', day: '2-digit', month: '2-digit', year: 'numeric', 
+        hour: '2-digit', minute: '2-digit', hour12: true 
+    });
+  };
+
   // 1. Abrir la ventana de emergencia
   const handleOpenDelete = (id) => {
     setVentaToDelete(id);
@@ -94,13 +104,14 @@ const HistorialVentas = () => {
               <tbody className="divide-y divide-gray-100">
                 {ventas.map((venta) => (
                   <tr key={venta.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-3 px-4 font-medium text-gray-800">#{venta.id}</td>
-                    <td className="py-3 px-4 text-gray-600">{new Date(venta.created_at).toLocaleString('es-PE')}</td>
+                    <td className="py-3 px-4 font-medium text-gray-800">#{String(venta.id).padStart(5, '0')}</td>
+                    <td className="py-3 px-4 text-gray-600">{formatearFecha(venta.created_at)}</td>
                     <td className="py-3 px-4 text-gray-600">{venta.cliente_nombre || 'Público General'}</td>
                     <td className="py-3 px-4 text-right font-medium text-gray-800">S/ {parseFloat(venta.total).toFixed(2)}</td>
                     <td className="py-3 px-4 text-center flex justify-center gap-2">
                       <button 
-                        onClick={() => navigate(`/ventas/${venta.id}/detalle`)}
+                        // ✨ CORRECCIÓN DE RUTA DE OSVALDO
+                        onClick={() => navigate(`/ventas/${venta.id}`)}
                         className="text-blue-600 hover:text-blue-800 font-medium bg-blue-50 px-3 py-1 rounded-md transition-colors"
                       >
                         Ver Boleta
@@ -128,7 +139,7 @@ const HistorialVentas = () => {
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">¿Eliminar esta venta?</h3>
             <p className="text-sm text-gray-500 mb-6">
-              Estás a punto de borrar la venta <b>#{ventaToDelete}</b>. Esta acción es permanente y no podrás recuperarla.
+              Estás a punto de borra la venta <b>#{ventaToDelete}</b>. Esta acción es permanente y no podrás recuperarla.
             </p>
             <div className="flex gap-3">
               <button

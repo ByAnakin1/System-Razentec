@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const clientesController = require('../controllers/clientesController');
+const auditoriaController = require('../controllers/auditoriaController');
 const jwt = require('jsonwebtoken');
 
 const verifyToken = (req, res, next) => {
@@ -15,7 +15,6 @@ const verifyToken = (req, res, next) => {
 };
 
 router.use(verifyToken);
-router.get('/', clientesController.listar);
-router.post('/', clientesController.crear);
+router.get('/', auditoriaController.listar);
 
 module.exports = router;

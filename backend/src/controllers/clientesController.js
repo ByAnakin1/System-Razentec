@@ -1,30 +1,31 @@
 const { pool } = require('../config/db');
 
-// 1. Obtener todos los clientes
-const getClientes = async (req, res) => {
-  try {
-    const result = await pool.query('SELECT id, nombre_completo AS nombre, documento_identidad AS dni FROM clientes ORDER BY created_at DESC');
-    res.json(result.rows);
-  } catch (error) {
-    res.status(500).json({ message: "Error al obtener clientes" });
+const clientesController = {
+  listar: async (req, res) => {
+    try {
+      // Traemos clientes de la empresa y también los antiguos (NULL) para no perder datos
+      const query = 'SELECT * FROM clientes WHERE empresa_id = $1 OR empresa_id IS NULL ORDER BY nombre_completo ASC';
+      const { rows } = await pool.query(query, [req.user.empresa_id]);
+      res.json(rows);
+    } catch (error) {
+      console.error("Error listar clientes:", error);
+      res.status(500).json({ error: 'Error al obtener clientes' });
+    }
+  },
+  crear: async (req, res) => {
+    try {
+      const { nombre_completo, documento_identidad, email, telefono } = req.body;
+      const query = `
+        INSERT INTO clientes (empresa_id, nombre_completo, documento_identidad, email, telefono) 
+        VALUES ($1, $2, $3, $4, $5) RETURNING *
+      `;
+      const { rows } = await pool.query(query, [req.user.empresa_id, nombre_completo, documento_identidad, email, telefono]);
+      res.status(201).json(rows[0]);
+    } catch (error) {
+      console.error("Error al crear cliente:", error);
+      res.status(500).json({ error: 'Error al crear cliente' });
+    }
   }
 };
 
-// 2. Crear un cliente nuevo
-const crearCliente = async (req, res) => {
-  const { nombre, dni, empresa_id } = req.body;
-  try {
-    const idEmpresa = (typeof empresa_id === 'string' && empresa_id.length === 36) ? empresa_id : null;
-    const query = `
-      INSERT INTO clientes (empresa_id, nombre_completo, documento_identidad)
-      VALUES ($1, $2, $3)
-      RETURNING id, nombre_completo AS nombre, documento_identidad AS dni
-    `;
-    const result = await pool.query(query, [idEmpresa, nombre, dni]);
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    res.status(500).json({ message: "Error al guardar el cliente" });
-  }
-};
-
-module.exports = { getClientes, crearCliente };
+module.exports = clientesController;

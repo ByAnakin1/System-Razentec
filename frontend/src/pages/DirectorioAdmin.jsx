@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Layout from '../components/Layout';
 import { Lock, ShieldAlert, Mail, ShieldCheck, Eye, Contact, Edit, X, Phone, CreditCard, UserPlus, User } from 'lucide-react';
 
 const DirectorioAdmin = () => {
+  const navigate = useNavigate(); // ✨ Permite redirigir al dashboard
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [password, setPassword] = useState('');
+  const [errorBoveda, setErrorBoveda] = useState(''); // Manejo de error visual
   const [empleados, setEmpleados] = useState([]);
   
   const [modalCrear, setModalCrear] = useState(false);
@@ -24,11 +27,16 @@ const DirectorioAdmin = () => {
 
   const handleUnlock = async (e) => {
     e.preventDefault();
+    setErrorBoveda('');
     try {
+      // ✨ VERIFICACIÓN REAL ESTRICTA AL BACKEND
       await api.post('/usuarios/verificar-admin', { admin_password: password });
       await fetchData();
       setIsUnlocked(true);
-    } catch (err) { alert('Contraseña de administrador incorrecta'); }
+    } catch (err) { 
+      // Mostramos el error en la interfaz en lugar del alert
+      setErrorBoveda('Contraseña de administrador incorrecta. Acceso denegado.'); 
+    }
   };
 
   // VALIDACIONES ESTRICTAS
@@ -89,16 +97,42 @@ const DirectorioAdmin = () => {
   if (!isUnlocked) {
     return (
       <Layout>
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/40 backdrop-blur-md">
-          <div className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-md text-center transform transition-all border border-white/50">
+        <div 
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/40 backdrop-blur-md"
+          onClick={() => navigate('/dashboard')} // ✨ Clic afuera expulsa al Dashboard
+        >
+          <div 
+            className="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-md text-center transform transition-all border border-white/50 relative"
+            onClick={(e) => e.stopPropagation()} // ✨ Evita que el clic en el formulario te expulse
+          >
+            {/* ✨ Botón visual para salir al Dashboard */}
+            <button 
+              type="button"
+              onClick={() => navigate('/dashboard')} 
+              className="absolute top-6 right-6 text-gray-400 hover:text-gray-800 bg-gray-50 hover:bg-gray-200 p-2 rounded-full transition-colors"
+            >
+              <X size={20}/>
+            </button>
+
             <div className="mx-auto w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-6 shadow-inner">
               <Lock size={36} />
             </div>
             <h2 className="text-3xl font-extrabold text-gray-800 mb-2">Bóveda Confidencial</h2>
             <p className="text-sm text-gray-500 mb-8 font-medium">Ingresa tu contraseña maestra de Administrador para visualizar la data del personal.</p>
+            
             <form onSubmit={handleUnlock}>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full border border-gray-200 p-4 rounded-xl mb-6 outline-none focus:ring-4 focus:ring-blue-100 text-center tracking-widest text-lg" placeholder="••••••••" required autoFocus/>
-              <button className="w-full bg-slate-900 text-white p-4 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg flex items-center justify-center gap-2">
+              <input 
+                type="password" 
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+                className={`w-full border p-4 rounded-xl outline-none focus:ring-4 text-center tracking-widest text-lg transition-colors ${errorBoveda ? 'border-red-500 focus:ring-red-100 bg-red-50' : 'border-gray-200 focus:ring-blue-100 mb-6'}`} 
+                placeholder="••••••••" 
+                required 
+                autoFocus
+              />
+              {errorBoveda && <p className="text-red-500 text-xs font-bold mt-2 mb-4">{errorBoveda}</p>}
+              
+              <button type="submit" className="w-full bg-slate-900 text-white p-4 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg flex items-center justify-center gap-2">
                 <ShieldAlert size={20} /> Desbloquear Bóveda
               </button>
             </form>
@@ -124,7 +158,6 @@ const DirectorioAdmin = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
         {empleados.map(emp => {
           const colors = getRoleColors(emp.rol);
-          // SOLUCIÓN: Si es Admin, forzamos mostrar 'Administrador'
           const tituloPrincipal = emp.rol === 'Administrador' ? 'Administrador' : (emp.area_cargo || emp.nombre_completo);
 
           return (
@@ -166,7 +199,6 @@ const DirectorioAdmin = () => {
             <form onSubmit={handleSave} className="space-y-4">
               <div>
                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 block">Nombres y Apellidos Completos</label>
-                {/* SOLUCIÓN FÍSICA: RegEx que reemplaza números por vacío en tiempo real */}
                 <input 
                   placeholder="Ej: Juan Pérez Gonzales" 
                   value={formData.nombre_completo} 
@@ -179,7 +211,6 @@ const DirectorioAdmin = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 block">DNI / Documento</label>
-                  {/* SOLUCIÓN FÍSICA: Solo deja números, max 8 */}
                   <input 
                     placeholder="12345678" 
                     value={formData.dni} 
@@ -190,7 +221,6 @@ const DirectorioAdmin = () => {
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 block">Teléfono</label>
-                  {/* SOLUCIÓN FÍSICA: Solo deja números, signos + y -, max 15 */}
                   <input 
                     placeholder="999888777" 
                     value={formData.telefono} 
@@ -236,7 +266,6 @@ const DirectorioAdmin = () => {
                <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center font-bold text-4xl shadow-lg border-4 border-white/30 mb-4 overflow-hidden z-10">
                  {modalVer.avatar ? <img src={modalVer.avatar} className="w-full h-full object-cover"/> : modalVer.nombre_completo.charAt(0).toUpperCase()}
                </div>
-               {/* SOLUCIÓN: Identidad en el sistema, mostrando "Administrador" si es el Admin */}
                <h2 className="text-2xl font-extrabold text-center drop-shadow-md">
                  {modalVer.rol === 'Administrador' ? 'Administrador' : (modalVer.area_cargo || 'Sin designación en sistema')}
                </h2>
@@ -263,7 +292,6 @@ const DirectorioAdmin = () => {
                 <p className="font-bold text-blue-600">{modalVer.correo_corporativo || 'Este empleado no tiene acceso al ERP'}</p>
               </div>
             </div>
-
           </div>
         </div>
       )}
