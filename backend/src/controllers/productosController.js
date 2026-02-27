@@ -61,6 +61,8 @@ const productosController = {
         [req.user.empresa_id, nuevoProductoId, 1, stockValid, 5]
       );
 
+      await registrarLog(req.user.id, req.user.empresa_id, 'CREAR', 'Inventario', `Registró el nuevo producto: "${nombre}"`, nuevoProductoId);
+
       res.status(201).json({ message: 'Producto creado con éxito' });
     } catch (error) {
       console.error(error);
@@ -164,6 +166,8 @@ const productosController = {
 
       // ⚠️ ELIMINADA la actualización del "inventario". 
       // Si editas el nombre o la foto, el stock se mantiene intacto.
+
+      await registrarLog(req.user.id, req.user.empresa_id, 'EDITAR', 'Inventario', `Actualizó el producto: "${nombre}"`, id);
 
       res.json({ message: 'Producto actualizado correctamente' });
     } catch (error) {
