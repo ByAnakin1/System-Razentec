@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Creamos la conexión base
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api', // La dirección de tu Backend
+  baseURL: 'https://system-razentec.onrender.com/api', // La dirección de tu Backend
   headers: {
     'Content-Type': 'application/json',
   },

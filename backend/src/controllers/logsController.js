@@ -1,9 +1,5 @@
 const { pool } = require('../config/db');
 
-/**
- * Controlador de logs de actividad
- * El Administrador puede visualizar qué módulos visitó un Supervisor y qué cambios realizó
- */
 const logsController = {
   // GET /logs - Listar logs de la empresa (quién, qué acción, en qué tabla, cuándo)
   listar: async (req, res) => {
