@@ -9,6 +9,9 @@ import DirectorioAdmin from './pages/DirectorioAdmin';
 import Productos from './pages/Productos'; 
 import Categorias from './pages/Categorias'; 
 import Auditoria from './pages/Auditoria'; 
+import Proveedores from './pages/Proveedores';
+import Compras from './pages/Compras';
+import DetalleCompra from './pages/Compras/DetalleCompra';
 
 // MÓDULO DE VENTAS Y POS
 import Ventas from './pages/Ventas'; 
@@ -51,6 +54,9 @@ const App = () => {
         <Route path="/usuarios" element={<AdminRoute><Usuarios /></AdminRoute>} />
         <Route path="/directorio" element={<AdminRoute><DirectorioAdmin /></AdminRoute>} />
         <Route path="/logs" element={<AdminRoute><Auditoria /></AdminRoute>} />
+        <Route path="/proveedores" element={<AdminRoute><Proveedores /></AdminRoute>} />
+        <Route path="/compras" element={<AdminRoute><Compras /></AdminRoute>} />
+        <Route path="/compras/:id" element={<AdminRoute><DetalleCompra /></AdminRoute>} />
         
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
