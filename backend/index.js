@@ -1,4 +1,3 @@
-const path = require('path');
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -8,7 +7,6 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ==========================================
 // 📌 RUTAS DE LA API
@@ -19,12 +17,11 @@ app.use('/api/empleados', require('./src/routes/empleadosRoutes'));
 app.use('/api/productos', require('./src/routes/productosRoutes')); 
 app.use('/api/categorias', require('./src/routes/categoriasRoutes'));
 app.use('/api/auditoria', require('./src/routes/auditoriaRoutes'));
-app.use('/api/proveedores', require('./src/routes/proveedoresRoutes'));
-app.use('/api/compras', require('./src/routes/comprasRoutes')); 
 
-// ✨ RUTAS DEL MÓDULO DE VENTAS (Conexión Frontend - Backend)
+// MÓDULOS DE NEGOCIO
 app.use('/api/ventas', require('./src/routes/ventasRoutes'));
 app.use('/api/clientes', require('./src/routes/clientesRoutes'));
+app.use('/api/sucursales', require('./src/routes/sucursalesRoutes')); // ✨ ESTA LÍNEA SOLUCIONA EL ERROR AL GUARDAR
 
 // ==========================================
 // 📌 MANEJO INTELIGENTE DE PUERTOS
