@@ -4,7 +4,6 @@ const { registrarLog } = require('../services/logService');
 const sucursalesController = {
   listar: async (req, res) => {
     try {
-      // ✨ CORRECCIÓN: Respetamos el UUID original, ya no forzamos a número
       const empresaId = req.user?.empresa_id || null;
       
       const query = `
@@ -18,29 +17,38 @@ const sucursalesController = {
       const { rows } = await pool.query(query, [empresaId]);
       res.json(rows);
     } catch (error) {
-      console.error("Error en listar sucursales:", error);
+      console.error("❌ Error en listar sucursales:", error);
       res.status(500).json({ error: error.message });
     }
   },
   
   crear: async (req, res) => {
     try {
-      const { nombre, direccion } = req.body;
+      console.log("🚀 ¡LLEGÓ LA PETICIÓN DESDE REACT! Datos:", req.body); 
+      
+      // ✨ AHORA RECIBIMOS LATITUD Y LONGITUD
+      const { nombre, direccion, latitud, longitud } = req.body;
       if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
 
-      // ✨ CORRECCIÓN: Usamos el UUID directo de la sesión
       const empresaId = req.user?.empresa_id || null;
+      const lat = latitud ? parseFloat(latitud) : null;
+      const lng = longitud ? parseFloat(longitud) : null;
 
-      const query = 'INSERT INTO sucursales (empresa_id, nombre, direccion) VALUES ($1, $2, $3) RETURNING *';
-      const { rows } = await pool.query(query, [empresaId, nombre, direccion]);
+      // ✨ GUARDAMOS LAS COORDENADAS EN LA BASE DE DATOS
+      const query = 'INSERT INTO sucursales (empresa_id, nombre, direccion, latitud, longitud) VALUES ($1, $2, $3, $4, $5) RETURNING *';
+      const { rows } = await pool.query(query, [empresaId, nombre, direccion, lat, lng]);
       
+      console.log("✅ SUCURSAL GUARDADA EN LA BD:", rows[0].nombre); 
+
       try {
-        await registrarLog(req.user?.id, empresaId, 'CREAR', 'Sucursales', `Registró la sucursal: "${nombre}".`);
-      } catch(e) { console.warn("Log warning:", e.message); }
+        if (req.user?.id) {
+          await registrarLog(req.user.id, empresaId, 'CREAR', 'Sucursales', `Registró la sucursal: "${nombre}".`);
+        }
+      } catch(e) { console.warn("Advertencia de Log:", e.message); }
 
       res.status(201).json(rows[0]);
     } catch (error) {
-      console.error("Error crítico al crear sucursal:", error);
+      console.error("❌ Error crítico en la Base de Datos:", error);
       res.status(500).json({ error: 'Error en la BD: ' + error.message });
     }
   },
@@ -55,12 +63,14 @@ const sucursalesController = {
       if (rowCount === 0) return res.status(404).json({ error: 'Sucursal no encontrada' });
 
       try {
-        await registrarLog(req.user?.id, empresaId, 'ELIMINAR', 'Sucursales', `Eliminó una sucursal del sistema.`);
-      } catch(e) { console.warn("Log warning:", e.message); }
+        if (req.user?.id) {
+          await registrarLog(req.user.id, empresaId, 'ELIMINAR', 'Sucursales', `Eliminó una sucursal del sistema.`);
+        }
+      } catch(e) { console.warn("Advertencia de Log:", e.message); }
 
       res.json({ message: 'Sucursal eliminada' });
     } catch (error) {
-      console.error("Error al eliminar sucursal:", error);
+      console.error("❌ Error al eliminar sucursal:", error);
       res.status(500).json({ error: 'No se puede eliminar la sucursal porque tiene productos vinculados.' });
     }
   }

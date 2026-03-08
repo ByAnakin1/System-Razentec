@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import Layout from '../components/Layout';
-import { Package, Search, Plus, Edit, Trash2, X, CheckCircle, List, Grid, AlertTriangle, TrendingUp, MapPin, BarChart3, Store, UploadCloud, Map, Image as ImageIcon } from 'lucide-react';
+import { Package, Search, Plus, Edit, Trash2, X, CheckCircle, List, Grid, AlertTriangle, TrendingUp, BarChart3, Store, UploadCloud, Map } from 'lucide-react';
 
 const Productos = () => {
   const [productos, setProductos] = useState([]);
@@ -20,6 +20,9 @@ const Productos = () => {
   
   const fileInputRef = useRef(null);
 
+  const [sucursalActiva, setSucursalActiva] = useState(JSON.parse(localStorage.getItem('sucursalActiva')) || null);
+  const esVistaGlobal = sucursalActiva?.id === 'ALL';
+
   const baseURL = api.defaults.baseURL ? api.defaults.baseURL.replace('/api', '') : 'http://localhost:3000';
   const getImageUrl = (path) => {
     if (!path) return null;
@@ -28,6 +31,15 @@ const Productos = () => {
   };
 
   const fetchData = async () => {
+    const currentSucursal = JSON.parse(localStorage.getItem('sucursalActiva'));
+    
+    // ✨ SI AÚN NO HAY SUCURSAL, PARAMOS LA CARGA (Evita el bucle infinito)
+    if (!currentSucursal) {
+      setProductos([]);
+      setLoading(false);
+      return; 
+    }
+
     setLoading(true);
     try {
       const prodRes = await api.get(`/productos?estado=${filtroEstado}`);
@@ -37,11 +49,20 @@ const Productos = () => {
       try {
         const sucRes = await api.get('/sucursales');
         setSucursales(sucRes.data);
-      } catch (e) { console.warn("Sucursales no cargaron"); }
+      } catch (e) {}
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchData(); }, [filtroEstado]);
+  useEffect(() => { 
+    fetchData(); 
+    
+    const handleSucursalCambiada = () => {
+      setSucursalActiva(JSON.parse(localStorage.getItem('sucursalActiva')));
+      fetchData(); 
+    };
+    window.addEventListener('sucursalCambiada', handleSucursalCambiada);
+    return () => window.removeEventListener('sucursalCambiada', handleSucursalCambiada);
+  }, [filtroEstado]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,11 +77,8 @@ const Productos = () => {
       if (imagenFile) formDataObj.append('imagen', imagenFile);
       else if (formData.imagen_url) formDataObj.append('imagen_url', formData.imagen_url);
 
-      if (formData.id) {
-        await api.put(`/productos/${formData.id}`, formDataObj, { headers: { 'Content-Type': 'multipart/form-data' } });
-      } else {
-        await api.post('/productos', formDataObj, { headers: { 'Content-Type': 'multipart/form-data' } });
-      }
+      if (formData.id) await api.put(`/productos/${formData.id}`, formDataObj, { headers: { 'Content-Type': 'multipart/form-data' } });
+      else await api.post('/productos', formDataObj, { headers: { 'Content-Type': 'multipart/form-data' } });
       setModalOpen(false);
       fetchData();
     } catch (err) { alert('Error al guardar el producto'); }
@@ -68,30 +86,18 @@ const Productos = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm("¿Seguro que deseas eliminar este producto?")) {
-      try {
-        await api.delete(`/productos/${id}`);
-        fetchData();
-      } catch (err) { alert('Error al eliminar'); }
+      try { await api.delete(`/productos/${id}`); fetchData(); } catch (err) { alert('Error al eliminar'); }
     }
   };
 
-  // ✨ LECTURA SEGURA DE JSON (Previene el pantallazo blanco)
   const abrirModal = (prod = null) => {
     if (prod) {
       let stockMap = {};
       let detalles = prod.inventario_detalle;
-      
-      // Si Postgres manda el JSON como String, lo parseamos seguro
-      if (typeof detalles === 'string') {
-        try { detalles = JSON.parse(detalles); } catch(e) { detalles = []; }
-      }
-      
+      if (typeof detalles === 'string') { try { detalles = JSON.parse(detalles); } catch(e) { detalles = []; } }
       if (Array.isArray(detalles)) {
-        detalles.forEach(inv => {
-          if (inv && inv.sucursal_id) stockMap[inv.sucursal_id] = inv.stock;
-        });
+        detalles.forEach(inv => { if (inv && inv.sucursal_id) stockMap[inv.sucursal_id] = inv.stock; });
       }
-
       setFormData({ 
         id: prod.id, nombre: prod.nombre || '', precio: prod.precio || '', 
         codigo: prod.codigo || '', categoria_id: prod.categoria_id || '', 
@@ -105,10 +111,7 @@ const Productos = () => {
   };
 
   const handleStockChange = (sucursalId, value) => {
-    setFormData(prev => ({
-      ...prev,
-      stock_sucursales: { ...prev.stock_sucursales, [sucursalId]: value }
-    }));
+    setFormData(prev => ({ ...prev, stock_sucursales: { ...prev.stock_sucursales, [sucursalId]: value } }));
   };
 
   const handleImportJSON = async (e) => {
@@ -127,7 +130,6 @@ const Productos = () => {
     e.target.value = '';
   };
 
-  // ✨ FILTRO SEGURO CONTRA NULOS
   const productosFiltrados = productos.filter(p => 
     (p.nombre || '').toLowerCase().includes(busqueda.toLowerCase()) || 
     (p.codigo || '').toLowerCase().includes(busqueda.toLowerCase())
@@ -136,13 +138,10 @@ const Productos = () => {
   const totalStock = productos.reduce((acc, p) => acc + parseInt(p.stock || 0), 0);
   const stockBajo = productos.filter(p => parseInt(p.stock || 0) < 5).length;
   
-  // ✨ EXTRACCIÓN SEGURA DE GRÁFICOS
   const stockPorSucursal = {};
   productos.forEach(p => {
     let detalles = p.inventario_detalle;
-    if (typeof detalles === 'string') {
-      try { detalles = JSON.parse(detalles); } catch(e) { detalles = []; }
-    }
+    if (typeof detalles === 'string') { try { detalles = JSON.parse(detalles); } catch(e) { detalles = []; } }
     if (Array.isArray(detalles)) {
       detalles.forEach(inv => {
         if(inv && inv.sucursal_nombre) {
@@ -158,7 +157,9 @@ const Productos = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-extrabold flex items-center gap-2 text-gray-800"><Package className="text-blue-600"/> Gestión de Inventario</h1>
-          <p className="text-sm text-gray-500 font-medium mt-1">Administra tu catálogo y monitorea el stock.</p>
+          <p className="text-sm text-gray-500 font-medium mt-1">
+            {esVistaGlobal ? 'Viendo catálogo global de la empresa' : (sucursalActiva ? `Viendo inventario de: ${sucursalActiva.nombre}` : 'No hay sucursal seleccionada')}
+          </p>
         </div>
       </div>
 
@@ -166,9 +167,11 @@ const Productos = () => {
         <button onClick={() => setTabActiva('catalogo')} className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm transition-colors ${tabActiva === 'catalogo' ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}>
           <List size={16}/> Catálogo Operativo
         </button>
-        <button onClick={() => setTabActiva('control')} className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm transition-colors ${tabActiva === 'control' ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}>
-          <BarChart3 size={16}/> Control y Monitores
-        </button>
+        {esVistaGlobal && (
+          <button onClick={() => setTabActiva('control')} className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm transition-colors ${tabActiva === 'control' ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}>
+            <BarChart3 size={16}/> Monitores Globales
+          </button>
+        )}
       </div>
 
       {tabActiva === 'catalogo' && (
@@ -208,35 +211,27 @@ const Productos = () => {
                   <tr>
                     <th className="px-6 py-4">Código</th>
                     <th className="px-6 py-4">Nombre del Producto</th>
-                    <th className="px-6 py-4">Distribución</th> 
+                    <th className="px-6 py-4">Categoría</th> 
                     <th className="px-6 py-4 text-right">Precio Base</th>
-                    <th className="px-6 py-4 text-center">Stock Total</th>
+                    <th className="px-6 py-4 text-center">{esVistaGlobal ? 'Stock Global' : 'Stock Local'}</th>
                     <th className="px-6 py-4 text-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {loading ? <tr><td colSpan="6" className="text-center py-10 font-medium">Cargando...</td></tr> : 
-                   productosFiltrados.length === 0 ? <tr><td colSpan="6" className="text-center py-10 italic text-gray-400">No hay productos.</td></tr> :
+                  {loading ? <tr><td colSpan="6" className="text-center py-10 font-medium">Cargando catálogo...</td></tr> : 
+                   !sucursalActiva ? <tr><td colSpan="6" className="text-center py-10 text-gray-400 font-medium bg-red-50">⚠️ No se ha detectado sucursal. Comunícate con el Administrador.</td></tr> :
+                   productosFiltrados.length === 0 ? <tr><td colSpan="6" className="text-center py-10 italic text-gray-400">No hay productos disponibles.</td></tr> :
                    productosFiltrados.map((prod) => {
-                    let sedesCount = 0;
-                    if (prod.inventario_detalle) {
-                      let det = prod.inventario_detalle;
-                      if (typeof det === 'string') { try { det = JSON.parse(det); } catch(e) { det = []; } }
-                      if (Array.isArray(det)) sedesCount = det.filter(i => i && i.sucursal_id).length;
-                    }
+                    const stockVisual = parseInt(prod.stock || 0);
                     return (
                     <tr key={prod.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 text-xs font-bold text-gray-400 tracking-wider">{prod.codigo || '---'}</td>
                       <td className="px-6 py-4 font-bold text-slate-800">{prod.nombre}</td>
-                      <td className="px-6 py-4">
-                        <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-1 rounded border border-purple-100 flex items-center gap-1 w-fit">
-                          <Map size={12}/> En {sedesCount} Sucursal(es)
-                        </span>
-                      </td>
+                      <td className="px-6 py-4"><span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">{prod.categoria_nombre || 'General'}</span></td>
                       <td className="px-6 py-4 text-right font-extrabold text-emerald-700">S/ {parseFloat(prod.precio).toFixed(2)}</td>
                       <td className="px-6 py-4 text-center">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold border ${prod.stock > 10 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : prod.stock > 0 ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                          {prod.stock} un.
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold border ${stockVisual > 10 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : stockVisual > 0 ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                          {stockVisual} un.
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -250,13 +245,12 @@ const Productos = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
-              {productosFiltrados.map((prod) => {
-                let sedesCount = 0;
-                if (prod.inventario_detalle) {
-                  let det = prod.inventario_detalle;
-                  if (typeof det === 'string') { try { det = JSON.parse(det); } catch(e) { det = []; } }
-                  if (Array.isArray(det)) sedesCount = det.filter(i => i && i.sucursal_id).length;
-                }
+              {!sucursalActiva ? (
+                <div className="col-span-full text-center py-10 text-red-500 font-medium bg-red-50 rounded-2xl border border-red-200">
+                  ⚠️ No tienes ninguna sucursal autorizada. Pídele al Administrador que te asigne una desde el menú Cuentas.
+                </div>
+              ) : productosFiltrados.map((prod) => {
+                const stockVisual = parseInt(prod.stock || 0);
                 return (
                 <div key={prod.id} className="bg-white rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-xl transition-all flex flex-col group overflow-hidden">
                   <div className="h-48 bg-white border-b border-slate-100 flex items-center justify-center p-4 relative">
@@ -271,12 +265,12 @@ const Productos = () => {
                     <h3 className="font-extrabold text-slate-800 text-sm leading-tight mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">{prod.nombre}</h3>
                     <div className="mt-auto flex justify-between items-end pt-4">
                       <span className="text-xl font-black text-emerald-600">S/ {parseFloat(prod.precio).toFixed(2)}</span>
-                      <span className={`text-xs font-extrabold px-2.5 py-1 rounded-md ${prod.stock > 0 ? 'bg-slate-100 text-slate-600' : 'bg-red-100 text-red-600'}`}>Total: {prod.stock} un.</span>
+                      <span className={`text-xs font-extrabold px-2.5 py-1 rounded-md ${stockVisual > 0 ? 'bg-slate-100 text-slate-600' : 'bg-red-100 text-red-600'}`}>Stock: {stockVisual} un.</span>
                     </div>
                   </div>
                   <div className="bg-slate-50 p-3 border-t border-slate-100 flex justify-between items-center">
                     <span className="text-[10px] font-extrabold uppercase text-purple-700 bg-purple-100 px-2.5 py-1.5 rounded-lg border border-purple-200 flex items-center gap-1">
-                      <Map size={12}/> {sedesCount} Sedes
+                      <Store size={12}/> {esVistaGlobal ? 'Global' : sucursalActiva?.nombre}
                     </span>
                     <div className="flex gap-2">
                       <button onClick={() => abrirModal(prod)} className="p-2 bg-white text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg border border-slate-200 shadow-sm transition-colors"><Edit size={16}/></button>
@@ -290,26 +284,26 @@ const Productos = () => {
         </div>
       )}
 
-      {tabActiva === 'control' && (
+      {tabActiva === 'control' && esVistaGlobal && (
         <div className="animate-fade-in space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-blue-600 flex justify-between items-center">
               <div>
-                <p className="text-xs font-extrabold text-gray-500 uppercase tracking-widest mb-1">Total en Stock</p>
+                <p className="text-xs font-extrabold text-gray-500 uppercase tracking-widest mb-1">Total en Stock Global</p>
                 <p className="text-3xl font-black text-slate-800">{totalStock}</p>
               </div>
               <div className="bg-blue-50 p-4 rounded-2xl text-blue-600"><Package size={28}/></div>
             </div>
             <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-yellow-500 flex justify-between items-center">
               <div>
-                <p className="text-xs font-extrabold text-gray-500 uppercase tracking-widest mb-1">Alertas Stock Bajo</p>
+                <p className="text-xs font-extrabold text-gray-500 uppercase tracking-widest mb-1">Productos con Alertas</p>
                 <p className="text-3xl font-black text-slate-800">{stockBajo}</p>
               </div>
               <div className="bg-yellow-50 p-4 rounded-2xl text-yellow-600"><AlertTriangle size={28}/></div>
             </div>
             <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-emerald-500 flex justify-between items-center">
               <div>
-                <p className="text-xs font-extrabold text-gray-500 uppercase tracking-widest mb-1">Catálogo Activo</p>
+                <p className="text-xs font-extrabold text-gray-500 uppercase tracking-widest mb-1">Catálogo Total</p>
                 <p className="text-3xl font-black text-slate-800">{productos.length}</p>
               </div>
               <div className="bg-emerald-50 p-4 rounded-2xl text-emerald-600"><TrendingUp size={28}/></div>
@@ -339,8 +333,9 @@ const Productos = () => {
         </div>
       )}
 
+      {/* MODAL CON DISTRIBUCIÓN MULTI-SUCURSAL */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8 animate-fade-in-up border border-white/50 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6 border-b pb-4">
               <h2 className="text-xl font-extrabold text-gray-800">{formData.id ? 'Editar Catálogo e Inventario' : 'Registrar Nuevo Producto'}</h2>
@@ -394,19 +389,35 @@ const Productos = () => {
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {sucursales.map(suc => (
-                      <div key={suc.id} className="bg-white border border-blue-200 p-3 rounded-xl shadow-sm">
-                        <label className="text-[10px] font-extrabold text-blue-800 uppercase block mb-1 truncate" title={suc.nombre}>{suc.nombre}</label>
-                        <input 
-                          type="number" 
-                          min="0"
-                          placeholder="0 un."
-                          className="w-full bg-blue-50 border-none rounded-lg p-2 text-sm font-black text-gray-800 outline-none focus:ring-2 focus:ring-blue-400"
-                          value={formData.stock_sucursales[suc.id] || ''}
-                          onChange={(e) => handleStockChange(suc.id, e.target.value)}
-                        />
-                      </div>
-                    ))}
+                    {sucursales.map(suc => {
+                      const usuarioDatos = JSON.parse(localStorage.getItem('usuario') || '{}');
+                      let asignadas = [];
+                      try {
+                        if (Array.isArray(usuarioDatos.sucursales_asignadas)) asignadas = usuarioDatos.sucursales_asignadas;
+                        else if (typeof usuarioDatos.sucursales_asignadas === 'string') {
+                          let p = JSON.parse(usuarioDatos.sucursales_asignadas);
+                          if (typeof p === 'string') p = JSON.parse(p);
+                          if (Array.isArray(p)) asignadas = p;
+                        }
+                      } catch(e){}
+                      
+                      const puedeEditar = usuarioDatos.rol === 'Administrador' || asignadas.map(id => parseInt(id)).includes(parseInt(suc.id));
+                      if (!puedeEditar) return null;
+
+                      return (
+                        <div key={suc.id} className="bg-white border border-blue-200 p-3 rounded-xl shadow-sm">
+                          <label className="text-[10px] font-extrabold text-blue-800 uppercase block mb-1 truncate" title={suc.nombre}>{suc.nombre}</label>
+                          <input 
+                            type="number" 
+                            min="0"
+                            placeholder="0 un."
+                            className="w-full bg-blue-50 border-none rounded-lg p-2 text-sm font-black text-gray-800 outline-none focus:ring-2 focus:ring-blue-400"
+                            value={formData.stock_sucursales[suc.id] || ''}
+                            onChange={(e) => handleStockChange(suc.id, e.target.value)}
+                          />
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>

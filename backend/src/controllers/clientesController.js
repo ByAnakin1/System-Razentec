@@ -4,10 +4,27 @@ const { registrarLog } = require('../services/logService');
 const clientesController = {
   listar: async (req, res) => {
     try {
-      const query = 'SELECT * FROM clientes WHERE empresa_id = $1 OR empresa_id IS NULL ORDER BY created_at DESC';
-      const { rows } = await pool.query(query, [req.user.empresa_id]);
+      const sucursalId = req.headers['x-sucursal-id'];
+
+      let query = `
+        SELECT c.*, s.nombre as sucursal_nombre 
+        FROM clientes c
+        LEFT JOIN sucursales s ON c.sucursal_id = s.id
+        WHERE (c.empresa_id = $1 OR c.empresa_id IS NULL)
+      `;
+      const params = [req.user.empresa_id];
+
+      // ✨ AISLAMIENTO ESTRICTO: Solo trae los de la sucursal seleccionada
+      if (sucursalId) {
+        query += ' AND c.sucursal_id = $2';
+        params.push(sucursalId);
+      }
+      query += ' ORDER BY c.created_at DESC';
+
+      const { rows } = await pool.query(query, params);
       res.json(rows);
     } catch (error) {
+      console.error(error);
       res.status(500).json({ error: 'Error al obtener clientes' });
     }
   },
@@ -16,39 +33,44 @@ const clientesController = {
     try {
       const nombre_completo = req.body.nombre_completo || req.body.nombre;
       const documento_identidad = req.body.documento_identidad || req.body.dni;
-      const { email, telefono, direccion } = req.body;
+      const { email, telefono, direccion, sucursal_id } = req.body; 
 
       if (!nombre_completo) return res.status(400).json({ error: 'El nombre es obligatorio' });
 
+      const finalSucursalId = sucursal_id ? parseInt(sucursal_id) : (req.headers['x-sucursal-id'] ? parseInt(req.headers['x-sucursal-id']) : null);
+
       const query = `
-        INSERT INTO clientes (empresa_id, nombre_completo, documento_identidad, email, telefono, direccion) 
-        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+        INSERT INTO clientes (empresa_id, nombre_completo, documento_identidad, email, telefono, direccion, sucursal_id) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *
       `;
-      const { rows } = await pool.query(query, [req.user.empresa_id, nombre_completo, documento_identidad, email, telefono, direccion]);
+      const { rows } = await pool.query(query, [req.user.empresa_id, nombre_completo, documento_identidad, email, telefono, direccion, finalSucursalId]);
       
       await registrarLog(req.user.id, req.user.empresa_id, 'CREAR', 'Clientes', `Registró al cliente: "${nombre_completo}".`);
       res.status(201).json(rows[0]);
     } catch (error) {
-      res.status(500).json({ error: 'Error al crear cliente' });
+      console.error(error);
+      res.status(500).json({ error: 'Error BD: Verifica haber creado la columna sucursal_id' });
     }
   },
 
   actualizar: async (req, res) => {
     try {
       const { id } = req.params;
-      const { nombre_completo, documento_identidad, email, telefono, direccion } = req.body;
+      const { nombre_completo, documento_identidad, email, telefono, direccion, sucursal_id } = req.body;
+      const finalSucId = sucursal_id ? parseInt(sucursal_id) : null;
       
       const query = `
-        UPDATE clientes SET nombre_completo = $1, documento_identidad = $2, email = $3, telefono = $4, direccion = $5 
-        WHERE id = $6 AND (empresa_id = $7 OR empresa_id IS NULL) RETURNING *
+        UPDATE clientes SET nombre_completo = $1, documento_identidad = $2, email = $3, telefono = $4, direccion = $5, sucursal_id = $6
+        WHERE id = $7 AND (empresa_id = $8 OR empresa_id IS NULL) RETURNING *
       `;
-      const { rows } = await pool.query(query, [nombre_completo, documento_identidad, email, telefono, direccion, id, req.user.empresa_id]);
+      const { rows } = await pool.query(query, [nombre_completo, documento_identidad, email, telefono, direccion, finalSucId, id, req.user.empresa_id]);
       
       if (rows.length === 0) return res.status(404).json({ error: 'Cliente no encontrado' });
       
       await registrarLog(req.user.id, req.user.empresa_id, 'ACTUALIZAR', 'Clientes', `Actualizó los datos del cliente: "${nombre_completo}".`);
       res.json(rows[0]);
     } catch (error) {
+      console.error(error);
       res.status(500).json({ error: 'Error al actualizar cliente' });
     }
   },
@@ -57,9 +79,7 @@ const clientesController = {
     try {
       const { id } = req.params;
       const { rowCount } = await pool.query('DELETE FROM clientes WHERE id = $1 AND (empresa_id = $2 OR empresa_id IS NULL)', [id, req.user.empresa_id]);
-      
       if (rowCount === 0) return res.status(404).json({ error: 'Cliente no encontrado' });
-      
       await registrarLog(req.user.id, req.user.empresa_id, 'ELIMINAR', 'Clientes', `Eliminó un cliente del sistema.`);
       res.json({ message: 'Cliente eliminado' });
     } catch (error) {

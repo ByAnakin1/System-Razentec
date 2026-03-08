@@ -1,43 +1,61 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import Layout from '../components/Layout';
-import { MapPin, Plus, Trash2, Package, Search, X, Store, AlertOctagon, CheckCircle, TrendingUp } from 'lucide-react';
+import { MapPin, Plus, Trash2, Package, Search, X, Store, AlertOctagon, CheckCircle, TrendingUp, Navigation } from 'lucide-react';
 
 const Sucursales = () => {
   const [sucursales, setSucursales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [busqueda, setBusqueda] = useState('');
-  const [formData, setFormData] = useState({ nombre: '', direccion: '' });
+  
+  // ✨ AÑADIMOS LATITUD Y LONGITUD AL ESTADO
+  const [formData, setFormData] = useState({ nombre: '', direccion: '', latitud: '', longitud: '' });
   
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [gpsLoading, setGpsLoading] = useState(false);
 
   const fetchSucursales = async () => {
     try {
       const res = await api.get('/sucursales');
       setSucursales(res.data);
-    } catch (err) { 
-      console.error("Error al cargar sucursales:", err); 
-    } finally { 
-      setLoading(false); 
-    }
+    } catch (err) { console.error("Error al cargar sucursales:", err); } finally { setLoading(false); }
   };
 
   useEffect(() => { fetchSucursales(); }, []);
 
+  // ✨ FUNCIÓN PARA CAPTURAR COORDENADAS AL CREAR SUCURSAL
+  const obtenerCoordenadas = () => {
+    setGpsLoading(true);
+    if (!navigator.geolocation) {
+      setErrorMsg("Tu navegador no soporta GPS.");
+      setGpsLoading(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setFormData({ ...formData, latitud: pos.coords.latitude, longitud: pos.coords.longitude });
+        setGpsLoading(false);
+      },
+      (err) => {
+        setErrorMsg("Permite el acceso a la ubicación en tu navegador.");
+        setGpsLoading(false);
+      }
+    );
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
-    setErrorMsg(''); // Limpiamos errores previos
+    setErrorMsg(''); 
     try {
       await api.post('/sucursales', formData);
       setModalOpen(false);
-      setFormData({ nombre: '', direccion: '' });
+      setFormData({ nombre: '', direccion: '', latitud: '', longitud: '' });
       setSuccessMsg('¡Sucursal registrada con éxito!');
       setTimeout(() => setSuccessMsg(''), 3000);
       fetchSucursales();
     } catch (err) { 
-      console.error(err);
       setErrorMsg(err.response?.data?.error || 'Error de conexión con el servidor.');
     }
   };
@@ -49,17 +67,11 @@ const Sucursales = () => {
         setSuccessMsg('Sucursal eliminada');
         setTimeout(() => setSuccessMsg(''), 3000);
         fetchSucursales();
-      } catch (err) { 
-        alert(err.response?.data?.error || 'Error al eliminar. Verifica si hay productos vinculados.'); 
-      }
+      } catch (err) { alert(err.response?.data?.error || 'Error al eliminar. Verifica si hay productos vinculados.'); }
     }
   };
 
-  const totales = {
-    sucursales: sucursales.length,
-    stock: sucursales.reduce((acc, s) => acc + parseInt(s.total_stock || 0), 0)
-  };
-
+  const totales = { sucursales: sucursales.length, stock: sucursales.reduce((acc, s) => acc + parseInt(s.total_stock || 0), 0) };
   const filtradas = sucursales.filter(s => s.nombre.toLowerCase().includes(busqueda.toLowerCase()));
 
   return (
@@ -121,12 +133,26 @@ const Sucursales = () => {
             
             <form onSubmit={handleSave} className="space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Nombre de Sucursal <span className="text-red-500">*</span></label>
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Nombre de Sucursal *</label>
                 <input required autoFocus type="text" className="w-full border-2 border-gray-200 p-3 rounded-xl focus:border-blue-500 outline-none font-bold text-gray-800 mt-1 transition-colors" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} placeholder="Ej. Sede Norte"/>
               </div>
               <div>
                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Dirección Completa</label>
                 <input type="text" className="w-full border-2 border-gray-200 p-3 rounded-xl focus:border-blue-500 outline-none font-medium text-gray-600 mt-1 transition-colors" value={formData.direccion} onChange={e => setFormData({...formData, direccion: e.target.value})} placeholder="Av. Principal 123..."/>
+              </div>
+
+              {/* ✨ CAPTURA DE COORDENADAS */}
+              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                <div className="flex justify-between items-center mb-3">
+                  <label className="text-[10px] font-bold text-blue-700 uppercase tracking-widest flex items-center gap-1"><Navigation size={12}/> Ubicación GPS</label>
+                  <button type="button" onClick={obtenerCoordenadas} disabled={gpsLoading} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-blue-700 transition-colors flex items-center gap-1">
+                    {gpsLoading ? 'Ubicando...' : '📍 Autodetectar'}
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <input type="text" placeholder="Latitud" className="w-full border border-blue-200 p-2 rounded-lg outline-none text-xs font-mono text-gray-600" value={formData.latitud} onChange={e => setFormData({...formData, latitud: e.target.value})} />
+                  <input type="text" placeholder="Longitud" className="w-full border border-blue-200 p-2 rounded-lg outline-none text-xs font-mono text-gray-600" value={formData.longitud} onChange={e => setFormData({...formData, longitud: e.target.value})} />
+                </div>
               </div>
 
               {errorMsg && (

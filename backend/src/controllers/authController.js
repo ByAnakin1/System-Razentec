@@ -20,12 +20,30 @@ const parseCategoriasSeguras = (cat) => {
   return [];
 };
 
+// ✨ NUEVO: Limpiador seguro para el arreglo de sucursales (Evita crasheos)
+const parseSucursalesSeguras = (suc) => {
+  if (!suc) return [];
+  try {
+    if (Array.isArray(suc)) return suc;
+    if (typeof suc === 'string') {
+      let parsed = JSON.parse(suc);
+      if (typeof parsed === 'string') parsed = JSON.parse(parsed); 
+      return Array.isArray(parsed) ? parsed : [];
+    }
+  } catch (e) {
+    console.error("Error limpiando sucursales:", e);
+  }
+  return [];
+};
+
 const authController = {
   login: async (req, res) => {
     try {
       const { email, password } = req.body;
+      
+      // ✨ INYECCIÓN: Agregamos u.sucursales_asignadas a la consulta
       const query = `
-        SELECT u.id, u.empresa_id, u.email, u.password_hash, u.rol, u.categorias, u.area_cargo,
+        SELECT u.id, u.empresa_id, u.email, u.password_hash, u.rol, u.categorias, u.area_cargo, u.sucursales_asignadas,
                e.nombre_completo, e.avatar, e.dni, e.telefono, e.correo_personal 
         FROM usuarios u
         LEFT JOIN empleados e ON u.empleado_id = e.id
@@ -40,6 +58,7 @@ const authController = {
       if (!validPassword) return res.status(401).json({ error: 'Credenciales inválidas' });
 
       const catsLimpias = parseCategoriasSeguras(usuario.categorias);
+      const sucsLimpias = parseSucursalesSeguras(usuario.sucursales_asignadas); // ✨ Limpiamos las sucursales
 
       const token = jwt.sign(
         { id: usuario.id, empresa_id: usuario.empresa_id, rol: usuario.rol, categorias: catsLimpias },
@@ -56,6 +75,7 @@ const authController = {
         'El usuario inició sesión en el sistema.'
       );
 
+      // ✨ INYECCIÓN: Enviamos las sucursales asignadas al Frontend
       res.json({
         token,
         usuario: {
@@ -65,6 +85,7 @@ const authController = {
           email: usuario.email,
           rol: usuario.rol,
           categorias: catsLimpias, 
+          sucursales_asignadas: sucsLimpias, // ✨ Dato vital para el Layout.jsx
           avatar: usuario.avatar,
           dni: usuario.dni,
           telefono: usuario.telefono,
@@ -79,8 +100,9 @@ const authController = {
 
   me: async (req, res) => {
     try {
+      // ✨ INYECCIÓN: Agregamos u.sucursales_asignadas a la consulta
       const query = `
-        SELECT u.id, u.email, u.rol, u.categorias, u.area_cargo, 
+        SELECT u.id, u.email, u.rol, u.categorias, u.area_cargo, u.sucursales_asignadas,
                e.nombre_completo as nombre, e.avatar, e.dni, e.telefono, e.correo_personal 
         FROM usuarios u
         LEFT JOIN empleados e ON u.empleado_id = e.id
@@ -94,6 +116,7 @@ const authController = {
       if (!usuario.nombre) usuario.nombre = 'Usuario';
       
       usuario.categorias = parseCategoriasSeguras(usuario.categorias);
+      usuario.sucursales_asignadas = parseSucursalesSeguras(usuario.sucursales_asignadas); // ✨ Dato vital
       
       res.json(usuario);
     } catch (error) {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, CheckCircle, FileText, Trash2, History } from 'lucide-react'; 
+import { AlertCircle, CheckCircle, FileText, Trash2, History, Store } from 'lucide-react'; 
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 
@@ -9,17 +9,25 @@ const HistorialVentas = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Estados para los modales animados
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [ventaToDelete, setVentaToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  useEffect(() => {
-    fetchVentas();
-  }, []);
+  // ✨ ESTADO GLOBAL PARA SABER EN QUÉ VISTA ESTAMOS
+  const [sucursalActiva, setSucursalActiva] = useState(JSON.parse(localStorage.getItem('sucursalActiva')) || null);
+  const esVistaGlobal = sucursalActiva?.id === 'ALL';
 
   const fetchVentas = async () => {
+    // 🚨 SEMÁFORO: Si no hay sucursal definida, espera.
+    const currentSucursal = JSON.parse(localStorage.getItem('sucursalActiva'));
+    if (!currentSucursal) {
+      setVentas([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await api.get('/ventas');
       setVentas(res.data);
@@ -30,7 +38,18 @@ const HistorialVentas = () => {
     }
   };
 
-  // ✨ FUNCIÓN DE HORA DE PERÚ
+  useEffect(() => {
+    fetchVentas();
+    
+    // ✨ RECARGA AUTOMÁTICA AL CAMBIAR DE SUCURSAL ARRIBA
+    const handleSucursalCambiada = () => {
+      setSucursalActiva(JSON.parse(localStorage.getItem('sucursalActiva')));
+      fetchVentas(); 
+    };
+    window.addEventListener('sucursalCambiada', handleSucursalCambiada);
+    return () => window.removeEventListener('sucursalCambiada', handleSucursalCambiada);
+  }, []);
+
   const formatearFecha = (fechaISO) => {
     if (!fechaISO) return '';
     const date = fechaISO.endsWith('Z') ? new Date(fechaISO) : new Date(`${fechaISO}Z`);
@@ -51,19 +70,15 @@ const HistorialVentas = () => {
 
     try {
       await api.delete(`/ventas/${ventaToDelete}`);
-      
       setShowDeleteModal(false);
       setVentas(ventas.filter(venta => venta.id !== ventaToDelete));
       setShowSuccess(true);
-      
       setTimeout(() => {
         setShowSuccess(false);
         setVentaToDelete(null);
       }, 2000);
-
     } catch (error) {
       alert("Error al eliminar la venta. Revisa la consola del backend.");
-      console.error(error);
     } finally {
       setIsDeleting(false);
     }
@@ -75,22 +90,27 @@ const HistorialVentas = () => {
         <History className="text-blue-600" size={28} />
         <div>
           <h1 className="text-2xl font-extrabold text-gray-800">Historial de Ventas</h1>
-          <p className="text-gray-500 text-sm mt-1 font-medium">Listado de transacciones realizadas</p>
+          <p className="text-gray-500 text-sm mt-1 font-medium">
+            {esVistaGlobal ? 'Viendo todas las transacciones de la empresa' : `Viendo transacciones de: ${sucursalActiva?.nombre || '...'}`}
+          </p>
         </div>
       </div>
 
-      {/* ✨ TABLA REDISEÑADA CON BORDES OSCUROS (GRID) */}
       <div className="bg-white rounded-xl shadow-md border-2 border-slate-300 overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-slate-500 font-bold">Cargando ventas...</div>
+        ) : !sucursalActiva ? (
+          <div className="p-8 text-center text-red-500 font-bold bg-red-50">⚠️ No se ha detectado sucursal autorizada.</div>
         ) : ventas.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 font-bold">No hay ventas registradas.</div>
+          <div className="p-8 text-center text-slate-500 font-bold">No hay ventas registradas en esta vista.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead className="bg-slate-100 text-slate-800 border-b-2 border-slate-300 uppercase text-xs font-extrabold tracking-wider">
                 <tr>
                   <th className="py-4 px-5 border-r border-slate-300 w-32 text-center">ID Venta</th>
+                  {/* ✨ COLUMNA SUCURSAL SOLO SI ESTÁ EN MODO GLOBAL */}
+                  {esVistaGlobal && <th className="py-4 px-5 border-r border-slate-300">Sucursal</th>}
                   <th className="py-4 px-5 border-r border-slate-300">Fecha</th>
                   <th className="py-4 px-5 border-r border-slate-300">Cliente</th>
                   <th className="py-4 px-5 border-r border-slate-300 text-right w-40">Total</th>
@@ -103,6 +123,16 @@ const HistorialVentas = () => {
                     <td className="py-3 px-5 font-bold text-slate-800 border-r border-slate-200 text-center font-mono">
                       #{String(venta.id).padStart(5, '0')}
                     </td>
+                    
+                    {/* ✨ ETIQUETA SUCURSAL */}
+                    {esVistaGlobal && (
+                      <td className="py-3 px-5 border-r border-slate-200">
+                        <span className="text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-1 rounded flex items-center gap-1 w-max">
+                          <Store size={12}/> {venta.sucursal_nombre || 'Local no asignado'}
+                        </span>
+                      </td>
+                    )}
+
                     <td className="py-3 px-5 text-slate-600 font-medium border-r border-slate-200">
                       {formatearFecha(venta.created_at)}
                     </td>
@@ -136,7 +166,6 @@ const HistorialVentas = () => {
         )}
       </div>
 
-      {/* MODALES ANIMADOS */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
           <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center transform scale-100 transition-transform border border-white/50">
@@ -145,21 +174,13 @@ const HistorialVentas = () => {
             </div>
             <h3 className="text-2xl font-extrabold text-gray-800 mb-2">¿Eliminar esta venta?</h3>
             <p className="text-sm text-gray-500 mb-8 font-medium">
-              Estás a punto de borrar la venta <b className="text-gray-800">#{String(ventaToDelete).padStart(5, '0')}</b>. Esta acción es permanente y no podrás recuperarla.
+              Estás a punto de borrar la venta <b className="text-gray-800">#{String(ventaToDelete).padStart(5, '0')}</b>. Esta acción es permanente y devolverá el stock al inventario.
             </p>
             <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-3 border-2 border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl font-bold transition-colors disabled:opacity-50"
-              >
+              <button onClick={() => setShowDeleteModal(false)} disabled={isDeleting} className="flex-1 px-4 py-3 border-2 border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl font-bold transition-colors disabled:opacity-50">
                 Cancelar
               </button>
-              <button
-                onClick={confirmDelete}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-red-600/30 disabled:opacity-50 flex justify-center items-center"
-              >
+              <button onClick={confirmDelete} disabled={isDeleting} className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-red-600/30 disabled:opacity-50 flex justify-center items-center">
                 {isDeleting ? 'Borrando...' : 'Sí, eliminar'}
               </button>
             </div>
@@ -178,7 +199,6 @@ const HistorialVentas = () => {
           </div>
         </div>
       )}
-
     </Layout>
   );
 };

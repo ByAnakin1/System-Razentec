@@ -3,14 +3,27 @@ const { pool } = require('../config/db');
 const empleadosController = {
   listar: async (req, res) => {
     try {
-      const query = `
-        SELECT e.*, u.rol, u.email as correo_corporativo, u.categorias, u.area_cargo 
+      const sucursalId = req.headers['x-sucursal-id'];
+
+      // ✨ LEEMOS EL ARREGLO DE SUCURSALES DESDE USUARIOS
+      let query = `
+        SELECT e.*, u.rol, u.email as correo_corporativo, u.categorias, u.area_cargo, u.sucursales_asignadas 
         FROM empleados e 
         LEFT JOIN usuarios u ON e.id = u.empleado_id 
         WHERE e.empresa_id = $1
-        ORDER BY e.created_at DESC
       `;
-      const { rows } = await pool.query(query, [req.user.empresa_id]);
+      const params = [req.user.empresa_id];
+
+      // ✨ FILTRO ESTRICTO: Solo trae empleados que tengan esta sucursal en su arreglo JSON
+      if (sucursalId) {
+        query += ` AND (u.sucursales_asignadas::jsonb @> $2::jsonb OR u.id IS NULL)`;
+        // Convertimos el ID en un arreglo JSON para que postgres pueda buscarlo dentro de sucursales_asignadas
+        params.push(JSON.stringify([parseInt(sucursalId)])); 
+      }
+      
+      query += ` ORDER BY e.created_at DESC`;
+
+      const { rows } = await pool.query(query, params);
       res.json(rows);
     } catch (error) {
       res.status(500).json({ error: 'Error al listar empleados' });
