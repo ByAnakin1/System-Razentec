@@ -1,5 +1,9 @@
 const { pool } = require('../config/db');
 const { registrarLog } = require('../services/logService');
+const { createClient } = require('@supabase/supabase-js');
+
+// ✨ Inicializamos Supabase con las variables de tu .env
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 const productosController = {
   listar: async (req, res) => {
@@ -33,17 +37,29 @@ const productosController = {
 
   crear: async (req, res) => {
     try {
-      // ⚠️ Cambiamos req.body.imagen por req.body.imagen_url
       const { nombre, descripcion, imagen_url, precio, stock, codigo, categoria_id } = req.body;
       
       if (!nombre || nombre.trim() === '') return res.status(400).json({ error: 'El nombre es obligatorio.' });
 
-      // Lógica de imagen
+      // ✨ Lógica de imagen con Supabase
       let imagenFinal = null;
       if (req.file) {
-        imagenFinal = `/uploads/${req.file.filename}`;
+        const fileName = `${Date.now()}-${req.file.originalname.replace(/\s+/g, '-')}`;
+        
+        const { data, error } = await supabase.storage
+          .from('productos')
+          .upload(fileName, req.file.buffer, { contentType: req.file.mimetype });
+
+        if (error) {
+          console.error("Error subiendo a Supabase:", error);
+          return res.status(500).json({ error: 'Error al subir la imagen a la nube.' });
+        }
+
+        const { data: publicUrlData } = supabase.storage.from('productos').getPublicUrl(fileName);
+        imagenFinal = publicUrlData.publicUrl;
+
       } else if (imagen_url && imagen_url.trim() !== '') {
-        imagenFinal = imagen_url; // Guarda el link
+        imagenFinal = imagen_url;
       }
 
       const catIdValid = categoria_id ? parseInt(categoria_id, 10) : null;
@@ -61,7 +77,7 @@ const productosController = {
         [req.user.empresa_id, nuevoProductoId, 1, stockValid, 5]
       );
 
-      await registrarLog(req.user.id, req.user.empresa_id, 'CREAR', 'Inventario', `Registró el nuevo producto: "${nombre}"`, nuevoProductoId);
+      await registrarLog(req.user.id, req.user.empresa_id, 'CREAR', 'Inventario', `Registró el nuevo producto: "${nombre}"`);
 
       res.status(201).json({ message: 'Producto creado con éxito' });
     } catch (error) {
@@ -71,24 +87,20 @@ const productosController = {
   },
 
   crearGranel: async (req, res) => {
+    // ... (Se mantiene igual, no requiere cambios de fotos porque las importaciones usan URLs)
     const client = await pool.connect();
     try {
       const { productos } = req.body;
-
       if (!Array.isArray(productos) || productos.length === 0) {
         return res.status(400).json({ error: 'El archivo JSON no contiene productos válidos.' });
       }
 
-      await client.query('BEGIN'); // 🚀 Iniciamos transacción
-
-      // Obtenemos la sucursal principal
+      await client.query('BEGIN');
       const sucursalRes = await client.query('SELECT id FROM sucursales WHERE empresa_id = $1 LIMIT 1', [req.user.empresa_id]);
       const sucursalId = sucursalRes.rows.length > 0 ? sucursalRes.rows[0].id : null;
-
       let insertados = 0;
 
       for (const prod of productos) {
-        // Validación básica: Si no tiene nombre, lo saltamos
         if (!prod.nombre || prod.nombre.trim() === '') continue;
 
         const precio = parseFloat(prod.precio) || 0;
@@ -98,38 +110,31 @@ const productosController = {
         const stockValid = prod.stock ? parseInt(prod.stock, 10) : 0;
         const imagenFinal = prod.imagen_url || null;
 
-        // 1. Insertar el Producto
         const insertProducto = await client.query(
           'INSERT INTO productos (empresa_id, nombre, descripcion, imagen, precio_base, sku, categoria_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
           [req.user.empresa_id, prod.nombre, descripcion, imagenFinal, precio, codigo, catIdValid]
         );
-        
         const nuevoProductoId = insertProducto.rows[0].id;
 
-        // 2. Insertar en Inventario
         await client.query(
           'INSERT INTO inventario (empresa_id, producto_id, sucursal_id, stock_actual, punto_reposicion) VALUES ($1, $2, $3, $4, $5)',
           [req.user.empresa_id, nuevoProductoId, sucursalId, stockValid, 5]
         );
 
-        // 3. (Opcional) Registrar movimiento de entrada si hay stock
         if (stockValid > 0) {
           await client.query(
             'INSERT INTO movimientos_almacen (empresa_id, producto_id, sucursal_id, usuario_id, tipo_movimiento, motivo, cantidad) VALUES ($1, $2, $3, $4, $5, $6, $7)',
             [req.user.empresa_id, nuevoProductoId, sucursalId, req.user.id, 'ENTRADA', 'Importación masiva JSON', stockValid]
           );
         }
-
         insertados++;
       }
 
-      await client.query('COMMIT'); // ✅ Confirmamos todos los productos
+      await client.query('COMMIT');
       await registrarLog(req.user.id, req.user.empresa_id, 'CREAR', 'Inventario', `Importó masivamente ${insertados} productos mediante JSON.`);
-      
       res.status(201).json({ message: `Se importaron ${insertados} productos con éxito.` });
-
     } catch (error) {
-      await client.query('ROLLBACK'); // ❌ Si algo falla, deshacemos todo
+      await client.query('ROLLBACK');
       console.error('Error importando JSON:', error);
       res.status(500).json({ error: 'Error al importar los productos del JSON' });
     } finally {
@@ -140,19 +145,32 @@ const productosController = {
   actualizar: async (req, res) => {
     try {
       const { id } = req.params;
-      // ⚠️ No recibimos "stock" aquí, para no sobrescribirlo accidentalmente
       const { nombre, descripcion, imagen_url, precio, codigo, categoria_id } = req.body; 
       
       if (!nombre || nombre.trim() === '') return res.status(400).json({ error: 'El nombre es obligatorio.' });
 
-      // 1. Recuperar los datos actuales del producto para no borrar la imagen vieja si no la cambian
       const prodActual = await pool.query('SELECT imagen FROM productos WHERE id = $1 AND empresa_id = $2', [id, req.user.empresa_id]);
       if (prodActual.rowCount === 0) return res.status(404).json({ error: 'Producto no encontrado' });
 
-      let imagenFinal = prodActual.rows[0].imagen; // Mantenemos la actual por defecto
+      // Mantenemos la actual por defecto
+      let imagenFinal = prodActual.rows[0].imagen; 
 
+      // ✨ Lógica de imagen con Supabase
       if (req.file) {
-        imagenFinal = `/uploads/${req.file.filename}`;
+        const fileName = `${Date.now()}-${req.file.originalname.replace(/\s+/g, '-')}`;
+        
+        const { data, error } = await supabase.storage
+          .from('productos')
+          .upload(fileName, req.file.buffer, { contentType: req.file.mimetype });
+
+        if (error) {
+          console.error("Error subiendo a Supabase:", error);
+          return res.status(500).json({ error: 'Error al subir la nueva imagen.' });
+        }
+
+        const { data: publicUrlData } = supabase.storage.from('productos').getPublicUrl(fileName);
+        imagenFinal = publicUrlData.publicUrl;
+
       } else if (imagen_url !== undefined) {
         imagenFinal = imagen_url.trim() !== '' ? imagen_url : null;
       }
@@ -164,10 +182,7 @@ const productosController = {
         [nombre, descripcion || null, imagenFinal, precio, codigo, catIdValid, id, req.user.empresa_id]
       );
 
-      // ⚠️ ELIMINADA la actualización del "inventario". 
-      // Si editas el nombre o la foto, el stock se mantiene intacto.
-
-      await registrarLog(req.user.id, req.user.empresa_id, 'EDITAR', 'Inventario', `Actualizó el producto: "${nombre}"`, id);
+      await registrarLog(req.user.id, req.user.empresa_id, 'EDITAR', 'Inventario', `Actualizó el producto: "${nombre}"`);
 
       res.json({ message: 'Producto actualizado correctamente' });
     } catch (error) {
