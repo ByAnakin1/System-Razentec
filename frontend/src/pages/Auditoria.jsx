@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import Layout from '../components/Layout';
-import { Activity, Clock, User, Search, Eye, X, ChevronLeft, ChevronRight, CalendarDays, LogIn, LogOut } from 'lucide-react';
+import { Activity, Clock, User, Search, Eye, X, ChevronLeft, ChevronRight, CalendarDays, LogIn, LogOut, Store } from 'lucide-react';
 
 const Auditoria = () => {
   const [logs, setLogs] = useState([]);
   const [usuariosDB, setUsuariosDB] = useState([]); 
+  const [sucursales, setSucursales] = useState([]); 
   const [loading, setLoading] = useState(true);
   
   const [viewMode, setViewMode] = useState('all'); 
@@ -17,22 +18,36 @@ const Auditoria = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [logDetail, setLogDetail] = useState(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [resLogs, resUsuarios] = await Promise.all([
-          api.get('/auditoria'),
-          api.get('/usuarios')
-        ]);
-        setLogs(resLogs.data);
-        setUsuariosDB(resUsuarios.data);
-      } catch (error) {
-        console.error("Error al cargar datos:", error);
-      } finally {
-        setLoading(false);
-      }
+  // ✨ SEMÁFORO Y VISTA GLOBAL
+  const [sucursalActiva, setSucursalActiva] = useState(JSON.parse(localStorage.getItem('sucursalActiva')) || null);
+  const esVistaGlobal = sucursalActiva?.id === 'ALL';
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [resLogs, resUsuarios, resSucs] = await Promise.all([
+        api.get('/auditoria'),
+        api.get('/usuarios'),
+        api.get('/sucursales')
+      ]);
+      setLogs(resLogs.data);
+      setUsuariosDB(resUsuarios.data);
+      setSucursales(resSucs.data);
+    } catch (error) {
+      console.error("Error al cargar datos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { 
+    fetchData(); 
+    // ✨ ESCUCHADOR PARA RECARGAR EL FILTRO AL CAMBIAR DE LOCAL ARRIBA
+    const handleSucursalCambiada = () => {
+      setSucursalActiva(JSON.parse(localStorage.getItem('sucursalActiva')));
     };
-    fetchData();
+    window.addEventListener('sucursalCambiada', handleSucursalCambiada);
+    return () => window.removeEventListener('sucursalCambiada', handleSucursalCambiada);
   }, []);
 
   const parseDateUTC = (dateString) => {
@@ -82,6 +97,20 @@ const Auditoria = () => {
     return currentDate.toLocaleDateString('es-PE', opciones).toUpperCase();
   };
 
+  // Helper Seguro
+  const parseJsonArray = (data) => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (typeof data === 'string') {
+      try {
+        let parsed = JSON.parse(data);
+        if (typeof parsed === 'string') parsed = JSON.parse(parsed); 
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) { return []; }
+    }
+    return [];
+  };
+
   const logsFiltradosPorFecha = logs.filter(log => {
     if (viewMode === 'all') return true;
     const logDate = parseDateUTC(log.created_at);
@@ -95,10 +124,11 @@ const Auditoria = () => {
   usuariosDB.forEach(u => {
     userMap[u.id] = {
       id: u.id,
-      nombre: u.nombre_completo || 'Usuario Desconocido',
+      nombre: u.empleado_nombre || u.email || 'Usuario Desconocido',
       avatar: u.avatar,
       rol: u.rol,
       area: u.area_cargo || 'Sin designar',
+      sucursales_asignadas: u.sucursales_asignadas, 
       total_acciones: 0,
       ultima_accion: null, 
       logs: []
@@ -115,6 +145,7 @@ const Auditoria = () => {
         avatar: log.avatar,
         rol: log.rol || 'N/A',
         area: log.area_cargo || 'N/A',
+        sucursales_asignadas: log.sucursales_asignadas,
         total_acciones: 0,
         ultima_accion: null,
         logs: []
@@ -129,10 +160,24 @@ const Auditoria = () => {
     }
   });
 
-  let usuariosMostrados = Object.values(userMap).filter(u => 
-    u.nombre.toLowerCase().includes(searchUser.toLowerCase()) || 
-    u.area.toLowerCase().includes(searchUser.toLowerCase())
-  );
+  // ✨ FILTRO ESTRICTO PARA LA AUDITORÍA
+  let usuariosMostrados = Object.values(userMap).filter(u => {
+    // 1. Filtro de Búsqueda Textual
+    const coincideTexto = u.nombre.toLowerCase().includes(searchUser.toLowerCase()) || 
+                          u.area.toLowerCase().includes(searchUser.toLowerCase());
+    
+    if (!coincideTexto) return false;
+
+    // 2. Filtro de Sucursal
+    if (esVistaGlobal) return true;
+    if (!sucursalActiva) return false;
+
+    const asignadas = parseJsonArray(u.sucursales_asignadas).map(id => parseInt(id, 10));
+    const perteneceASucursal = asignadas.includes(parseInt(sucursalActiva.id, 10));
+
+    // Si es Administrador, aparece en todos los historiales porque tiene poder global
+    return perteneceASucursal || u.rol === 'Administrador';
+  });
 
   usuariosMostrados.sort((a, b) => {
     if (b.total_acciones !== a.total_acciones) return b.total_acciones - a.total_acciones;
@@ -171,18 +216,25 @@ const Auditoria = () => {
     return [...logsFiltrados].reverse();
   };
 
+  const obtenerNombresSucursales = (arrStr) => {
+    const arr = parseJsonArray(arrStr);
+    if (arr.length === 0) return 'Sin asignar';
+    const nombres = arr.map(id => sucursales.find(s => s.id === parseInt(id))?.nombre).filter(Boolean);
+    if (nombres.length === sucursales.length && sucursales.length > 0) return 'Todas las Sucursales';
+    return nombres.join(', ') || 'Desconocida';
+  };
+
   return (
     <Layout>
-      {/* ✨ TÍTULO FUERA DEL BLOQUE BLANCO */}
       <div className="mb-5 px-1">
-        <h1 className="text-2xl font-extrabold flex items-center gap-2 text-gray-800"><Activity className="text-blue-600" /> Auditoría</h1>
-        <p className="text-sm text-gray-500 mt-1 font-medium">Panel de control de actividad de todos los usuarios.</p>
+        <h1 className="text-2xl font-extrabold flex items-center gap-2 text-gray-800"><Activity className="text-blue-600" /> Auditoría del Personal</h1>
+        <p className="text-sm text-gray-500 mt-1 font-medium">
+          {esVistaGlobal ? 'Viendo la actividad de todos los usuarios de la empresa.' : `Viendo actividad del personal de: ${sucursalActiva?.nombre || '...'}`}
+        </p>
       </div>
 
-      {/* ✨ BLOQUE BLANCO DE CONTROLES ORDENADO */}
       <div className="flex flex-col xl:flex-row justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 gap-4">
         
-        {/* NAVEGACIÓN DE FECHAS */}
         <div className="flex items-center gap-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200 w-full xl:w-auto justify-between xl:justify-start">
           <div className="flex items-center bg-white rounded-lg shadow-sm">
             <button onClick={handlePrev} disabled={viewMode === 'all'} className="p-2 hover:bg-gray-50 text-gray-600 disabled:opacity-30 rounded-l-lg transition-colors"><ChevronLeft size={18}/></button>
@@ -199,7 +251,6 @@ const Auditoria = () => {
           </div>
         </div>
 
-        {/* BUSCADOR MAESTRO */}
         <div className="relative w-full xl:w-72">
           <Search className="absolute left-3 top-2.5 text-gray-400" size={16}/>
           <input 
@@ -210,7 +261,6 @@ const Auditoria = () => {
         </div>
       </div>
 
-      {/* TABLA PRINCIPAL */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <table className="w-full text-left text-sm text-gray-600">
           <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold tracking-wider text-[10px]">
@@ -223,17 +273,24 @@ const Auditoria = () => {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? <tr><td colSpan="4" className="text-center py-10 font-medium">Analizando registros...</td></tr> : 
-             usuariosMostrados.length === 0 ? <tr><td colSpan="4" className="text-center py-10 text-gray-400">No hay usuarios registrados.</td></tr> :
+             !sucursalActiva ? <tr><td colSpan="4" className="text-center py-10 text-red-500 font-medium bg-red-50">⚠️ No se ha detectado sucursal.</td></tr> :
+             usuariosMostrados.length === 0 ? <tr><td colSpan="4" className="text-center py-10 text-gray-400">No hay usuarios con actividad registrada en este local.</td></tr> :
              usuariosMostrados.map((u) => (
               <tr key={u.id} className="hover:bg-blue-50/30 transition-colors group">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm overflow-hidden shadow-sm border border-blue-200">
+                     <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm overflow-hidden shadow-sm border border-blue-200 shrink-0">
                        {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover"/> : (u.nombre.charAt(0).toUpperCase())}
                      </div>
                      <div>
                        <p className="font-extrabold text-slate-800">{u.nombre}</p>
                        <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{u.rol === 'Administrador' ? 'ADMINISTRADOR' : u.area}</p>
+                       
+                       {esVistaGlobal && u.rol !== 'Administrador' && (
+                          <p className="text-[9px] uppercase tracking-wider text-purple-600 font-bold mt-1 flex items-center gap-1">
+                            <Store size={10}/> {obtenerNombresSucursales(u.sucursales_asignadas)}
+                          </p>
+                       )}
                      </div>
                   </div>
                 </td>
@@ -262,7 +319,6 @@ const Auditoria = () => {
         </table>
       </div>
 
-      {/* MODAL: EXPEDIENTE TÉCNICO */}
       {selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md transition-all p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl flex flex-col h-[85vh] overflow-hidden animate-fade-in-up border border-white/20">
@@ -295,7 +351,6 @@ const Auditoria = () => {
               </div>
             </div>
 
-            {/* TABLA INTERNA CON SOLUCIÓN AL BUG DE SUPERPOSICIÓN */}
             <div className="flex-1 overflow-y-auto bg-white relative rounded-b-3xl">
               <table className="w-full text-left text-sm text-gray-600 border-collapse">
                 <thead>
@@ -332,7 +387,6 @@ const Auditoria = () => {
         </div>
       )}
 
-      {/* MODAL: LECTURA DEL DETALLE TÉCNICO (El Ojito) */}
       {logDetail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 border border-white/50 animate-fade-in-up relative">

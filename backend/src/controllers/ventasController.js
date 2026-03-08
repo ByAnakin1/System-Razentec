@@ -1,21 +1,32 @@
 const { pool } = require('../config/db');
-// ✨ Conexión con tu Auditoría
 const { registrarLog } = require('../services/logService');
 
 const ventasController = {
-  // 1. Obtener Historial de Ventas
   getVentas: async (req, res) => {
     try {
-      const query = `
-        SELECT v.id, v.created_at, v.total, c.nombre_completo AS cliente_nombre, e.nombre_completo AS cajero_nombre
+      // ✨ LEEMOS LA SUCURSAL DESDE EL INTERCEPTOR
+      const sucursalId = req.headers['x-sucursal-id'];
+
+      let query = `
+        SELECT v.id, v.created_at, v.total, c.nombre_completo AS cliente_nombre, e.nombre_completo AS cajero_nombre, s.nombre AS sucursal_nombre
         FROM ventas v
         LEFT JOIN clientes c ON v.cliente_id = c.id
         LEFT JOIN usuarios u ON v.usuario_id = u.id
         LEFT JOIN empleados e ON u.empleado_id = e.id
-        WHERE v.empresa_id = $1 OR v.empresa_id IS NULL
-        ORDER BY v.created_at DESC
+        LEFT JOIN sucursales s ON v.sucursal_id = s.id
+        WHERE (v.empresa_id = $1 OR v.empresa_id IS NULL)
       `;
-      const result = await pool.query(query, [req.user.empresa_id]);
+      const params = [req.user.empresa_id];
+
+      // ✨ FILTRO CONDICIONAL
+      if (sucursalId) {
+        query += ` AND v.sucursal_id = $2`;
+        params.push(sucursalId);
+      }
+
+      query += ` ORDER BY v.created_at DESC`;
+
+      const result = await pool.query(query, params);
       res.json(result.rows);
     } catch (error) {
       console.error("Error al obtener historial:", error);
@@ -23,9 +34,8 @@ const ventasController = {
     }
   },
 
-  // 2. Crear Nueva Venta (POS)
   crearVenta: async (req, res) => {
-    const { cliente_id, total, productos } = req.body;
+    const { cliente_id, total, productos, sucursal_id } = req.body;
     const client = await pool.connect();
 
     try {
@@ -33,10 +43,10 @@ const ventasController = {
       const idCliente = (cliente_id && cliente_id !== '') ? parseInt(cliente_id) : null; 
       
       const insertVenta = `
-        INSERT INTO ventas (empresa_id, cliente_id, usuario_id, total) 
-        VALUES ($1, $2, $3, $4) RETURNING id
+        INSERT INTO ventas (empresa_id, cliente_id, usuario_id, total, sucursal_id) 
+        VALUES ($1, $2, $3, $4, $5) RETURNING id
       `;
-      const resVenta = await client.query(insertVenta, [req.user.empresa_id, idCliente, req.user.id, total]);
+      const resVenta = await client.query(insertVenta, [req.user.empresa_id, idCliente, req.user.id, total, sucursal_id]);
       const ventaId = resVenta.rows[0].id;
 
       const insertDetalle = `
@@ -46,20 +56,18 @@ const ventasController = {
       
       for (const item of productos) {
         const cantidad = parseInt(item.cantidad) || 1;
-        // Compatibilidad: lee precio o precio_base según lo que envíe el frontend
         const precio = parseFloat(item.precio || item.precio_base) || 0; 
         
         await client.query(insertDetalle, [ventaId, item.id, cantidad, precio, cantidad * precio]);
         
         await client.query(
-          'UPDATE inventario SET stock_actual = stock_actual - $1 WHERE producto_id = $2 AND (empresa_id = $3 OR empresa_id IS NULL)', 
-          [cantidad, item.id, req.user.empresa_id]
+          'UPDATE inventario SET stock_actual = stock_actual - $1 WHERE producto_id = $2 AND sucursal_id = $3 AND (empresa_id = $4 OR empresa_id IS NULL)', 
+          [cantidad, item.id, sucursal_id, req.user.empresa_id]
         );
       }
 
       await client.query('COMMIT');
 
-      // ✨ AUDITORÍA AUTOMÁTICA
       await registrarLog(
         req.user.id, req.user.empresa_id, 'CREAR', 'Ventas', 
         `Realizó una venta (Boleta #${ventaId}) por un total de S/ ${total}.`
@@ -76,20 +84,31 @@ const ventasController = {
     }
   },
 
-  // 3. Ver Boleta (Detalle)
   getDetalleVenta: async (req, res) => {
     const { id } = req.params;
+    const sucursalId = req.headers['x-sucursal-id']; // ✨ Leemos el interceptor
+
     try {
-      const ventaRes = await pool.query(`
-        SELECT v.id, v.created_at, v.total, c.nombre_completo AS cliente_nombre, c.documento_identidad, e.nombre_completo AS cajero_nombre
+      let queryVenta = `
+        SELECT v.id, v.created_at, v.total, c.nombre_completo AS cliente_nombre, c.documento_identidad, e.nombre_completo AS cajero_nombre, s.nombre AS sucursal_nombre
         FROM ventas v
         LEFT JOIN clientes c ON v.cliente_id = c.id
         LEFT JOIN usuarios u ON v.usuario_id = u.id
         LEFT JOIN empleados e ON u.empleado_id = e.id
+        LEFT JOIN sucursales s ON v.sucursal_id = s.id
         WHERE v.id = $1 AND (v.empresa_id = $2 OR v.empresa_id IS NULL)
-      `, [id, req.user.empresa_id]);
+      `;
+      const params = [id, req.user.empresa_id];
 
-      if (ventaRes.rows.length === 0) return res.status(404).json({ message: 'Venta no encontrada' });
+      // ✨ Seguridad para que un empleado de la Sede A no abra boletas de la Sede B conociendo el ID
+      if (sucursalId) {
+        queryVenta += ` AND v.sucursal_id = $3`;
+        params.push(sucursalId);
+      }
+
+      const ventaRes = await pool.query(queryVenta, params);
+
+      if (ventaRes.rows.length === 0) return res.status(404).json({ message: 'Venta no encontrada o sin permisos' });
 
       const detallesRes = await pool.query(`
         SELECT dv.cantidad, dv.precio_unitario, dv.subtotal, p.nombre AS producto_nombre, p.sku
@@ -105,7 +124,6 @@ const ventasController = {
     }
   },
 
-  // 4. Eliminar Venta
   eliminarVenta: async (req, res) => {
     const { id } = req.params;
     const client = await pool.connect();
@@ -114,12 +132,15 @@ const ventasController = {
       await client.query('BEGIN');
       const ventaId = parseInt(id);
 
+      const ventaInfo = await client.query('SELECT sucursal_id FROM ventas WHERE id = $1', [ventaId]);
+      const sucursalId = ventaInfo.rows[0]?.sucursal_id;
+
       const detalles = await client.query('SELECT producto_id, cantidad FROM detalle_venta WHERE venta_id = $1', [ventaId]);
       
       for(const item of detalles.rows) {
         await client.query(
-          'UPDATE inventario SET stock_actual = stock_actual + $1 WHERE producto_id = $2 AND (empresa_id = $3 OR empresa_id IS NULL)',
-          [item.cantidad, item.producto_id, req.user.empresa_id]
+          'UPDATE inventario SET stock_actual = stock_actual + $1 WHERE producto_id = $2 AND sucursal_id = $3 AND (empresa_id = $4 OR empresa_id IS NULL)',
+          [item.cantidad, item.producto_id, sucursalId, req.user.empresa_id]
         );
       }
 
@@ -128,7 +149,6 @@ const ventasController = {
       
       await client.query('COMMIT');
 
-      // ✨ AUDITORÍA AUTOMÁTICA
       await registrarLog(
         req.user.id, req.user.empresa_id, 'ELIMINAR', 'Ventas', 
         `Anuló la venta (Boleta #${ventaId}) y se restauró el stock de los productos.`

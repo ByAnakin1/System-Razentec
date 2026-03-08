@@ -9,18 +9,41 @@ const productosController = {
   listar: async (req, res) => {
     try {
       const { estado } = req.query; 
+      const sucursalId = req.headers['x-sucursal-id'];
+
       let query = `
         SELECT 
-          p.id, p.empresa_id, p.nombre, p.descripcion, p.imagen, p.estado, p.categoria_id,
+          p.id, p.empresa_id, p.nombre, p.estado, p.categoria_id, p.descripcion, p.imagen,
           p.precio_base as precio, p.precio_base, 
           p.sku as codigo, p.sku, 
           c.nombre as categoria_nombre,
-          COALESCE((SELECT SUM(stock_actual) FROM inventario WHERE producto_id = p.id AND empresa_id = $1), 0) as stock
-        FROM productos p 
-        LEFT JOIN categorias c ON p.categoria_id = c.id 
-        WHERE p.empresa_id = $1
+          (
+            SELECT json_agg(json_build_object('sucursal_id', i.sucursal_id, 'sucursal_nombre', s.nombre, 'stock', i.stock_actual))
+            FROM inventario i
+            LEFT JOIN sucursales s ON i.sucursal_id = s.id
+            WHERE i.producto_id = p.id
+          ) as inventario_detalle
       `;
+
       const params = [req.user.empresa_id];
+
+      if (sucursalId) {
+        query += `
+          , COALESCE((SELECT SUM(stock_actual) FROM inventario WHERE producto_id = p.id AND sucursal_id = $2), 0) as stock
+          FROM productos p 
+          LEFT JOIN categorias c ON p.categoria_id = c.id 
+          WHERE (p.empresa_id = $1 OR p.empresa_id IS NULL)
+          AND EXISTS (SELECT 1 FROM inventario inv WHERE inv.producto_id = p.id AND inv.sucursal_id = $2)
+        `;
+        params.push(sucursalId);
+      } else {
+        query += `
+          , COALESCE((SELECT SUM(stock_actual) FROM inventario WHERE producto_id = p.id AND (empresa_id = $1 OR empresa_id IS NULL)), 0) as stock
+          FROM productos p 
+          LEFT JOIN categorias c ON p.categoria_id = c.id 
+          WHERE (p.empresa_id = $1 OR p.empresa_id IS NULL)
+        `;
+      }
 
       if (estado === 'activos') query += ' AND p.estado = true';
       else if (estado === 'inactivos') query += ' AND p.estado = false';
@@ -29,19 +52,19 @@ const productosController = {
 
       const { rows } = await pool.query(query, params);
       res.json(rows);
-    } catch (error) {
-      console.error("Error listar productos:", error);
-      res.status(500).json({ error: 'Error al obtener productos' });
+    } catch (error) { 
+      console.error(error);
+      res.status(500).json({ error: 'Error al obtener productos' }); 
     }
   },
 
   crear: async (req, res) => {
     try {
-      const { nombre, descripcion, imagen_url, precio, stock, codigo, categoria_id } = req.body;
+      const { nombre, descripcion, imagen_url, precio, codigo, categoria_id, stock_sucursales } = req.body;
       
       if (!nombre || nombre.trim() === '') return res.status(400).json({ error: 'El nombre es obligatorio.' });
 
-      // ✨ Lógica de imagen con Supabase
+      // ✨ Lógica de imagen con Supabase fusionada
       let imagenFinal = null;
       if (req.file) {
         const fileName = `${Date.now()}-${req.file.originalname.replace(/\s+/g, '-')}`;
@@ -63,20 +86,34 @@ const productosController = {
       }
 
       const catIdValid = categoria_id ? parseInt(categoria_id, 10) : null;
-      const stockValid = stock ? parseInt(stock, 10) : 0;
-
+      
       const insertProducto = await pool.query(
         'INSERT INTO productos (empresa_id, nombre, descripcion, imagen, precio_base, sku, categoria_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
         [req.user.empresa_id, nombre, descripcion || null, imagenFinal, precio, codigo, catIdValid]
       );
-      
       const nuevoProductoId = insertProducto.rows[0].id;
 
-      await pool.query(
-        'INSERT INTO inventario (empresa_id, producto_id, sucursal_id, stock_actual, punto_reposicion) VALUES ($1, $2, $3, $4, $5)',
-        [req.user.empresa_id, nuevoProductoId, 1, stockValid, 5]
-      );
+      // ✨ Lógica de Sucursales fusionada
+      if (stock_sucursales) {
+        const stockData = JSON.parse(stock_sucursales || '{}');
+        for (const [sucursalId, cantidad] of Object.entries(stockData)) {
+          const stockNum = parseInt(cantidad, 10);
+          if (stockNum >= 0) { 
+            await pool.query(
+              'INSERT INTO inventario (empresa_id, producto_id, sucursal_id, stock_actual, punto_reposicion) VALUES ($1, $2, $3, $4, $5)',
+              [req.user.empresa_id, nuevoProductoId, parseInt(sucursalId, 10), stockNum, 5]
+            );
+          }
+        }
+      } else if (req.body.stock) {
+        // Fallback si manda un stock general (sucursal 1)
+        await pool.query(
+          'INSERT INTO inventario (empresa_id, producto_id, sucursal_id, stock_actual, punto_reposicion) VALUES ($1, $2, $3, $4, $5)',
+          [req.user.empresa_id, nuevoProductoId, 1, parseInt(req.body.stock, 10) || 0, 5]
+        );
+      }
 
+      // ✨ Auditoría limpia (sin causar error de BD)
       await registrarLog(req.user.id, req.user.empresa_id, 'CREAR', 'Inventario', `Registró el nuevo producto: "${nombre}"`);
 
       res.status(201).json({ message: 'Producto creado con éxito' });
@@ -87,7 +124,6 @@ const productosController = {
   },
 
   crearGranel: async (req, res) => {
-    // ... (Se mantiene igual, no requiere cambios de fotos porque las importaciones usan URLs)
     const client = await pool.connect();
     try {
       const { productos } = req.body;
@@ -145,14 +181,13 @@ const productosController = {
   actualizar: async (req, res) => {
     try {
       const { id } = req.params;
-      const { nombre, descripcion, imagen_url, precio, codigo, categoria_id } = req.body; 
+      const { nombre, descripcion, imagen_url, precio, codigo, categoria_id, stock_sucursales } = req.body; 
       
       if (!nombre || nombre.trim() === '') return res.status(400).json({ error: 'El nombre es obligatorio.' });
 
-      const prodActual = await pool.query('SELECT imagen FROM productos WHERE id = $1 AND empresa_id = $2', [id, req.user.empresa_id]);
+      const prodActual = await pool.query('SELECT imagen FROM productos WHERE id = $1 AND (empresa_id = $2 OR empresa_id IS NULL)', [id, req.user.empresa_id]);
       if (prodActual.rowCount === 0) return res.status(404).json({ error: 'Producto no encontrado' });
 
-      // Mantenemos la actual por defecto
       let imagenFinal = prodActual.rows[0].imagen; 
 
       // ✨ Lógica de imagen con Supabase
@@ -178,9 +213,26 @@ const productosController = {
       const catIdValid = categoria_id ? parseInt(categoria_id, 10) : null;
 
       await pool.query(
-        'UPDATE productos SET nombre = $1, descripcion = $2, imagen = $3, precio_base = $4, sku = $5, categoria_id = $6 WHERE id = $7 AND empresa_id = $8',
+        'UPDATE productos SET nombre = $1, descripcion = $2, imagen = $3, precio_base = $4, sku = $5, categoria_id = $6 WHERE id = $7 AND (empresa_id = $8 OR empresa_id IS NULL)',
         [nombre, descripcion || null, imagenFinal, precio, codigo, catIdValid, id, req.user.empresa_id]
       );
+
+      // ✨ Actualización de stock de sucursales fusionado
+      if (stock_sucursales) {
+        const stockData = JSON.parse(stock_sucursales);
+        for (const [sucursalId, cantidad] of Object.entries(stockData)) {
+          const stockNum = parseInt(cantidad, 10);
+          const checkInv = await pool.query('SELECT id FROM inventario WHERE producto_id = $1 AND sucursal_id = $2', [id, parseInt(sucursalId, 10)]);
+          if (checkInv.rowCount > 0) {
+            await pool.query('UPDATE inventario SET stock_actual = $1 WHERE producto_id = $2 AND sucursal_id = $3', [stockNum, id, parseInt(sucursalId, 10)]);
+          } else {
+            await pool.query(
+              'INSERT INTO inventario (empresa_id, producto_id, sucursal_id, stock_actual, punto_reposicion) VALUES ($1, $2, $3, $4, $5)',
+              [req.user.empresa_id, id, parseInt(sucursalId, 10), stockNum, 5]
+            );
+          }
+        }
+      }
 
       await registrarLog(req.user.id, req.user.empresa_id, 'EDITAR', 'Inventario', `Actualizó el producto: "${nombre}"`);
 
@@ -194,22 +246,11 @@ const productosController = {
   eliminar: async (req, res) => {
     try {
       const { id } = req.params;
-
-      const prodData = await pool.query('SELECT nombre FROM productos WHERE id = $1 AND empresa_id = $2', [id, req.user.empresa_id]);
-      const nombreProducto = prodData.rows.length > 0 ? prodData.rows[0].nombre : 'Producto Desconocido';
-
-      const { rowCount } = await pool.query(
-        'UPDATE productos SET estado = false WHERE id = $1 AND empresa_id = $2', 
-        [id, req.user.empresa_id]
-      );
-
+      const { rowCount } = await pool.query('UPDATE productos SET estado = false WHERE id = $1 AND (empresa_id = $2 OR empresa_id IS NULL)', [id, req.user.empresa_id]);
       if (rowCount === 0) return res.status(404).json({ error: 'Producto no encontrado' });
-
-      await registrarLog(req.user.id, req.user.empresa_id, 'ELIMINAR', 'Inventario', `Envió a la papelera (desactivó) el producto: "${nombreProducto}".`);
+      await registrarLog(req.user.id, req.user.empresa_id, 'ELIMINAR', 'Inventario', `Desactivó un producto.`);
       res.json({ message: 'Enviado a papelera' });
-    } catch (error) {
-      res.status(500).json({ error: 'Error al eliminar producto' });
-    }
+    } catch (error) { res.status(500).json({ error: 'Error' }); }
   }
 };
 

@@ -9,13 +9,13 @@ const verifyToken = (req, res, next) => {
   try {
     req.user = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
     next(); 
-  } catch (error) { 
-    return res.status(401).json({ error: 'Token inválido' }); 
-  }
+  } catch (error) { return res.status(401).json({ error: 'Token inválido' }); }
 };
 
 router.use(verifyToken);
 router.get('/', clientesController.listar);
 router.post('/', clientesController.crear);
+router.put('/:id', clientesController.actualizar);
+router.delete('/:id', clientesController.eliminar);
 
 module.exports = router;
