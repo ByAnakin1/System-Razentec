@@ -1,25 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const sucursalesController = require('../controllers/sucursalesController');
-const jwt = require('jsonwebtoken');
-
-// Middleware para verificar la seguridad
-const verifyToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  if (!authHeader) return res.status(403).json({ error: 'Acceso denegado' });
-  try {
-    req.user = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
-    next(); 
-  } catch (error) { 
-    return res.status(401).json({ error: 'Token inválido' }); 
-  }
-};
+const verifyToken = require('../middlewares/authMiddleware'); // ✅ Ahora usamos el central
+const requireModificador = require('../middlewares/requireModificador');
 
 router.use(verifyToken);
 
-// Las rutas que React está buscando
+// 🟢 Lectura
 router.get('/', sucursalesController.listar);
-router.post('/', sucursalesController.crear);
-router.delete('/:id', sucursalesController.eliminar);
+
+// 🔴 Escritura (Crear o borrar sucursales es sumamente delicado)
+router.post('/', requireModificador('Sucursales'), sucursalesController.crear);
+router.delete('/:id', requireModificador('Sucursales'), sucursalesController.eliminar);
 
 module.exports = router;

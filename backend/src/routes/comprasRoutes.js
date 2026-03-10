@@ -1,16 +1,17 @@
-// En tu routes/comprasRoutes.js
 const express = require('express');
 const router = express.Router();
 const comprasController = require('../controllers/comprasController');
-const authMiddleware = require('../middlewares/authMiddleware');
-const verifyToken = authMiddleware.verifyToken || authMiddleware;
-const { audit } = require('../middlewares/auditMiddleware');
+const verifyToken = require('../middlewares/authMiddleware');
+const requireModificador = require('../middlewares/requireModificador');
 
+// 🚀 Verificación de identidad para todas las rutas
 router.use(verifyToken);
 
-router.get('/', audit('GET', '/compras', 'compras'), comprasController.listar);
-router.post('/', audit('POST', '/compras', 'compras'), comprasController.crear);
-// ✨ NUEVA RUTA PARA VER EL DETALLE
-router.get('/:id', audit('GET', '/compras/detalle', 'compras'), comprasController.obtenerPorId);
+// 🟢 Lectura (Permitido para todos los que puedan entrar al módulo)
+router.get('/', comprasController.listar);
+router.get('/:id', comprasController.obtenerPorId);
+
+// 🔴 Escritura (Solo Admin o quienes tengan la etiqueta Modificador_Compras)
+router.post('/', requireModificador('Compras'), comprasController.crear);
 
 module.exports = router;

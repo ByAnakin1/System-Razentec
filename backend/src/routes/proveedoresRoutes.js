@@ -2,14 +2,16 @@ const express = require('express');
 const router = express.Router();
 const proveedoresController = require('../controllers/proveedoresController');
 const verifyToken = require('../middlewares/authMiddleware'); 
+const requireModificador = require('../middlewares/requireModificador');
 
-// 🚀 Aplicamos seguridad a todas las rutas
 router.use(verifyToken);
 
-// 🚀 Rutas limpias (Sin el audit automático que genera los JSON feos)
+// 🟢 Lectura
 router.get('/', proveedoresController.listar);
-router.post('/', proveedoresController.crear);
-router.put('/:id', proveedoresController.actualizar);
-router.delete('/:id', proveedoresController.eliminar);
+
+// 🔴 Escritura
+router.post('/', requireModificador('Proveedores'), proveedoresController.crear);
+router.put('/:id', requireModificador('Proveedores'), proveedoresController.actualizar);
+router.delete('/:id', requireModificador('Proveedores'), proveedoresController.eliminar);
 
 module.exports = router;

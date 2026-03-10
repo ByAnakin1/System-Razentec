@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import Layout from '../components/Layout';
-import { Plus, Trash2, X, AlertTriangle, Search, CheckCircle, ShoppingCart, FileText, Eye, Store } from 'lucide-react';
+import { Plus, Trash2, X, AlertTriangle, Search, CheckCircle, ShoppingCart, FileText, Eye, Store, Building2, MapPin, CalendarDays } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Compras = () => {
@@ -9,32 +9,41 @@ const Compras = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   
-  // Dependencias para el modal (Proveedores y Productos)
   const [proveedores, setProveedores] = useState([]);
   const [productos, setProductos] = useState([]);
   
-  // Estados del Modal y Formulario
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
   
-  // Datos de la nueva compra
+  const [detalleCompraOpen, setDetalleCompraOpen] = useState(false);
+  const [compraSeleccionada, setCompraSeleccionada] = useState(null);
+
   const [proveedorId, setProveedorId] = useState('');
   const [comprobante, setComprobante] = useState('');
   const [cart, setCart] = useState([]);
   const [busquedaProd, setBusquedaProd] = useState('');
 
-  // ✨ ESTADOS GLOBALES DE SUCURSAL
   const [sucursalActiva, setSucursalActiva] = useState(JSON.parse(localStorage.getItem('sucursalActiva')) || null);
   const esVistaGlobal = sucursalActiva?.id === 'ALL';
+
+  // ✨ COMPROBACIÓN DE PERMISOS EN TIEMPO REAL
+  const [usuarioActual, setUsuarioActual] = useState(JSON.parse(localStorage.getItem('usuario') || '{}'));
+  const getCategoriasSeguras = () => {
+    try {
+      let cat = usuarioActual?.categorias;
+      if (typeof cat === 'string') cat = JSON.parse(cat);
+      if (typeof cat === 'string') cat = JSON.parse(cat);
+      return Array.isArray(cat) ? cat : [];
+    } catch(e) { return []; }
+  };
+  const tienePermisoCrear = usuarioActual?.rol === 'Administrador' || getCategoriasSeguras().includes('Modificador') || getCategoriasSeguras().includes('Modificador_Compras');
 
   const showToast = (type, message) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3500);
   };
 
-  // 1. Cargar el historial de compras (Con el Semáforo Inyectado)
   const fetchCompras = async () => {
-    // 🚨 SEMÁFORO: Esperar a que el Layout asigne la sucursal
     const currentSucursal = JSON.parse(localStorage.getItem('sucursalActiva'));
     if (!currentSucursal) {
       setCompras([]);
@@ -57,7 +66,6 @@ const Compras = () => {
   useEffect(() => { 
     fetchCompras(); 
     
-    // ✨ ESCUCHADOR: Recarga si cambias de local arriba
     const handleSucursalCambiada = () => {
       setSucursalActiva(JSON.parse(localStorage.getItem('sucursalActiva')));
       fetchCompras(); 
@@ -66,7 +74,6 @@ const Compras = () => {
     return () => window.removeEventListener('sucursalCambiada', handleSucursalCambiada);
   }, []);
 
-  // 2. Cargar dependencias al abrir el modal (Con Filtro Inteligente de Interceptor)
   const openModal = async () => {
     setIsModalOpen(true);
     setProveedorId('');
@@ -86,7 +93,16 @@ const Compras = () => {
     }
   };
 
-  // 3. Lógica del "Carrito" de compras
+  const openDetalleCompra = async (id) => {
+    try {
+      const res = await api.get(`/compras/${id}`);
+      setCompraSeleccionada(res.data);
+      setDetalleCompraOpen(true);
+    } catch (error) {
+      showToast('error', 'Error al cargar los detalles de esta compra.');
+    }
+  };
+
   const productosFiltrados = productos.filter(p => 
     busquedaProd && (p.nombre.toLowerCase().includes(busquedaProd.toLowerCase()) || (p.codigo && p.codigo.toLowerCase().includes(busquedaProd.toLowerCase())))
   );
@@ -128,7 +144,6 @@ const Compras = () => {
 
   const calcularTotal = () => cart.reduce((acc, item) => acc + item.subtotal, 0);
 
-  // 4. Enviar la compra al Backend
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!proveedorId) return showToast('error', 'Selecciona un proveedor');
@@ -173,19 +188,18 @@ const Compras = () => {
           </p>
         </div>
 
-        {/* ✨ BLOQUEO DE BOTÓN: No se puede comprar si estás en "Todas las sucursales" o si no tienes local asignado */}
+        {/* ✨ SOLO MUESTRA EL BOTON SI TIENE PERMISO */}
         {esVistaGlobal ? (
           <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2">
             <AlertTriangle size={18}/> Selecciona una sucursal específica para comprar
           </div>
-        ) : sucursalActiva ? (
+        ) : sucursalActiva && tienePermisoCrear ? (
           <button onClick={openModal} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/30 w-full md:w-auto justify-center">
             <Plus size={20} /> Registrar Compra
           </button>
         ) : null}
       </div>
 
-      {/* TABLA DE HISTORIAL DE COMPRAS */}
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-600">
@@ -193,7 +207,6 @@ const Compras = () => {
               <tr>
                 <th className="px-5 py-4">Fecha</th>
                 <th className="px-5 py-4">Proveedor</th>
-                {/* ✨ COLUMNA SUCURSAL PARA VISTA GLOBAL */}
                 {esVistaGlobal && <th className="px-5 py-4">Sucursal Destino</th>}
                 <th className="px-5 py-4">Comprobante</th>
                 <th className="px-5 py-4 text-center">Estado</th>
@@ -216,7 +229,6 @@ const Compras = () => {
                     </td>
                     <td className="px-5 py-4 font-bold text-slate-800">{compra.proveedor_nombre || 'S/D'}</td>
                     
-                    {/* ✨ ETIQUETA DE SUCURSAL */}
                     {esVistaGlobal && (
                       <td className="px-5 py-4">
                         <span className="text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-1 rounded flex items-center gap-1 w-max">
@@ -230,9 +242,9 @@ const Compras = () => {
                     <td className="px-5 py-4 text-right font-black text-emerald-600 text-base">S/ {parseFloat(compra.total).toFixed(2)}</td>
                     <td className="px-5 py-4 text-center">
                       <button 
-                        onClick={() => navigate(`/compras/${compra.id}`)}
+                        onClick={() => openDetalleCompra(compra.id)}
                         className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-colors border border-blue-100 hover:border-blue-600 shadow-sm"
-                        title="Ver detalle"
+                        title="Ver detalle de la compra"
                       >
                         <Eye size={18} />
                       </button>
@@ -244,6 +256,76 @@ const Compras = () => {
           </table>
         </div>
       </div>
+
+      {/* MODAL DETALLE DE COMPRA (EL OJITO) */}
+      {detalleCompraOpen && compraSeleccionada && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-md transition-all p-4">
+          <div className="bg-white p-8 rounded-3xl w-full max-w-3xl shadow-2xl border border-white/50 animate-fade-in-up">
+            
+            <div className="flex justify-between items-start mb-6 border-b-2 border-gray-100 pb-4">
+              <div>
+                <h2 className="text-2xl font-extrabold text-gray-800 flex items-center gap-2">
+                  <FileText className="text-blue-600"/> Detalle de Ingreso 
+                </h2>
+                <p className="text-sm text-gray-500 font-medium mt-1">Registro Interno N° {compraSeleccionada.compra.id}</p>
+              </div>
+              <button onClick={() => setDetalleCompraOpen(false)} className="text-gray-400 hover:text-gray-800 bg-gray-100 p-2 rounded-full transition-colors"><X size={20}/></button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="p-5 border border-gray-100 bg-gray-50/50 rounded-2xl">
+                <h3 className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-3"><Building2 size={14}/> PROVEEDOR</h3>
+                <p className="text-lg font-bold text-gray-800">{compraSeleccionada.compra.proveedor_nombre || 'No Especificado'}</p>
+                <p className="text-xs text-gray-500 font-medium mt-1">RUC: {compraSeleccionada.compra.proveedor_ruc || 'S/D'}</p>
+              </div>
+
+              <div className="p-5 border border-gray-100 bg-gray-50/50 rounded-2xl relative">
+                <div className="absolute top-5 right-5 bg-emerald-100 text-emerald-700 text-[10px] font-extrabold px-3 py-1 rounded-full flex items-center gap-1">
+                  <CheckCircle size={12}/> RECIBIDO
+                </div>
+                <h3 className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-3"><CalendarDays size={14}/> DATOS DEL INGRESO</h3>
+                <p className="text-xs font-bold text-gray-800 mb-1">Comprobante: <span className="font-medium text-gray-600 ml-1">{compraSeleccionada.compra.comprobante || 'S/C'}</span></p>
+                <p className="text-xs font-bold text-gray-800 mb-1">Fecha: <span className="font-medium text-gray-600 ml-1">{new Date(compraSeleccionada.compra.created_at).toLocaleString('es-PE')}</span></p>
+                <div className="mt-3 flex items-center gap-1.5 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg w-fit">
+                  <MapPin size={14}/> Destino: {compraSeleccionada.compra.sucursal_nombre || 'Local Principal'}
+                </div>
+              </div>
+            </div>
+
+            <h3 className="text-sm font-extrabold text-gray-800 mb-3 border-l-4 border-blue-600 pl-3">Mercadería Ingresada</h3>
+            <div className="overflow-y-auto max-h-[30vh] border border-gray-200 rounded-xl mb-6">
+              <table className="w-full text-left text-sm border-collapse">
+                <thead className="bg-slate-50 border-b border-gray-200 text-slate-800 sticky top-0">
+                  <tr>
+                    <th className="py-3 px-4 font-extrabold text-gray-500 uppercase text-[10px] tracking-wider text-center">Cant.</th>
+                    <th className="py-3 px-4 font-extrabold text-gray-500 uppercase text-[10px] tracking-wider">Producto</th>
+                    <th className="py-3 px-4 font-extrabold text-gray-500 uppercase text-[10px] tracking-wider text-center">Costo Unit.</th>
+                    <th className="py-3 px-4 font-extrabold text-gray-500 uppercase text-[10px] tracking-wider text-right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {compraSeleccionada.detalles?.map((item, index) => (
+                    <tr key={index} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-4 font-extrabold text-blue-600 text-center">{item.cantidad}</td>
+                      <td className="py-3 px-4 font-bold text-gray-800">{item.producto_nombre}</td>
+                      <td className="py-3 px-4 text-gray-600 font-medium text-center">S/ {parseFloat(item.precio_unitario).toFixed(2)}</td>
+                      <td className="py-3 px-4 font-bold text-emerald-600 text-right">S/ {parseFloat(item.subtotal).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end">
+              <div className="bg-slate-800 px-8 py-4 rounded-2xl flex items-center gap-8 shadow-md text-white">
+                <span className="text-xs font-extrabold text-gray-400 uppercase tracking-widest">Costo Total</span>
+                <span className="text-3xl font-black text-emerald-400">S/ {parseFloat(compraSeleccionada.compra.total).toFixed(2)}</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* MODAL GIGANTE DE NUEVA COMPRA */}
       {isModalOpen && (

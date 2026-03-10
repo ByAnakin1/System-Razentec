@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Printer, Store, User, CalendarDays, ReceiptText, CheckCircle, FileText, Building2, Ticket } from 'lucide-react';
+import { ArrowLeft, Printer, Store, User, CalendarDays, ReceiptText, CheckCircle, FileText, Building2, Ticket, MapPin } from 'lucide-react';
 import api from '../../services/api';
 import Layout from '../../components/Layout';
 
@@ -11,8 +11,7 @@ const DetalleVenta = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // ✨ NUEVO ESTADO: Controla qué diseño se muestra y se imprime
-  const [vistaActiva, setVistaActiva] = useState('empresa'); // 'empresa' | 'cliente'
+  const [vistaActiva, setVistaActiva] = useState('empresa'); 
 
   useEffect(() => {
     const fetchVenta = async () => {
@@ -21,7 +20,7 @@ const DetalleVenta = () => {
         setVenta(res.data);
       } catch (err) {
         console.error(err);
-        setError('Error al cargar la boleta. Es posible que haya sido eliminada.');
+        setError('Error al cargar la boleta. Es posible que haya sido eliminada o no tengas permisos.');
       } finally {
         setLoading(false); 
       }
@@ -70,7 +69,6 @@ const DetalleVenta = () => {
 
   return (
     <Layout>
-      {/* 🛑 CABECERA DE NAVEGACIÓN E IMPRESIÓN (OCULTA AL IMPRIMIR) */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 print:hidden px-1">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate('/historial-ventas')} className="p-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors shadow-sm text-gray-600 hover:text-blue-600">
@@ -89,7 +87,6 @@ const DetalleVenta = () => {
         </button>
       </div>
 
-      {/* 🛑 SELECTOR DE VISTAS (OCULTO AL IMPRIMIR) */}
       <div className="flex gap-2 mb-6 bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm w-fit print:hidden">
         <button 
           onClick={() => setVistaActiva('empresa')} 
@@ -105,85 +102,91 @@ const DetalleVenta = () => {
         </button>
       </div>
 
-      {/* ============================================================== */}
-      {/* ✨ SECCIÓN IMPRIMIBLE: CAMBIA SU CSS SEGÚN LA VISTA ACTIVA */}
-      {/* ============================================================== */}
       <div id="print-section" className={`bg-white rounded-2xl shadow-sm border border-gray-200 transition-all ${vistaActiva === 'cliente' ? 'ticket-mode max-w-[400px] mx-auto p-8' : 'a4-mode p-8 w-full'}`}>
         
         {vistaActiva === 'empresa' && (
-          /* ========================================== */
-          /* 🏢 DISEÑO 1: VISTA EMPRESA (TIPO A4 / INGRESO) */
-          /* ========================================== */
           <div className="animate-fade-in">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              
-              {/* Tarjeta Cliente */}
-              <div className="p-6 border border-gray-100 bg-gray-50/50 rounded-2xl">
-                <h3 className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-3"><User size={14}/> CLIENTE</h3>
-                <p className="text-xl font-bold text-gray-800">{venta.cliente_nombre || 'Público General'}</p>
-                <p className="text-sm text-gray-500 font-medium mt-1">Doc/RUC: {venta.documento_identidad || 'S/C'}</p>
+            {/* ✨ ENCABEZADO A4: AHORA MUESTRA LA SUCURSAL */}
+            <div className="flex justify-between items-start mb-8 pb-6 border-b-2 border-gray-100">
+              <div>
+                <h2 className="text-3xl font-black text-gray-800 uppercase tracking-tight">Razentec</h2>
+                <div className="flex items-center gap-2 mt-2 text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200 w-fit">
+                  <MapPin size={16} className="text-blue-600"/>
+                  <span className="font-bold text-sm">Sucursal: {venta.sucursal_nombre || 'No asignada'}</span>
+                </div>
               </div>
-
-              {/* Tarjeta Datos de Comprobante */}
-              <div className="p-6 border border-gray-100 bg-gray-50/50 rounded-2xl relative">
-                <div className="absolute top-6 right-6 bg-emerald-100 text-emerald-700 text-[10px] font-extrabold px-3 py-1 rounded-full flex items-center gap-1">
-                  <CheckCircle size={12}/> COMPLETADO
+              <div className="text-right">
+                <div className="bg-emerald-100 text-emerald-700 text-xs font-extrabold px-3 py-1 rounded-full flex items-center justify-end gap-1 mb-2 w-fit ml-auto">
+                  <CheckCircle size={14}/> COMPLETADO
                 </div>
-                <h3 className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-5"><CalendarDays size={14}/> DATOS DEL COMPROBANTE</h3>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-[10px] text-gray-400 font-extrabold uppercase mb-1">Comprobante</p>
-                    <p className="font-bold text-gray-800">BOL-{String(venta.id).padStart(5, '0')}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-400 font-extrabold uppercase mb-1">Fecha de Emisión</p>
-                    <p className="font-bold text-gray-800">{formatearFecha(venta.created_at)}</p>
-                  </div>
-                </div>
+                <p className="text-sm font-bold text-gray-500">BOL-{String(venta.id).padStart(5, '0')}</p>
+                <p className="text-sm font-bold text-gray-500 mt-1">{formatearFecha(venta.created_at)}</p>
               </div>
             </div>
 
-            {/* Tabla de Productos Empresa */}
-            <div className="overflow-x-auto mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              
+              <div className="p-6 border border-gray-100 bg-gray-50/50 rounded-2xl">
+                <h3 className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-3"><User size={14}/> DATOS DEL CLIENTE</h3>
+                <p className="text-xl font-bold text-gray-800">{venta.cliente_nombre || 'Público General'}</p>
+                <p className="text-sm text-gray-500 font-medium mt-1">DNI/RUC: {venta.documento_identidad || 'S/C'}</p>
+              </div>
+
+              <div className="p-6 border border-gray-100 bg-gray-50/50 rounded-2xl">
+                <h3 className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-3"><User size={14}/> DATOS INTERNOS</h3>
+                <p className="text-sm text-gray-500 font-bold mb-1">Cajero Responsable:</p>
+                <p className="text-lg font-bold text-gray-800">{venta.cajero_nombre || 'Usuario Sistema'}</p>
+                {venta.metodo_pago && (
+                  <p className="text-sm text-gray-500 font-medium mt-2">Método de Pago: <span className="font-bold uppercase text-gray-700">{venta.metodo_pago.replace('_', ' ')}</span></p>
+                )}
+              </div>
+            </div>
+
+            <div className="overflow-x-auto mb-8 border border-gray-200 rounded-xl">
               <table className="w-full text-left text-sm border-collapse">
-                <thead className="border-b-2 border-gray-100 text-slate-800">
+                <thead className="bg-slate-50 border-b border-gray-200 text-slate-800">
                   <tr>
-                    <th className="py-3 font-extrabold text-gray-500 uppercase text-xs tracking-wider">Código</th>
-                    <th className="py-3 font-extrabold text-gray-500 uppercase text-xs tracking-wider">Producto</th>
-                    <th className="py-3 font-extrabold text-gray-500 uppercase text-xs tracking-wider text-center">Cant.</th>
-                    <th className="py-3 font-extrabold text-gray-500 uppercase text-xs tracking-wider text-center">Precio Unit.</th>
-                    <th className="py-3 font-extrabold text-gray-500 uppercase text-xs tracking-wider text-right">Subtotal</th>
+                    <th className="py-4 px-4 font-extrabold text-gray-500 uppercase text-[10px] tracking-wider">Código</th>
+                    <th className="py-4 px-4 font-extrabold text-gray-500 uppercase text-[10px] tracking-wider">Producto</th>
+                    <th className="py-4 px-4 font-extrabold text-gray-500 uppercase text-[10px] tracking-wider text-center">Cant.</th>
+                    <th className="py-4 px-4 font-extrabold text-gray-500 uppercase text-[10px] tracking-wider text-center">Precio Unit.</th>
+                    <th className="py-4 px-4 font-extrabold text-gray-500 uppercase text-[10px] tracking-wider text-right">Subtotal</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-100">
                   {venta.detalles?.map((item, index) => (
                     <tr key={index} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-4 text-gray-400 font-medium text-xs">{item.sku || 'S/C'}</td>
-                      <td className="py-4 font-bold text-gray-800">{item.producto_nombre}</td>
-                      <td className="py-4 font-extrabold text-blue-600 text-center">{item.cantidad}</td>
-                      <td className="py-4 text-gray-600 font-medium text-center">S/ {parseFloat(item.precio_unitario).toFixed(2)}</td>
-                      <td className="py-4 font-bold text-gray-800 text-right">S/ {parseFloat(item.subtotal).toFixed(2)}</td>
+                      <td className="py-4 px-4 text-gray-400 font-medium text-xs">{item.sku || 'S/C'}</td>
+                      <td className="py-4 px-4 font-bold text-gray-800">{item.producto_nombre}</td>
+                      <td className="py-4 px-4 font-extrabold text-blue-600 text-center">{item.cantidad}</td>
+                      <td className="py-4 px-4 text-gray-600 font-medium text-center">S/ {parseFloat(item.precio_unitario).toFixed(2)}</td>
+                      <td className="py-4 px-4 font-bold text-gray-800 text-right">S/ {parseFloat(item.subtotal).toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            {/* Total Empresa */}
             <div className="flex justify-end">
-              <div className="bg-gray-50 px-8 py-5 rounded-2xl flex items-center gap-10 border border-gray-100 shadow-inner">
-                <span className="text-sm font-extrabold text-gray-500 uppercase tracking-widest">Total</span>
-                <span className="text-3xl font-black text-emerald-600">S/ {parseFloat(venta.total).toFixed(2)}</span>
+              <div className="w-full md:w-80 space-y-3">
+                <div className="flex justify-between text-gray-500 font-bold text-sm px-4">
+                  <span>Subtotal:</span>
+                  <span>S/ {(parseFloat(venta.total) / 1.18).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-gray-500 font-bold text-sm px-4 border-b border-gray-200 pb-3">
+                  <span>IGV (18%):</span>
+                  <span>S/ {(parseFloat(venta.total) - (parseFloat(venta.total) / 1.18)).toFixed(2)}</span>
+                </div>
+                <div className="bg-slate-800 px-6 py-5 rounded-2xl flex justify-between items-center text-white shadow-md">
+                  <span className="text-sm font-extrabold uppercase tracking-widest text-slate-300">Total Pagado</span>
+                  <span className="text-3xl font-black">S/ {parseFloat(venta.total).toFixed(2)}</span>
+                </div>
               </div>
             </div>
           </div>
         )}
 
         {vistaActiva === 'cliente' && (
-          /* ========================================== */
-          /* 🧾 DISEÑO 2: VISTA CLIENTE (TICKET TÉRMICO POS) */
-          /* ========================================== */
           <div className="animate-fade-in bg-white">
             <div className="text-center border-b-2 border-dashed border-gray-300 pb-6 mb-6">
               <div className="mx-auto w-14 h-14 bg-slate-900 text-white rounded-full flex items-center justify-center mb-3 shadow-inner">
@@ -267,7 +270,6 @@ const DetalleVenta = () => {
 
       </div>
       
-      {/* ✨ MAGIA CSS: OCULTAR TODO Y CENTRAR EL TICKET AL IMPRIMIR */}
       <style dangerouslySetInnerHTML={{__html: `
         @media print {
           body * { visibility: hidden; }
@@ -283,14 +285,12 @@ const DetalleVenta = () => {
             margin: 0 !important;
           }
 
-          /* Modo Ticket: Alineación perfecta al centro del papel */
           #print-section.ticket-mode {
             left: 50%;
             transform: translateX(-50%);
-            width: 80mm !important; /* Estándar de impresora térmica POS */
+            width: 80mm !important;
           }
 
-          /* Modo Empresa: Se expande en tamaño A4 */
           #print-section.a4-mode {
             left: 0;
             width: 100% !important;
