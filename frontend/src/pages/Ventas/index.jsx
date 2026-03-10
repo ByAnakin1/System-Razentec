@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 import { Search, ShoppingBag, Plus, Minus, X, AlertOctagon, UserPlus, CheckCircle, MapPin } from 'lucide-react';
+import PaymentModal from './PaymentModal'; // ✨ IMPORTAMOS EL MODAL DE PAGO
 
 const VentasPOS = () => {
   const navigate = useNavigate();
@@ -17,13 +18,15 @@ const VentasPOS = () => {
   const [stockModal, setStockModal] = useState({ isOpen: false, producto: null, maxStock: 0 });
   const [clientModal, setClientModal] = useState({ isOpen: false, nombre: '', dni: '', direccion: '', error: '' });
   const [successModal, setSuccessModal] = useState(false);
+  
+  // ✨ ESTADO PARA ABRIR EL MODAL DE PAGO
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   const [sucursalActiva, setSucursalActiva] = useState(JSON.parse(localStorage.getItem('sucursalActiva')) || null);
   const esVistaGlobal = sucursalActiva?.id === 'ALL';
 
   useEffect(() => {
     const fetchData = async () => {
-      // ✨ SEMÁFORO DE POS: Si no hay sucursal elegida, no pide datos (evita mezclas)
       const currentSucursal = JSON.parse(localStorage.getItem('sucursalActiva'));
       if (!currentSucursal) return;
 
@@ -37,13 +40,12 @@ const VentasPOS = () => {
       } catch (err) { console.error("Error al cargar data POS:", err); }
     };
     
-    fetchData(); // Carga inicial
+    fetchData(); 
 
-    // ✨ ESCUCHADOR CORREGIDO
     const handleSucursalCambiada = () => {
       setSucursalActiva(JSON.parse(localStorage.getItem('sucursalActiva')));
       setCarrito([]); 
-      fetchData(); // ✨ LÍNEA MÁGICA: Vuelve a descargar el catálogo instantáneamente
+      fetchData(); 
     };
     
     window.addEventListener('sucursalCambiada', handleSucursalCambiada);
@@ -98,15 +100,15 @@ const VentasPOS = () => {
     } catch (error) { setClientModal({ ...clientModal, error: 'Error al registrar cliente.' }); }
   };
 
-  const handleFinalizar = async () => {
-    if (carrito.length === 0 || !sucursalActiva || esVistaGlobal) return;
+  // ✨ FUNCIÓN FINAL QUE SE LLAMA AL ACEPTAR EL MODAL DE PAGO
+  const processCheckout = async (paymentData) => {
     setIsSubmitting(true);
-    const subtotalBruto = carrito.reduce((acc, item) => acc + (parseFloat(item.precio) * item.cantidad), 0);
     
     try {
       const res = await api.post('/ventas', {
         cliente_id: clienteSel || null,
-        total: subtotalBruto,
+        total: paymentData.total,
+        metodo_pago: paymentData.metodo, // ✨ Enviamos el método de pago
         sucursal_id: sucursalActiva.id,
         productos: carrito.map(p => ({ id: p.id, cantidad: p.cantidad, precio: parseFloat(p.precio) }))
       });
@@ -219,8 +221,9 @@ const VentasPOS = () => {
               <span className="text-blue-600">S/ {subtotal.toFixed(2)}</span>
             </div>
 
+            {/* ✨ BOTÓN QUE ABRE EL MODAL DE PAGO */}
             <button 
-              onClick={handleFinalizar} 
+              onClick={() => setIsPaymentModalOpen(true)} 
               disabled={carrito.length === 0 || isSubmitting || esVistaGlobal} 
               className={`w-full py-4 rounded-xl font-bold text-white transition-all text-lg shadow-md active:scale-[0.98] ${carrito.length === 0 || esVistaGlobal ? 'bg-slate-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/30'}`}
             >
@@ -230,7 +233,14 @@ const VentasPOS = () => {
         </div>
       </div>
 
-      {/* MODAL ALERTA STOCK */}
+      {/* ✨ RENDERIZAMOS EL MODAL DE PAGO */}
+      <PaymentModal 
+        open={isPaymentModalOpen} 
+        total={subtotal} 
+        onClose={() => setIsPaymentModalOpen(false)} 
+        onConfirm={processCheckout} 
+      />
+
       {stockModal.isOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
           <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center border border-white/50 relative animate-fade-in-up">
@@ -245,7 +255,6 @@ const VentasPOS = () => {
         </div>
       )}
 
-      {/* MODAL NUEVO CLIENTE */}
       {clientModal.isOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-fade-in-up border border-white/50 relative">
@@ -256,11 +265,13 @@ const VentasPOS = () => {
             <form onSubmit={handleSaveClient} className="space-y-4">
               <div>
                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">DNI / Documento</label>
-                <input type="text" className="w-full mt-1 border-2 border-gray-200 p-3 rounded-xl outline-none focus:border-blue-500 font-bold text-gray-700" value={clientModal.dni} onChange={e => setClientModal({...clientModal, dni: e.target.value.replace(/\D/g, '')})} />
+                {/* ✨ VALIDACIÓN DNI */}
+                <input type="text" className="w-full mt-1 border-2 border-gray-200 p-3 rounded-xl outline-none focus:border-blue-500 font-bold text-gray-700" value={clientModal.dni} onChange={e => setClientModal({...clientModal, dni: e.target.value.replace(/\D/g, '').slice(0, 8)})} />
               </div>
               <div>
                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Nombre Completo *</label>
-                <input required type="text" className="w-full mt-1 border-2 border-gray-200 p-3 rounded-xl outline-none focus:border-blue-500 font-bold text-gray-700" value={clientModal.nombre} onChange={e => setClientModal({...clientModal, nombre: e.target.value})} autoFocus/>
+                {/* ✨ VALIDACIÓN NOMBRE */}
+                <input required type="text" className="w-full mt-1 border-2 border-gray-200 p-3 rounded-xl outline-none focus:border-blue-500 font-bold text-gray-700" value={clientModal.nombre} onChange={e => setClientModal({...clientModal, nombre: e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')})} autoFocus/>
               </div>
               <div>
                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Dirección</label>

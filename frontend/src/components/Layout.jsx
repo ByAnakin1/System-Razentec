@@ -28,13 +28,12 @@ const Layout = ({ children }) => {
           const todasSucs = sucRes.data;
           setSucursales(todasSucs);
 
-          // ✨ LECTURA BLINDADA DE SUCURSALES (Previene fallos si viene en formato texto)
           let asignadas = [];
           if (u.sucursales_asignadas) {
             try {
               let parsed = u.sucursales_asignadas;
               if (typeof parsed === 'string') parsed = JSON.parse(parsed);
-              if (typeof parsed === 'string') parsed = JSON.parse(parsed); // Doble parseo preventivo
+              if (typeof parsed === 'string') parsed = JSON.parse(parsed); 
               if (Array.isArray(parsed)) asignadas = parsed;
             } catch (e) {}
           }
@@ -54,7 +53,6 @@ const Layout = ({ children }) => {
             try { sucursalPrevia = JSON.parse(sucursalPreviaStr); } catch(e){}
           }
 
-          // Verificamos que la sucursal guardada siga siendo válida para este usuario
           const esValida = sucursalPrevia?.id === 'ALL' 
             ? u.rol === 'Administrador' 
             : permitidas.some(s => parseInt(s.id, 10) === parseInt(sucursalPrevia?.id, 10));
@@ -66,12 +64,11 @@ const Layout = ({ children }) => {
             } else {
               setSucursalActiva(null);
               localStorage.removeItem('sucursalActiva');
-              window.dispatchEvent(new Event('sucursalCambiada')); // Da luz verde a los módulos
+              window.dispatchEvent(new Event('sucursalCambiada')); 
             }
           } else {
-            // ✨ FIJA EL ESTADO INMEDIATAMENTE PARA QUE DESAPAREZCA EL "Cargando..."
             setSucursalActiva(sucursalPrevia);
-            window.dispatchEvent(new Event('sucursalCambiada')); // Da luz verde a los módulos
+            window.dispatchEvent(new Event('sucursalCambiada')); 
           }
 
         } catch(e) {}
@@ -101,7 +98,6 @@ const Layout = ({ children }) => {
     if(!suc) return;
     setSucursalActiva(suc);
     localStorage.setItem('sucursalActiva', JSON.stringify(suc));
-    // Damos tiempo a que se guarde en memoria antes de avisarle al inventario
     setTimeout(() => window.dispatchEvent(new Event('sucursalCambiada')), 50); 
   };
 
@@ -112,6 +108,9 @@ const Layout = ({ children }) => {
     localStorage.removeItem('sucursalActiva'); 
     navigate('/login');
   };
+
+  // ✨ VERIFICAMOS SI ESTAMOS EN LA RUTA SUCURSALES
+  const isSucursalesRoute = location.pathname === '/sucursales';
 
   return (
     <div className="flex h-screen bg-slate-50">
@@ -134,22 +133,25 @@ const Layout = ({ children }) => {
           </div>
           
           <div className="flex-1 flex items-center justify-center">
-            <div className={`hidden md:flex items-center bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-full px-4 py-1.5 transition-all shadow-sm ${sucursalesPermitidas.length <= 1 && usuario.rol !== 'Administrador' ? 'opacity-80 cursor-default' : ''}`}>
-              {sucursalActiva?.id === 'ALL' ? <Building2 size={16} className="text-gray-500 mr-2"/> : <MapPin size={16} className="text-blue-600 mr-2"/>}
-              <select 
-                className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 py-1 w-auto max-w-[200px] cursor-pointer appearance-none text-center disabled:cursor-default"
-                value={sucursalActiva?.id || ''}
-                disabled={sucursalesPermitidas.length <= 1 && usuario.rol !== 'Administrador'}
-                onChange={(e) => {
-                  if (e.target.value === 'ALL') seleccionarSucursal({ id: 'ALL', nombre: 'Todas las Sucursales' });
-                  else seleccionarSucursal(sucursales.find(s => s.id === parseInt(e.target.value)));
-                }}
-              >
-                <option value="" disabled>{sucursalesPermitidas.length === 0 && usuario.rol !== 'Administrador' ? 'Sin locales asignados' : 'Cargando local...'}</option>
-                {usuario.rol === 'Administrador' && <option value="ALL">🏢 Todas las Sucursales</option>}
-                {sucursalesPermitidas.map(suc => <option key={suc.id} value={suc.id}>{suc.nombre}</option>)}
-              </select>
-            </div>
+            {/* ✨ OCULTAMOS EL SELECTOR SI ESTAMOS EN /sucursales */}
+            {!isSucursalesRoute && (
+              <div className={`hidden md:flex items-center bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-full px-4 py-1.5 transition-all shadow-sm ${sucursalesPermitidas.length <= 1 && usuario.rol !== 'Administrador' ? 'opacity-80 cursor-default' : ''}`}>
+                {sucursalActiva?.id === 'ALL' ? <Building2 size={16} className="text-gray-500 mr-2"/> : <MapPin size={16} className="text-blue-600 mr-2"/>}
+                <select 
+                  className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 py-1 w-auto max-w-[200px] cursor-pointer appearance-none text-center disabled:cursor-default"
+                  value={sucursalActiva?.id || ''}
+                  disabled={sucursalesPermitidas.length <= 1 && usuario.rol !== 'Administrador'}
+                  onChange={(e) => {
+                    if (e.target.value === 'ALL') seleccionarSucursal({ id: 'ALL', nombre: 'Todas las Sucursales' });
+                    else seleccionarSucursal(sucursales.find(s => s.id === parseInt(e.target.value)));
+                  }}
+                >
+                  <option value="" disabled>{sucursalesPermitidas.length === 0 && usuario.rol !== 'Administrador' ? 'Sin locales asignados' : 'Cargando local...'}</option>
+                  {usuario.rol === 'Administrador' && <option value="ALL">🏢 Todas las Sucursales</option>}
+                  {sucursalesPermitidas.map(suc => <option key={suc.id} value={suc.id}>{suc.nombre}</option>)}
+                </select>
+              </div>
+            )}
           </div>
           
           <div className="flex-1 flex items-center justify-end gap-3 relative">

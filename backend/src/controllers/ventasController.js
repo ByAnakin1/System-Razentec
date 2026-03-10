@@ -4,7 +4,6 @@ const { registrarLog } = require('../services/logService');
 const ventasController = {
   getVentas: async (req, res) => {
     try {
-      // ✨ LEEMOS LA SUCURSAL DESDE EL INTERCEPTOR
       const sucursalId = req.headers['x-sucursal-id'];
 
       let query = `
@@ -18,7 +17,6 @@ const ventasController = {
       `;
       const params = [req.user.empresa_id];
 
-      // ✨ FILTRO CONDICIONAL
       if (sucursalId) {
         query += ` AND v.sucursal_id = $2`;
         params.push(sucursalId);
@@ -35,18 +33,20 @@ const ventasController = {
   },
 
   crearVenta: async (req, res) => {
-    const { cliente_id, total, productos, sucursal_id } = req.body;
+    // ✨ RECIBE EL METODO_PAGO
+    const { cliente_id, total, productos, sucursal_id, metodo_pago } = req.body;
     const client = await pool.connect();
 
     try {
       await client.query('BEGIN');
       const idCliente = (cliente_id && cliente_id !== '') ? parseInt(cliente_id) : null; 
       
+      // ✨ GUARDA EL METODO_PAGO
       const insertVenta = `
-        INSERT INTO ventas (empresa_id, cliente_id, usuario_id, total, sucursal_id) 
-        VALUES ($1, $2, $3, $4, $5) RETURNING id
+        INSERT INTO ventas (empresa_id, cliente_id, usuario_id, total, sucursal_id, metodo_pago) 
+        VALUES ($1, $2, $3, $4, $5, $6) RETURNING id
       `;
-      const resVenta = await client.query(insertVenta, [req.user.empresa_id, idCliente, req.user.id, total, sucursal_id]);
+      const resVenta = await client.query(insertVenta, [req.user.empresa_id, idCliente, req.user.id, total, sucursal_id, metodo_pago || 'efectivo']);
       const ventaId = resVenta.rows[0].id;
 
       const insertDetalle = `
@@ -70,7 +70,7 @@ const ventasController = {
 
       await registrarLog(
         req.user.id, req.user.empresa_id, 'CREAR', 'Ventas', 
-        `Realizó una venta (Boleta #${ventaId}) por un total de S/ ${total}.`
+        `Realizó una venta (Boleta #${ventaId}) por un total de S/ ${total} (${metodo_pago}).`
       );
 
       res.status(201).json({ id: ventaId, message: 'Venta registrada' });
@@ -86,11 +86,11 @@ const ventasController = {
 
   getDetalleVenta: async (req, res) => {
     const { id } = req.params;
-    const sucursalId = req.headers['x-sucursal-id']; // ✨ Leemos el interceptor
+    const sucursalId = req.headers['x-sucursal-id']; 
 
     try {
       let queryVenta = `
-        SELECT v.id, v.created_at, v.total, c.nombre_completo AS cliente_nombre, c.documento_identidad, e.nombre_completo AS cajero_nombre, s.nombre AS sucursal_nombre
+        SELECT v.id, v.created_at, v.total, v.metodo_pago, c.nombre_completo AS cliente_nombre, c.documento_identidad, e.nombre_completo AS cajero_nombre, s.nombre AS sucursal_nombre
         FROM ventas v
         LEFT JOIN clientes c ON v.cliente_id = c.id
         LEFT JOIN usuarios u ON v.usuario_id = u.id
@@ -100,7 +100,6 @@ const ventasController = {
       `;
       const params = [id, req.user.empresa_id];
 
-      // ✨ Seguridad para que un empleado de la Sede A no abra boletas de la Sede B conociendo el ID
       if (sucursalId) {
         queryVenta += ` AND v.sucursal_id = $3`;
         params.push(sucursalId);

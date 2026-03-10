@@ -41,17 +41,19 @@ const ClienteQuickRegisterModal = ({ open, onClose, onSave }) => {
       const usuarioLocal = JSON.parse(localStorage.getItem('usuario') || '{}');
       
       // 2. Lo guardamos en la Base de Datos REAL
+      // NOTA: El interceptor global 'api.js' ya le inyecta la sucursal activa por debajo.
       const response = await api.post('/clientes', {
-        nombre: n,
-        dni: dni.trim() || null,
+        nombre_completo: n, // Ajustado al nombre real en la BD
+        documento_identidad: dni.trim() || null,
+        direccion: direccion.trim() || null,
         empresa_id: usuarioLocal.empresa_id || null
       });
 
       // 3. Pasamos el ID real que nos devuelve la base de datos
       onSave({
         id: response.data.id, 
-        nombre: response.data.nombre,
-        dni: response.data.dni
+        nombre: response.data.nombre_completo,
+        dni: response.data.documento_identidad
       });
       
       reset();
@@ -89,6 +91,7 @@ const ClienteQuickRegisterModal = ({ open, onClose, onSave }) => {
             <input
               type="text"
               value={dni}
+              // ✨ VALIDACIÓN: Solo números y corta en 8 dígitos
               onChange={(e) => setDni(e.target.value.replace(/\D/g, '').slice(0, 8))}
               placeholder="Ej. 12345678"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
@@ -99,6 +102,7 @@ const ClienteQuickRegisterModal = ({ open, onClose, onSave }) => {
             <input
               type="text"
               value={nombre}
+              // ✨ VALIDACIÓN: Evita números y símbolos especiales extraños
               onChange={(e) => setNombre(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''))}
               placeholder="Nombre completo"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"

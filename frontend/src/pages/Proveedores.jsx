@@ -23,8 +23,20 @@ const Proveedores = () => {
   const [sucursalActiva, setSucursalActiva] = useState(JSON.parse(localStorage.getItem('sucursalActiva')) || null);
   const esVistaGlobal = sucursalActiva?.id === 'ALL';
 
-  // ✨ LECTURA SÍNCRONA
-  const esAdmin = JSON.parse(localStorage.getItem('usuario') || '{}').rol === 'Administrador';
+  // ✨ COMPROBACIÓN DE PERMISOS
+  const [usuarioActual, setUsuarioActual] = useState(JSON.parse(localStorage.getItem('usuario') || '{}'));
+  const esAdmin = usuarioActual.rol === 'Administrador';
+
+  const getCategoriasSeguras = () => {
+    try {
+      let cat = usuarioActual?.categorias;
+      if (typeof cat === 'string') cat = JSON.parse(cat);
+      if (typeof cat === 'string') cat = JSON.parse(cat); // Doble parseo preventivo
+      return Array.isArray(cat) ? cat : [];
+    } catch(e) { return []; }
+  };
+
+  const tienePermisoEditar = esAdmin || getCategoriasSeguras().includes('Modificador') || getCategoriasSeguras().includes('Modificador_Proveedores');
 
   const showToast = (type, message) => { setToast({ type, message }); setTimeout(() => setToast(null), 3500); };
 
@@ -122,9 +134,12 @@ const Proveedores = () => {
             <select className="border p-2 rounded-lg outline-none cursor-pointer font-medium bg-white" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
               <option value="activos">Activos</option><option value="inactivos">Papelera</option><option value="todos">Todos</option>
             </select>
-            <button onClick={() => openModal()} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors">
-              <Plus size={20} /> Nuevo
-            </button>
+            {/* ✨ SOLO MUESTRA BOTÓN CREAR SI TIENE PERMISO */}
+            {tienePermisoEditar && (
+              <button onClick={() => openModal()} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors">
+                <Plus size={20} /> Nuevo
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -162,9 +177,14 @@ const Proveedores = () => {
                   <td className="px-4 py-3 truncate">{prov.telefono || '-'}</td>
                   <td className="px-4 py-3"><p className="truncate text-blue-600 text-xs font-medium">{prov.email || 'Sin correo'}</p><p className="truncate text-gray-400 text-[10px] mt-0.5">{prov.direccion || 'Sin dirección'}</p></td>
                   <td className="px-4 py-3 flex justify-center gap-2">
-                    <button onClick={() => setModalDetalles(prov)} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded transition-colors"><Eye size={18} /></button>
-                    <button onClick={() => openModal(prov)} className="text-yellow-600 hover:bg-yellow-50 p-1.5 rounded transition-colors"><Edit size={18} /></button>
-                    {prov.estado && <button onClick={() => {setProvToDelete(prov); setDeleteModalOpen(true);}} className="text-red-500 hover:bg-red-50 p-1.5 rounded transition-colors"><Trash2 size={18} /></button>}
+                    <button onClick={() => setModalDetalles(prov)} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded transition-colors" title="Ver Detalles"><Eye size={18} /></button>
+                    {/* ✨ SOLO MUESTRA ACCIONES DE EDICIÓN SI TIENE PERMISO */}
+                    {tienePermisoEditar && (
+                      <>
+                        <button onClick={() => openModal(prov)} className="text-yellow-600 hover:bg-yellow-50 p-1.5 rounded transition-colors" title="Editar"><Edit size={18} /></button>
+                        {prov.estado && <button onClick={() => {setProvToDelete(prov); setDeleteModalOpen(true);}} className="text-red-500 hover:bg-red-50 p-1.5 rounded transition-colors" title="Eliminar"><Trash2 size={18} /></button>}
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -185,7 +205,7 @@ const Proveedores = () => {
                <div><label className="text-[10px] font-bold text-gray-500 uppercase block">RUC</label><p className="font-medium text-gray-700">{modalDetalles.ruc || 'N/A'}</p></div>
                <div><label className="text-[10px] font-bold text-gray-500 uppercase block">Pertenece a:</label>
                  <div className="mt-1 inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100 font-bold text-sm">
-                   <Store size={14}/> {modalDetalles.sucursal_id ? modalDetalles.sucursal_nombre : '⚠️ Requiere Asignación'}
+                   <Store size={14}/> {modalDetalles.sucursal_id ? modalDetalles.sucursal_nombre : '⚠️ Requiere Asignación del Administrador'}
                  </div>
                </div>
             </div>

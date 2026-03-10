@@ -10,7 +10,7 @@ const DirectorioAdmin = () => {
   const [password, setPassword] = useState('');
   const [errorBoveda, setErrorBoveda] = useState(''); 
   const [empleados, setEmpleados] = useState([]);
-  const [sucursales, setSucursales] = useState([]); // ✨
+  const [sucursales, setSucursales] = useState([]); 
   
   const [modalCrear, setModalCrear] = useState(false);
   const [modalVer, setModalVer] = useState(null);
@@ -19,13 +19,12 @@ const DirectorioAdmin = () => {
   const [formData, setFormData] = useState({ nombre_completo: '', dni: '', telefono: '', correo_personal: '' });
   const [errores, setErrores] = useState({});
 
-  // ✨ SEMÁFORO
   const [sucursalActiva, setSucursalActiva] = useState(JSON.parse(localStorage.getItem('sucursalActiva')) || null);
   const esVistaGlobal = sucursalActiva?.id === 'ALL';
 
   const fetchData = async () => {
     const currentSucursal = JSON.parse(localStorage.getItem('sucursalActiva'));
-    if (!currentSucursal) return; // Espera al layout
+    if (!currentSucursal) return; 
 
     try {
       const res = await api.get('/empleados');
@@ -67,7 +66,12 @@ const DirectorioAdmin = () => {
       nuevosErrores.nombre_completo = "Solo se permiten letras y espacios.";
     }
     if (formData.dni && !/^\d{8}$/.test(formData.dni)) nuevosErrores.dni = "El DNI debe tener exactamente 8 dígitos numéricos.";
-    if (formData.telefono && !/^[\d\s\-\+]{9,15}$/.test(formData.telefono.replace(/\s/g, ''))) nuevosErrores.telefono = "Ingrese un número de teléfono válido.";
+    
+    // ✨ VALIDACIÓN ESTRICTA: SOLO 9 NÚMEROS EXACTAMENTE
+    if (formData.telefono && !/^\d{9}$/.test(formData.telefono.replace(/\s/g, ''))) {
+        nuevosErrores.telefono = "El teléfono debe tener exactamente 9 dígitos numéricos.";
+    }
+
     if (formData.correo_personal && !/^\S+@\S+\.\S+$/.test(formData.correo_personal)) nuevosErrores.correo_personal = "El formato del correo no es válido.";
     setErrores(nuevosErrores);
     return Object.keys(nuevosErrores).length === 0;
@@ -95,7 +99,6 @@ const DirectorioAdmin = () => {
     }
   };
 
-  // ✨ Helper Seguro
   const parseJsonArray = (data) => {
     if (!data) return [];
     if (Array.isArray(data)) return data;
@@ -175,7 +178,6 @@ const DirectorioAdmin = () => {
                 <div className="p-5 bg-white flex-1 space-y-3">
                   <p className="text-xs text-gray-600 flex items-center gap-3 font-medium truncate" title={emp.nombre_completo}><User size={14} className="text-gray-400 flex-shrink-0"/> {emp.nombre_completo}</p>
                   <p className="text-xs text-gray-600 flex items-center gap-3 font-medium"><Phone size={14} className="text-gray-400 flex-shrink-0"/> {emp.telefono || 'Sin Teléfono'}</p>
-                  {/* ✨ ETIQUETA DE SUCURSAL SI ES VISTA GLOBAL */}
                   {esVistaGlobal && (
                     <div className="pt-2 mt-2 border-t border-gray-100">
                       <span className="text-[10px] font-extrabold uppercase text-purple-700 bg-purple-50 border border-purple-100 px-2 py-1 rounded flex items-center gap-1 w-max">
@@ -194,9 +196,6 @@ const DirectorioAdmin = () => {
         </div>
       )}
 
-      {/* LOS MODALES MANTIENEN EXACTAMENTE TU DISEÑO ORIGINAL, NO LOS HE TOCADO PARA AHORRAR ESPACIO (Pégalos tal cual los tenías en tu código original) */}
-      
-      {/* MODAL CREAR / EDITAR EMPLEADO */}
       {(modalCrear || modalEditar) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-all">
           <div className="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl border border-white/50 animate-fade-in-up">
@@ -235,7 +234,8 @@ const DirectorioAdmin = () => {
                   <input 
                     placeholder="999888777" 
                     value={formData.telefono} 
-                    onChange={e => setFormData({...formData, telefono: e.target.value.replace(/[^\d\+\-\s]/g, '').slice(0, 15)})} 
+                    // ✨ BLOQUEO FÍSICO AL ESCRIBIR
+                    onChange={e => setFormData({...formData, telefono: e.target.value.replace(/[^\d]/g, '').slice(0, 9)})} 
                     className={`w-full border p-3 rounded-xl focus:ring-2 focus:outline-none font-medium ${errores.telefono ? 'border-red-500 focus:ring-red-200' : 'border-gray-200 focus:ring-blue-500'}`}
                   />
                   {errores.telefono && <p className="text-[10px] text-red-500 mt-1 font-bold leading-tight">{errores.telefono}</p>}
@@ -267,11 +267,9 @@ const DirectorioAdmin = () => {
         </div>
       )}
 
-      {/* MODAL VISTA DETALLES ("El Ojito" Rediseñado) */}
       {modalVer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md">
           <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-white/50 animate-fade-in-up">
-            
             <div className={`${getRoleColors(modalVer.rol).header} px-8 py-10 flex flex-col items-center relative`}>
                <button onClick={() => setModalVer(null)} className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 p-2 rounded-full backdrop-blur-sm transition-colors"><X size={20}/></button>
                <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center font-bold text-4xl shadow-lg border-4 border-white/30 mb-4 overflow-hidden z-10">

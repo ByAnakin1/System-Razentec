@@ -1,26 +1,26 @@
 const bcrypt = require('bcryptjs');
 const { pool } = require('../config/db');
 
-const ROLES_ASIGNABLES = ['Supervisor', 'Empleado'];
-const MODULOS = ['Dashboard', 'Inventario', 'Categorias', 'Ventas', 'Compras', 'Clientes', 'Proveedores', 'Usuarios'];
-const CATEGORIAS = [...MODULOS, 'Modificador', ...MODULOS.map(m => `Modificador_${m}`)];
-
-const validarCategorias = (arr) => {
-  if (!Array.isArray(arr)) return [];
-  return arr.filter(c => CATEGORIAS.includes(c));
-};
-
 const usuariosController = {
   listar: async (req, res) => {
     try {
-      const query = `
+      const sucursalId = req.headers['x-sucursal-id'];
+
+      let query = `
         SELECT u.id, u.email, u.rol, u.categorias, u.area_cargo, u.sucursales_asignadas, 
                e.nombre_completo, e.avatar, e.dni, e.telefono, e.correo_personal
         FROM usuarios u 
         JOIN empleados e ON u.empleado_id = e.id 
         WHERE u.empresa_id = $1
       `;
-      const { rows } = await pool.query(query, [req.user.empresa_id]);
+      const params = [req.user.empresa_id];
+
+      if (sucursalId) {
+         query += ` AND (u.sucursales_asignadas::jsonb @> $2::jsonb OR u.rol = 'Administrador')`;
+         params.push(JSON.stringify([parseInt(sucursalId)])); 
+      }
+
+      const { rows } = await pool.query(query, params);
       res.json(rows);
     } catch (error) { res.status(500).json({ error: 'Error al listar usuarios' }); }
   },
@@ -33,8 +33,8 @@ const usuariosController = {
       if (!await bcrypt.compare(admin_password, adminRes.rows[0].password_hash)) return res.status(401).json({ error: 'Contraseña incorrecta' });
 
       const hash = await bcrypt.hash(password, await bcrypt.genSalt(10));
-      const catsJson = JSON.stringify(categorias || []);
-      const sucsJson = JSON.stringify(sucursales_asignadas || []); // ✨ Guarda arreglo de IDs
+      const catsJson = JSON.stringify(categorias || []); // ✨ Guarda TODO sin filtrar
+      const sucsJson = JSON.stringify(sucursales_asignadas || []); 
 
       await pool.query(
         'INSERT INTO usuarios (empresa_id, empleado_id, area_cargo, email, password_hash, rol, categorias, sucursales_asignadas) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
@@ -72,10 +72,11 @@ const usuariosController = {
       const adminRes = await pool.query('SELECT password_hash FROM usuarios WHERE id = $1', [req.user.id]);
       if (!await bcrypt.compare(admin_password, adminRes.rows[0].password_hash)) return res.status(401).json({ error: 'Contraseña incorrecta' });
 
+      const catsJson = JSON.stringify(categorias || []); // ✨ Guarda TODO sin filtrar
       const sucsJson = JSON.stringify(sucursales_asignadas || []);
 
       await pool.query('UPDATE usuarios SET email = $1, rol = $2, area_cargo = $3, categorias = $4, sucursales_asignadas = $5 WHERE id = $6 AND empresa_id = $7', 
-        [email, rol, area_cargo, JSON.stringify(validarCategorias(categorias)), sucsJson, id, req.user.empresa_id]);
+        [email, rol, area_cargo, catsJson, sucsJson, id, req.user.empresa_id]);
 
       if (nueva_password) {
         const hash = await bcrypt.hash(nueva_password, await bcrypt.genSalt(10));
