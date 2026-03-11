@@ -11,6 +11,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // ==========================================
 // 📌 RUTAS DE LA API (TODAS CONECTADAS)
 // ==========================================
+app.use('/api/dashboard', require('./src/routes/dashboardRoutes')); // NUEVA RUTA PARA EL DASHBOARD
 app.use('/api/auth', require('./src/routes/authRoutes'));
 app.use('/api/usuarios', require('./src/routes/usuariosRoutes'));
 app.use('/api/empleados', require('./src/routes/empleadosRoutes'));
