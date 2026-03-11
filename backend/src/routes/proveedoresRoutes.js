@@ -1,24 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const proveedoresController = require('../controllers/proveedoresController');
-
-// 👇 CORRECCIÓN: Lo importamos exactamente igual que en productosRoutes.js (sin llaves)
 const verifyToken = require('../middlewares/authMiddleware'); 
-const { audit } = require('../middlewares/auditMiddleware');
+const requireModificador = require('../middlewares/requireModificador');
 
-// Aplicamos el middleware
 router.use(verifyToken);
 
-// Listar proveedores
-router.get('/', audit('GET', '/proveedores', 'proveedores'), proveedoresController.listar);
+// 🟢 Lectura
+router.get('/', proveedoresController.listar);
 
-// Crear proveedor
-router.post('/', audit('POST', '/proveedores', 'proveedores'), proveedoresController.crear);
-
-// Actualizar proveedor
-router.put('/:id', audit('PUT', '/proveedores', 'proveedores'), proveedoresController.actualizar);
-
-// Eliminar (desactivar) proveedor
-router.delete('/:id', audit('DELETE', '/proveedores', 'proveedores'), proveedoresController.eliminar);
+// 🔴 Escritura
+router.post('/', requireModificador('Proveedores'), proveedoresController.crear);
+router.put('/:id', requireModificador('Proveedores'), proveedoresController.actualizar);
+router.delete('/:id', requireModificador('Proveedores'), proveedoresController.eliminar);
 
 module.exports = router;

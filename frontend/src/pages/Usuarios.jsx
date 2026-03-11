@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import Layout from '../components/Layout';
-import { Plus, Trash2, X, AlertTriangle, UserPlus, Eye, Edit, ShieldCheck, Zap, Search } from 'lucide-react';
+import { Plus, Trash2, X, AlertTriangle, UserPlus, Eye, Edit, ShieldCheck, Search, Store, CheckCircle } from 'lucide-react';
 import { CATEGORIA_A_RUTA } from '../config/menuConfig';
 
 const ROLES = ['Supervisor', 'Empleado'];
@@ -16,10 +16,10 @@ const ToggleSwitch = ({ checked, onChange, disabled }) => (
 const Usuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [empleadosDisponibles, setEmpleadosDisponibles] = useState([]); 
+  const [sucursales, setSucursales] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [usuarioActual, setUsuarioActual] = useState(null);
   
-  // ✨ NUEVO: Estado para el buscador
   const [busqueda, setBusqueda] = useState('');
 
   const [modalCrear, setModalCrear] = useState(false);
@@ -30,25 +30,30 @@ const Usuarios = () => {
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
   const [permisosLocales, setPermisosLocales] = useState({ view: {}, mod: {} });
 
-  const [formCrear, setFormCrear] = useState({ empleado_id: '', area_cargo: '', email: '', password: '', rol: 'Empleado', admin_password: '' });
-  const [formEditar, setFormEditar] = useState({ nombre_completo: '', area_cargo: '', email: '', rol: 'Empleado', nueva_password: '', admin_password: '' });
+  const [formCrear, setFormCrear] = useState({ empleado_id: '', area_cargo: '', email: '', password: '', rol: 'Empleado', admin_password: '', sucursales_asignadas: [] });
+  const [formEditar, setFormEditar] = useState({ nombre_completo: '', area_cargo: '', email: '', rol: 'Empleado', nueva_password: '', admin_password: '', sucursales_asignadas: [] });
   const [errores, setErrores] = useState({});
+
+  // ✨ ESTADOS PARA EL SEMÁFORO Y FILTRO DE SUCURSAL
+  const [sucursalActiva, setSucursalActiva] = useState(JSON.parse(localStorage.getItem('sucursalActiva')) || null);
+  const esVistaGlobal = sucursalActiva?.id === 'ALL';
 
   const esAdmin = () => usuarioActual?.rol === 'Administrador';
   
-  const categoriasArray = (u) => {
-    if (!u || !u.categorias) return [];
-    try {
-      if (Array.isArray(u.categorias)) return u.categorias;
-      if (typeof u.categorias === 'string') {
-        let parsed = JSON.parse(u.categorias);
-        if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+  const parseJsonArray = (data) => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (typeof data === 'string') {
+      try {
+        let parsed = JSON.parse(data);
+        if (typeof parsed === 'string') parsed = JSON.parse(parsed); 
         return Array.isArray(parsed) ? parsed : [];
-      }
-    } catch(e) {}
+      } catch (e) { return []; }
+    }
     return [];
   };
 
+  const categoriasArray = (u) => parseJsonArray(u?.categorias);
   const tieneView = (u, mod) => categoriasArray(u).includes(mod);
   const tieneModificador = (u, mod) => categoriasArray(u).includes('Modificador') || categoriasArray(u).includes(`Modificador_${mod}`);
 
@@ -67,25 +72,43 @@ const Usuarios = () => {
   const fetchUsuarios = async () => {
     setLoading(true);
     try {
-      const resUsuarios = await api.get('/usuarios');
+      const [resUsuarios, resEmpleados, resSucs] = await Promise.all([
+        api.get('/usuarios'), api.get('/empleados'), api.get('/sucursales')
+      ]);
       setUsuarios(resUsuarios.data);
-      const resEmpleados = await api.get('/empleados');
       setEmpleadosDisponibles(resEmpleados.data.filter(e => !e.correo_corporativo));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+      setSucursales(resSucs.data);
+    } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchUsuarios(); }, []);
+  useEffect(() => { 
+    fetchUsuarios(); 
+    // ✨ ESCUCHADOR PARA RECARGAR LA VISTA AL CAMBIAR DE SUCURSAL ARRIBA
+    const handleSucursalCambiada = () => {
+      setSucursalActiva(JSON.parse(localStorage.getItem('sucursalActiva')));
+    };
+    window.addEventListener('sucursalCambiada', handleSucursalCambiada);
+    return () => window.removeEventListener('sucursalCambiada', handleSucursalCambiada);
+  }, []);
 
-  // ✨ NUEVO: Filtrado de usuarios en tiempo real
-  const usuariosFiltrados = usuarios.filter(u => 
-    (u.nombre_completo || '').toLowerCase().includes(busqueda.toLowerCase()) ||
-    (u.area_cargo || '').toLowerCase().includes(busqueda.toLowerCase()) ||
-    (u.email || '').toLowerCase().includes(busqueda.toLowerCase())
-  );
+  // ✨ FILTRO ESTRICTO: Oculta a la gente que no pertenece a la tienda que estás viendo
+  const usuariosFiltrados = usuarios.filter(u => {
+    const coincideTexto = (u.nombre_completo || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+                          (u.area_cargo || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+                          (u.email || '').toLowerCase().includes(busqueda.toLowerCase());
+
+    if (!coincideTexto) return false;
+
+    if (esVistaGlobal) return true; // Si es Global, mostramos todos.
+    if (!sucursalActiva) return false;
+
+    // Leemos las sucursales del usuario y vemos si tiene permiso en la actual
+    const asignadas = parseJsonArray(u.sucursales_asignadas).map(id => parseInt(id, 10));
+    const perteneceASucursal = asignadas.includes(parseInt(sucursalActiva.id, 10));
+
+    // Si es Administrador General, lo mostramos porque tiene acceso a todas partes
+    return perteneceASucursal || u.rol === 'Administrador';
+  });
 
   const openModalDetalles = (u) => {
     setUsuarioSeleccionado(u);
@@ -93,7 +116,7 @@ const Usuarios = () => {
   };
 
   const handleOpenCrear = () => {
-    setFormCrear({ empleado_id: '', area_cargo: '', email: '', password: '', rol: 'Empleado', admin_password: '' });
+    setFormCrear({ empleado_id: '', area_cargo: '', email: '', password: '', rol: 'Empleado', admin_password: '', sucursales_asignadas: [] });
     setPermisosLocales({ view: {}, mod: {} });
     setErrores({});
     setModalCrear(true);
@@ -101,13 +124,11 @@ const Usuarios = () => {
 
   const openModalEditar = (u) => {
     setUsuarioSeleccionado(u);
+    const arrAsignadas = parseJsonArray(u.sucursales_asignadas);
+
     setFormEditar({ 
-      nombre_completo: u.nombre_completo, 
-      area_cargo: u.area_cargo || '', 
-      email: u.email, 
-      rol: u.rol || 'Empleado', 
-      nueva_password: '', 
-      admin_password: '' 
+      nombre_completo: u.nombre_completo, area_cargo: u.area_cargo || '', email: u.email, 
+      rol: u.rol || 'Empleado', nueva_password: '', admin_password: '', sucursales_asignadas: arrAsignadas 
     });
     const view = {}; const mod = {};
     MODULOS.forEach(m => { view[m] = tieneView(u, m); mod[m] = tieneModificador(u, m); });
@@ -159,18 +180,12 @@ const Usuarios = () => {
 
     try {
       await api.put(`/usuarios/${usuarioSeleccionado.id}`, {
-        email: formEditar.email,
-        area_cargo: formEditar.area_cargo,
-        rol: formEditar.rol,
-        categorias: procesarCategoriasParaGuardar(),
-        nueva_password: formEditar.nueva_password,
-        admin_password: formEditar.admin_password
+        email: formEditar.email, rol: formEditar.rol, area_cargo: formEditar.area_cargo,
+        categorias: procesarCategoriasParaGuardar(), nueva_password: formEditar.nueva_password, admin_password: formEditar.admin_password,
+        sucursales_asignadas: formEditar.sucursales_asignadas 
       });
-      setModalEditar(false);
-      fetchUsuarios();
-    } catch (err) {
-      alert(err.response?.data?.error || 'Error al guardar los cambios.');
-    }
+      setModalEditar(false); fetchUsuarios();
+    } catch (err) { alert(err.response?.data?.error || 'Error al guardar los cambios.'); }
   };
 
   const handleCrear = async (e) => {
@@ -179,50 +194,41 @@ const Usuarios = () => {
 
     try {
       await api.post('/usuarios', {
-        empleado_id: formCrear.empleado_id,
-        area_cargo: formCrear.area_cargo,
-        email: formCrear.email,
-        password: formCrear.password,
-        rol: formCrear.rol,
-        categorias: procesarCategoriasParaGuardar(),
-        admin_password: formCrear.admin_password
+        empleado_id: formCrear.empleado_id, area_cargo: formCrear.area_cargo, email: formCrear.email,
+        password: formCrear.password, rol: formCrear.rol, categorias: procesarCategoriasParaGuardar(), admin_password: formCrear.admin_password,
+        sucursales_asignadas: formCrear.sucursales_asignadas 
       });
-      setModalCrear(false);
-      fetchUsuarios();
-    } catch (err) { 
-      alert(err.response?.data?.error || 'Error al crear. El correo podría estar en uso.'); 
-    }
+      setModalCrear(false); fetchUsuarios();
+    } catch (err) { alert(err.response?.data?.error || 'Error al crear.'); }
   };
 
   const handleEliminar = async () => {
     if (!usuarioSeleccionado) return;
-    try {
-      await api.delete(`/usuarios/${usuarioSeleccionado.id}`);
-      setModalEliminar(false);
-      fetchUsuarios();
-    } catch (err) { alert(err.response?.data?.error || 'Error al eliminar'); }
+    try { await api.delete(`/usuarios/${usuarioSeleccionado.id}`); setModalEliminar(false); fetchUsuarios(); } catch (err) { alert(err.response?.data?.error || 'Error al eliminar'); }
+  };
+
+  const obtenerNombresSucursales = (arrStr) => {
+    const arr = parseJsonArray(arrStr);
+    if (arr.length === 0) return 'Ninguna';
+    const nombres = arr.map(id => sucursales.find(s => s.id === parseInt(id))?.nombre).filter(Boolean);
+    if (nombres.length === sucursales.length && sucursales.length > 0) return 'Todas las sucursales';
+    return nombres.join(', ') || 'Desconocida';
   };
 
   return (
     <Layout>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        {/* ✨ TÍTULO LIMPIO */}
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <UserPlus size={24} className="text-blue-600" /> Cuentas
-        </h1>
-        
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><UserPlus size={24} className="text-blue-600" /> Cuentas de Acceso</h1>
+          <p className="text-sm text-gray-500 font-medium mt-1">
+            {esVistaGlobal ? 'Administrando cuentas globales' : `Viendo cuentas de: ${sucursalActiva?.nombre || '...'}`}
+          </p>
+        </div>
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-          {/* ✨ BUSCADOR */}
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-2.5 text-gray-400" size={16}/>
-            <input 
-              type="text" placeholder="Buscar usuario..." 
-              className="w-full bg-white border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 font-medium shadow-sm"
-              value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
-            />
+            <input type="text" placeholder="Buscar usuario..." className="w-full bg-white border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 font-medium shadow-sm" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
           </div>
-          
-          {/* ✨ BOTÓN ACORTADO */}
           {esAdmin() && (
             <button onClick={handleOpenCrear} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-colors font-medium shadow-sm">
               <Plus size={20} /> Credencial
@@ -237,13 +243,15 @@ const Usuarios = () => {
             <tr>
               <th className="px-6 py-3">Designación en Sistema</th>
               <th className="px-6 py-3">Correo Login</th>
+              <th className="px-6 py-3">Permiso de Locales</th>
               <th className="px-6 py-3">Nivel de Acceso</th>
               <th className="px-6 py-3 text-center">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {loading ? <tr><td colSpan="4" className="text-center py-8">Cargando...</td></tr> : 
-             usuariosFiltrados.length === 0 ? <tr><td colSpan="4" className="text-center py-8 text-gray-400">No se encontraron usuarios.</td></tr> :
+            {loading ? <tr><td colSpan="5" className="text-center py-8">Cargando...</td></tr> : 
+             !sucursalActiva ? <tr><td colSpan="5" className="text-center py-8 text-red-500 font-medium bg-red-50">⚠️ No se ha detectado sucursal.</td></tr> :
+             usuariosFiltrados.length === 0 ? <tr><td colSpan="5" className="text-center py-8 text-gray-400">No hay cuentas asignadas a esta vista.</td></tr> :
              usuariosFiltrados.map((u) => (
               <tr key={u.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">
@@ -252,19 +260,24 @@ const Usuarios = () => {
                        {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover"/> : (u.area_cargo || u.nombre_completo)?.charAt(0).toUpperCase()}
                      </div>
                      <div>
-                       <p className="font-bold text-gray-900">
-                         {u.rol === 'Administrador' ? 'Administrador' : (u.area_cargo || 'Sin designar')}
-                       </p>
+                       <p className="font-bold text-gray-900">{u.rol === 'Administrador' ? 'Administrador' : (u.area_cargo || 'Sin designar')}</p>
                        <p className="text-[10px] text-gray-400 truncate">Vinc: {u.nombre_completo}</p>
                      </div>
                    </div>
                 </td>
                 <td className="px-6 py-4">{u.email}</td>
+                
                 <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${u.rol === 'Administrador' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                    {u.rol}
-                  </span>
+                  {u.rol === 'Administrador' ? (
+                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded">Global (Todas)</span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-1 rounded line-clamp-1 max-w-[150px]" title={obtenerNombresSucursales(u.sucursales_asignadas)}>
+                      {obtenerNombresSucursales(u.sucursales_asignadas)}
+                    </span>
+                  )}
                 </td>
+
+                <td className="px-6 py-4"><span className={`px-2 py-1 rounded-full text-xs font-bold ${u.rol === 'Administrador' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>{u.rol}</span></td>
                 <td className="px-6 py-4 flex justify-center gap-2 mt-1">
                   <button onClick={() => openModalDetalles(u)} className="p-1.5 text-gray-400 hover:text-blue-600" title="Ver Permisos"><Eye size={18} /></button>
                   {esAdmin() && usuarioActual?.id !== u.id && (
@@ -289,20 +302,16 @@ const Usuarios = () => {
               <button onClick={() => setModalDetalles(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
             </div>
             <div className="space-y-4">
-              <div>
-                <label className="text-xs text-gray-500 font-bold uppercase">Identidad en Sistema (Cargo)</label>
-                <div className="bg-gray-50 p-2 rounded border font-bold text-blue-800 text-lg">
-                  {usuarioSeleccionado.rol === 'Administrador' ? 'Administrador' : (usuarioSeleccionado.area_cargo || 'Sin designar')}
-                </div>
-              </div>
-              <div><label className="text-xs text-gray-500 font-bold uppercase">Persona Física Vinculada</label><div className="text-sm font-medium text-gray-700">{usuarioSeleccionado.nombre_completo}</div></div>
-              <div><label className="text-xs text-gray-500 font-bold uppercase">Correo Corporativo</label><div className="bg-gray-50 p-2 rounded border text-gray-800">{usuarioSeleccionado.email}</div></div>
+              <div><label className="text-xs text-gray-500 font-bold uppercase">Identidad en Sistema</label><div className="bg-gray-50 p-2 rounded border font-bold text-blue-800 text-lg">{usuarioSeleccionado.rol === 'Administrador' ? 'Administrador' : (usuarioSeleccionado.area_cargo || 'Sin designar')}</div></div>
+              <div><label className="text-xs text-gray-500 font-bold uppercase">Persona Física</label><div className="text-sm font-medium text-gray-700">{usuarioSeleccionado.nombre_completo}</div></div>
+              <div><label className="text-xs text-gray-500 font-bold uppercase">Correo</label><div className="bg-gray-50 p-2 rounded border text-gray-800">{usuarioSeleccionado.email}</div></div>
+              
+              <div><label className="text-xs text-gray-500 font-bold uppercase">Locales Autorizados</label><div className="text-sm font-bold text-purple-700 mt-1">{usuarioSeleccionado.rol === 'Administrador' ? 'Todos los locales (Acceso Global)' : obtenerNombresSucursales(usuarioSeleccionado.sucursales_asignadas)}</div></div>
+
               <div><label className="text-xs text-gray-500 font-bold uppercase">Rol</label><div className="mt-1"><span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-bold">{usuarioSeleccionado.rol}</span></div></div>
               <div className="pt-2"><label className="text-xs text-gray-500 font-bold uppercase mb-2 block">Módulos Permitidos</label>
                 <div className="flex flex-wrap gap-2">
-                  {MODULOS.filter(m => tieneView(usuarioSeleccionado, m)).length > 0 ? (
-                    MODULOS.filter(m => tieneView(usuarioSeleccionado, m)).map(m => <span key={m} className="bg-slate-800 text-white px-3 py-1 rounded text-xs font-semibold flex items-center gap-1"><Eye size={12}/> {m}</span>)
-                  ) : <span className="text-sm text-gray-400 italic">Sin acceso a módulos.</span>}
+                  {MODULOS.filter(m => tieneView(usuarioSeleccionado, m)).length > 0 ? MODULOS.filter(m => tieneView(usuarioSeleccionado, m)).map(m => <span key={m} className="bg-slate-800 text-white px-3 py-1 rounded text-xs font-semibold flex items-center gap-1"><Eye size={12}/> {m}</span>) : <span className="text-sm text-gray-400 italic">Sin acceso.</span>}
                 </div>
               </div>
             </div>
@@ -315,20 +324,16 @@ const Usuarios = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-all p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-white/50">
             <div className="p-6 border-b flex justify-between items-center bg-white z-10 shadow-sm">
-              <h2 className="text-xl md:text-2xl font-extrabold text-gray-800 flex items-center gap-2">
-                {modalCrear ? <UserPlus className="text-blue-600"/> : <Edit className="text-yellow-500"/>}
-                {modalCrear ? 'Generar Credencial a Empleado' : 'Editar Accesos y Permisos'}
-              </h2>
+              <h2 className="text-xl md:text-2xl font-extrabold text-gray-800 flex items-center gap-2">{modalCrear ? <UserPlus className="text-blue-600"/> : <Edit className="text-yellow-500"/>}{modalCrear ? 'Generar Credencial a Empleado' : 'Editar Accesos y Permisos'}</h2>
               <button onClick={() => modalCrear ? setModalCrear(false) : setModalEditar(false)} className="bg-gray-100 hover:bg-gray-200 p-2 rounded-full text-gray-500"><X size={20}/></button>
             </div>
             
             <form onSubmit={modalCrear ? handleCrear : handleGuardarEditarCompleto} className="overflow-y-auto p-4 md:p-8 bg-gray-50/50 space-y-8">
-              
               <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                 <h3 className="font-bold text-gray-700 mb-5 border-b border-gray-100 pb-2">Identidad en el Sistema</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div>
-                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Vincular a Empleado (Persona Física)</label>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Vincular a Empleado</label>
                     {modalCrear ? (
                       <select className={`w-full border p-3 rounded-xl outline-none font-medium ${errores.empleado_id ? 'border-red-500' : 'border-gray-200 focus:ring-blue-500'}`} value={formCrear.empleado_id} onChange={e => setFormCrear({...formCrear, empleado_id: e.target.value})}>
                         <option value="">-- Seleccione del Staff --</option>
@@ -339,9 +344,8 @@ const Usuarios = () => {
                     )}
                     {errores.empleado_id && <p className="text-[10px] text-red-500 mt-1 font-bold">{errores.empleado_id}</p>}
                   </div>
-
                   <div>
-                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Área o Cargo (Identidad en Sistema)</label>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Área o Cargo</label>
                     <input type="text" className={`w-full border p-3 rounded-xl outline-none font-bold text-blue-800 bg-blue-50/30 ${errores.area_cargo ? 'border-red-500' : 'border-gray-200 focus:ring-blue-500'}`} value={modalCrear ? formCrear.area_cargo : formEditar.area_cargo} onChange={e => modalCrear ? setFormCrear({...formCrear, area_cargo: e.target.value}) : setFormEditar({...formEditar, area_cargo: e.target.value})} placeholder="Ej: Cajero Turno Mañana"/>
                     {errores.area_cargo && <p className="text-[10px] text-red-500 mt-1 font-bold">{errores.area_cargo}</p>}
                   </div>
@@ -353,14 +357,54 @@ const Usuarios = () => {
                     <input type="email" className={`w-full border p-3 rounded-xl outline-none font-medium ${errores.email ? 'border-red-500' : 'border-gray-200 focus:ring-blue-500'}`} value={modalCrear ? formCrear.email : formEditar.email} onChange={e => modalCrear ? setFormCrear({...formCrear, email: e.target.value}) : setFormEditar({...formEditar, email: e.target.value})} placeholder="usuario@empresa.com"/>
                     {errores.email && <p className="text-[10px] text-red-500 mt-1 font-bold">{errores.email}</p>}
                   </div>
-
                   <div>
                     <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Nivel de Privilegios (Rol)</label>
-                    <select className="w-full border border-gray-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium" value={modalCrear ? formCrear.rol : formEditar.rol} onChange={e => modalCrear ? setFormCrear({...formCrear, rol: e.target.value}) : setFormEditar({...formEditar, rol: e.target.value})}>
+                    <select className="w-full border border-gray-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium" value={modalCrear ? formCrear.rol : formEditar.rol} onChange={e => {
+                      const nuevoRol = e.target.value;
+                      if(modalCrear) setFormCrear({...formCrear, rol: nuevoRol}); else setFormEditar({...formEditar, rol: nuevoRol});
+                    }}>
                       {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </div>
                 </div>
+
+                {(modalCrear ? formCrear.rol : formEditar.rol) !== 'Administrador' && (
+                  <div className="mt-6 bg-purple-50 p-5 rounded-2xl border border-purple-100">
+                    <label className="text-xs font-bold text-purple-700 uppercase flex items-center gap-2 mb-1"><Store size={16}/> Locales Autorizados</label>
+                    <p className="text-[11px] text-purple-600/80 mb-4">Selecciona una o más sucursales donde este empleado podrá operar.</p>
+                    
+                    {sucursales.length === 0 ? <p className="text-xs italic text-gray-400">No hay sucursales registradas aún.</p> : (
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                        {sucursales.map(suc => {
+                          const arregloActual = modalCrear ? formCrear.sucursales_asignadas : formEditar.sucursales_asignadas;
+                          const isChecked = arregloActual.includes(suc.id);
+                          return (
+                            <label key={suc.id} className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${isChecked ? 'bg-purple-600 text-white border-purple-700 shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300'}`}>
+                              <input 
+                                type="checkbox" 
+                                className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500 border-gray-300 cursor-pointer hidden" 
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  const val = e.target.checked;
+                                  let nuevoArreglo = [...arregloActual];
+                                  if (val) nuevoArreglo.push(suc.id);
+                                  else nuevoArreglo = nuevoArreglo.filter(id => id !== suc.id);
+                                  
+                                  if (modalCrear) setFormCrear({...formCrear, sucursales_asignadas: nuevoArreglo});
+                                  else setFormEditar({...formEditar, sucursales_asignadas: nuevoArreglo});
+                                }}
+                              />
+                              <div className={`w-4 h-4 flex items-center justify-center rounded border ${isChecked ? 'bg-white border-white' : 'bg-gray-50 border-gray-300'}`}>
+                                {isChecked && <CheckCircle size={12} className="text-purple-600" strokeWidth={4}/>}
+                              </div>
+                              <span className="text-xs font-bold truncate select-none">{suc.nombre}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -370,14 +414,8 @@ const Usuarios = () => {
                     <div key={mod} className={`p-5 rounded-2xl border transition-all duration-300 ${permisosLocales.view[mod] ? 'bg-white shadow-md border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
                       <h4 className={`font-extrabold mb-4 text-lg ${permisosLocales.view[mod] ? 'text-blue-700' : 'text-gray-500'}`}>{mod}</h4>
                       <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">Ver Módulo</span>
-                          <ToggleSwitch checked={permisosLocales.view[mod]} onChange={() => togglePermiso('view', mod)} />
-                        </div>
-                        <div className="flex justify-between items-center pt-3 border-t">
-                          <span className={`text-sm font-medium ${permisosLocales.view[mod] ? 'text-gray-800' : 'text-gray-400'}`}>Editar / Crear</span>
-                          <ToggleSwitch checked={permisosLocales.mod[mod]} onChange={() => togglePermiso('mod', mod)} disabled={!permisosLocales.view[mod]} />
-                        </div>
+                        <div className="flex justify-between items-center"><span className="text-sm font-medium">Ver Módulo</span><ToggleSwitch checked={permisosLocales.view[mod]} onChange={() => togglePermiso('view', mod)} /></div>
+                        <div className="flex justify-between items-center pt-3 border-t"><span className={`text-sm font-medium ${permisosLocales.view[mod] ? 'text-gray-800' : 'text-gray-400'}`}>Editar / Crear</span><ToggleSwitch checked={permisosLocales.mod[mod]} onChange={() => togglePermiso('mod', mod)} disabled={!permisosLocales.view[mod]} /></div>
                       </div>
                     </div>
                   ))}
@@ -411,13 +449,12 @@ const Usuarios = () => {
         </div>
       )}
 
-      {/* MODAL ELIMINAR */}
       {modalEliminar && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-all p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center border border-white/50">
             <div className="h-16 w-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-5 text-red-600"><AlertTriangle size={32} /></div>
             <h3 className="text-2xl font-extrabold text-gray-800">¿Revocar Acceso?</h3>
-            <p className="text-sm text-gray-500 mt-3 font-medium px-4">Esta acción eliminará el usuario del sistema. <strong>El empleado seguirá en el Directorio Staff.</strong></p>
+            <p className="text-sm text-gray-500 mt-3 font-medium px-4">Esta acción eliminará el usuario del sistema. <strong>El empleado seguirá en el Directorio.</strong></p>
             <div className="flex gap-4 mt-8">
               <button onClick={() => setModalEliminar(false)} className="flex-1 border border-gray-200 py-3 rounded-xl font-bold text-gray-600 hover:bg-gray-50">Cancelar</button>
               <button onClick={handleEliminar} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700">Sí, Revocar Acceso</button>
@@ -428,5 +465,4 @@ const Usuarios = () => {
     </Layout>
   );
 };
-
 export default Usuarios;

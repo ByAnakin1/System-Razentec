@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, CheckCircle } from 'lucide-react'; // Importamos los íconos para las animaciones
+import { AlertCircle, CheckCircle, FileText, Trash2, History, Store } from 'lucide-react'; 
 import Layout from '../../components/Layout';
 import api from '../../services/api';
 
@@ -9,17 +9,25 @@ const HistorialVentas = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Estados para los modales animados
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [ventaToDelete, setVentaToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  useEffect(() => {
-    fetchVentas();
-  }, []);
+  // ✨ ESTADO GLOBAL PARA SABER EN QUÉ VISTA ESTAMOS
+  const [sucursalActiva, setSucursalActiva] = useState(JSON.parse(localStorage.getItem('sucursalActiva')) || null);
+  const esVistaGlobal = sucursalActiva?.id === 'ALL';
 
   const fetchVentas = async () => {
+    // 🚨 SEMÁFORO: Si no hay sucursal definida, espera.
+    const currentSucursal = JSON.parse(localStorage.getItem('sucursalActiva'));
+    if (!currentSucursal) {
+      setVentas([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await api.get('/ventas');
       setVentas(res.data);
@@ -30,7 +38,18 @@ const HistorialVentas = () => {
     }
   };
 
-  // ✨ FUNCIÓN DE HORA DE PERÚ APLICADA AL CÓDIGO DE OSVALDO
+  useEffect(() => {
+    fetchVentas();
+    
+    // ✨ RECARGA AUTOMÁTICA AL CAMBIAR DE SUCURSAL ARRIBA
+    const handleSucursalCambiada = () => {
+      setSucursalActiva(JSON.parse(localStorage.getItem('sucursalActiva')));
+      fetchVentas(); 
+    };
+    window.addEventListener('sucursalCambiada', handleSucursalCambiada);
+    return () => window.removeEventListener('sucursalCambiada', handleSucursalCambiada);
+  }, []);
+
   const formatearFecha = (fechaISO) => {
     if (!fechaISO) return '';
     const date = fechaISO.endsWith('Z') ? new Date(fechaISO) : new Date(`${fechaISO}Z`);
@@ -40,38 +59,26 @@ const HistorialVentas = () => {
     });
   };
 
-  // 1. Abrir la ventana de emergencia
   const handleOpenDelete = (id) => {
     setVentaToDelete(id);
     setShowDeleteModal(true);
   };
 
-  // 2. Confirmar y eliminar
   const confirmDelete = async () => {
     if (!ventaToDelete) return;
     setIsDeleting(true);
 
     try {
       await api.delete(`/ventas/${ventaToDelete}`);
-      
-      // Cerramos el modal de advertencia
       setShowDeleteModal(false);
-      
-      // Actualizamos la tabla para que desaparezca la fila
       setVentas(ventas.filter(venta => venta.id !== ventaToDelete));
-      
-      // Mostramos la animación verde de éxito
       setShowSuccess(true);
-      
-      // Ocultamos el mensaje de éxito automáticamente después de 2 segundos
       setTimeout(() => {
         setShowSuccess(false);
         setVentaToDelete(null);
       }, 2000);
-
     } catch (error) {
       alert("Error al eliminar la venta. Revisa la consola del backend.");
-      console.error(error);
     } finally {
       setIsDeleting(false);
     }
@@ -79,49 +86,77 @@ const HistorialVentas = () => {
 
   return (
     <Layout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Historial de Ventas</h1>
-        <p className="text-gray-500 text-sm mt-1">Listado de transacciones realizadas</p>
+      <div className="mb-6 flex items-center gap-2">
+        <History className="text-blue-600" size={28} />
+        <div>
+          <h1 className="text-2xl font-extrabold text-gray-800">Historial de Ventas</h1>
+          <p className="text-gray-500 text-sm mt-1 font-medium">
+            {esVistaGlobal ? 'Viendo todas las transacciones de la empresa' : `Viendo transacciones de: ${sucursalActiva?.nombre || '...'}`}
+          </p>
+        </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-md border-2 border-slate-300 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Cargando ventas...</div>
+          <div className="p-8 text-center text-slate-500 font-bold">Cargando ventas...</div>
+        ) : !sucursalActiva ? (
+          <div className="p-8 text-center text-red-500 font-bold bg-red-50">⚠️ No se ha detectado sucursal autorizada.</div>
         ) : ventas.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">No hay ventas registradas.</div>
+          <div className="p-8 text-center text-slate-500 font-bold">No hay ventas registradas en esta vista.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 text-gray-600 border-b border-gray-100">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-slate-100 text-slate-800 border-b-2 border-slate-300 uppercase text-xs font-extrabold tracking-wider">
                 <tr>
-                  <th className="py-3 px-4">ID Venta</th>
-                  <th className="py-3 px-4">Fecha</th>
-                  <th className="py-3 px-4">Cliente</th>
-                  <th className="py-3 px-4 text-right">Total</th>
-                  <th className="py-3 px-4 text-center">Acciones</th>
+                  <th className="py-4 px-5 border-r border-slate-300 w-32 text-center">ID Venta</th>
+                  {/* ✨ COLUMNA SUCURSAL SOLO SI ESTÁ EN MODO GLOBAL */}
+                  {esVistaGlobal && <th className="py-4 px-5 border-r border-slate-300">Sucursal</th>}
+                  <th className="py-4 px-5 border-r border-slate-300">Fecha</th>
+                  <th className="py-4 px-5 border-r border-slate-300">Cliente</th>
+                  <th className="py-4 px-5 border-r border-slate-300 text-right w-40">Total</th>
+                  <th className="py-4 px-5 text-center w-64">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y-2 divide-slate-200">
                 {ventas.map((venta) => (
-                  <tr key={venta.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-3 px-4 font-medium text-gray-800">#{String(venta.id).padStart(5, '0')}</td>
-                    <td className="py-3 px-4 text-gray-600">{formatearFecha(venta.created_at)}</td>
-                    <td className="py-3 px-4 text-gray-600">{venta.cliente_nombre || 'Público General'}</td>
-                    <td className="py-3 px-4 text-right font-medium text-gray-800">S/ {parseFloat(venta.total).toFixed(2)}</td>
-                    <td className="py-3 px-4 text-center flex justify-center gap-2">
-                      <button 
-                        // ✨ CORRECCIÓN DE RUTA DE OSVALDO
-                        onClick={() => navigate(`/ventas/${venta.id}`)}
-                        className="text-blue-600 hover:text-blue-800 font-medium bg-blue-50 px-3 py-1 rounded-md transition-colors"
-                      >
-                        Ver Boleta
-                      </button>
-                      <button 
-                        onClick={() => handleOpenDelete(venta.id)}
-                        className="text-red-600 hover:text-red-800 font-medium bg-red-50 px-3 py-1 rounded-md transition-colors"
-                      >
-                        Eliminar
-                      </button>
+                  <tr key={venta.id} className="hover:bg-blue-50/40 transition-colors">
+                    <td className="py-3 px-5 font-bold text-slate-800 border-r border-slate-200 text-center font-mono">
+                      #{String(venta.id).padStart(5, '0')}
+                    </td>
+                    
+                    {/* ✨ ETIQUETA SUCURSAL */}
+                    {esVistaGlobal && (
+                      <td className="py-3 px-5 border-r border-slate-200">
+                        <span className="text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-1 rounded flex items-center gap-1 w-max">
+                          <Store size={12}/> {venta.sucursal_nombre || 'Local no asignado'}
+                        </span>
+                      </td>
+                    )}
+
+                    <td className="py-3 px-5 text-slate-600 font-medium border-r border-slate-200">
+                      {formatearFecha(venta.created_at)}
+                    </td>
+                    <td className="py-3 px-5 text-slate-700 font-bold border-r border-slate-200">
+                      {venta.cliente_nombre || 'Público General'}
+                    </td>
+                    <td className="py-3 px-5 text-right font-extrabold text-emerald-700 border-r border-slate-200 bg-emerald-50/20">
+                      S/ {parseFloat(venta.total).toFixed(2)}
+                    </td>
+                    <td className="py-3 px-5 text-center">
+                      <div className="flex justify-center gap-2">
+                        <button 
+                          onClick={() => navigate(`/ventas/${venta.id}`)}
+                          className="flex items-center gap-1.5 text-blue-700 hover:text-white font-bold bg-blue-100 hover:bg-blue-600 px-4 py-2 rounded-lg transition-colors border border-blue-200 hover:border-blue-600 shadow-sm"
+                        >
+                          <FileText size={16} /> Ver Boleta
+                        </button>
+                        <button 
+                          onClick={() => handleOpenDelete(venta.id)}
+                          className="flex items-center gap-1.5 text-red-700 hover:text-white font-bold bg-red-100 hover:bg-red-600 px-4 py-2 rounded-lg transition-colors border border-red-200 hover:border-red-600 shadow-sm"
+                        >
+                          <Trash2 size={16} /> Eliminar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -132,28 +167,20 @@ const HistorialVentas = () => {
       </div>
 
       {showDeleteModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center transform scale-100 transition-transform">
-            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
-              <AlertCircle className="h-8 w-8 text-red-600 animate-pulse" />
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center transform scale-100 transition-transform border border-white/50">
+            <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-red-50 border-4 border-red-100 mb-6">
+              <AlertCircle className="h-10 w-10 text-red-600 animate-pulse" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">¿Eliminar esta venta?</h3>
-            <p className="text-sm text-gray-500 mb-6">
-              Estás a punto de borra la venta <b>#{ventaToDelete}</b>. Esta acción es permanente y no podrás recuperarla.
+            <h3 className="text-2xl font-extrabold text-gray-800 mb-2">¿Eliminar esta venta?</h3>
+            <p className="text-sm text-gray-500 mb-8 font-medium">
+              Estás a punto de borrar la venta <b className="text-gray-800">#{String(ventaToDelete).padStart(5, '0')}</b>. Esta acción es permanente y devolverá el stock al inventario.
             </p>
             <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-800 rounded-xl font-medium transition-colors disabled:opacity-50"
-              >
+              <button onClick={() => setShowDeleteModal(false)} disabled={isDeleting} className="flex-1 px-4 py-3 border-2 border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl font-bold transition-colors disabled:opacity-50">
                 Cancelar
               </button>
-              <button
-                onClick={confirmDelete}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 flex justify-center items-center"
-              >
+              <button onClick={confirmDelete} disabled={isDeleting} className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-red-600/30 disabled:opacity-50 flex justify-center items-center">
                 {isDeleting ? 'Borrando...' : 'Sí, eliminar'}
               </button>
             </div>
@@ -162,17 +189,16 @@ const HistorialVentas = () => {
       )}
       
       {showSuccess && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center animate-bounce">
-            <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-green-100 mb-4">
-              <CheckCircle className="h-10 w-10 text-green-500" />
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-10 text-center animate-bounce border border-white/50">
+            <div className="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-green-50 border-4 border-green-100 mb-6">
+              <CheckCircle className="h-12 w-12 text-green-500" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">¡Eliminada!</h3>
-            <p className="text-gray-500">La venta fue borrada con éxito de la base de datos.</p>
+            <h3 className="text-3xl font-extrabold text-gray-800 mb-2">¡Eliminada!</h3>
+            <p className="text-gray-500 font-medium">La venta fue borrada con éxito de la base de datos.</p>
           </div>
         </div>
       )}
-
     </Layout>
   );
 };
