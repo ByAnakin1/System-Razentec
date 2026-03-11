@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // ✨ Importar useNavigate
+import { useNavigate } from 'react-router-dom'; 
 import api from '../services/api';
 import Layout from '../components/Layout';
 import { 
@@ -9,7 +9,7 @@ import {
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
-  const navigate = useNavigate(); // ✨ Inicializar useNavigate
+  const navigate = useNavigate(); 
   const [stats, setStats] = useState({
     ventasDelMes: 0, ventasHoy: 0, comprasDelMes: 0,
     totalProductos: 0, productosStockBajo: 0, clientesTotales: 0,
@@ -18,14 +18,12 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // ✨ NUEVO: Estado para manejar la sucursal seleccionada para el dashboard.
-  // En producción, esto debería integrarse con el selector superior real si existe un estado global.
+  // Estado para manejar la sucursal seleccionada para el dashboard.
   const [sucursalSeleccionada, setSucursalSeleccionada] = useState('general'); 
 
   const fetchDashboardData = async (sucursalId = 'general') => {
     setLoading(true);
     try {
-      //api.get(`/dashboard?sucursal_id=${selectedSucursalId}`)
       const url = sucursalId === 'general' ? '/dashboard' : `/dashboard?sucursal_id=${sucursalId}`;
       const res = await api.get(url);
       setStats(res.data);
@@ -38,16 +36,16 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData(sucursalSeleccionada);
-  }, [sucursalSeleccionada]); // Volver a cargar cuando cambie la sucursal
+  }, [sucursalSeleccionada]); 
 
-  // ✨ FUNCIÓN DEL BOTÓN ACTUALIZAR
+  // FUNCIÓN DEL BOTÓN ACTUALIZAR
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await fetchDashboardData(sucursalSeleccionada);
     setTimeout(() => setIsRefreshing(false), 500); 
   };
 
-  // ✨ FUNCIÓN DEL BOTÓN IMPRIMIR
+  // FUNCIÓN DEL BOTÓN IMPRIMIR
   const handlePrint = () => {
     window.print();
   };
@@ -65,7 +63,7 @@ const Dashboard = () => {
 
   return (
     <Layout>
-      {/* 🚀 CABECERA Y BOTONES DE ACCIÓN */}
+      {/* CABECERA Y BOTONES DE ACCIÓN */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 print:hidden">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Panel de Control</h1>
@@ -74,10 +72,10 @@ const Dashboard = () => {
           </p>
         </div>
         
-        {/* ✨ VISUALIZACIÓN DE SUCURSAL ACTUAL ✨ */}
+        {/* VISUALIZACIÓN DE SUCURSAL ACTUAL */}
         <div className="flex items-center gap-2 border bg-white px-4 py-2 rounded-xl text-sm font-medium text-gray-700">
             <MapPin size={18} className="text-blue-600"/>
-            <span>Sucursal: {sucursalSeleccionada === 'general' ? 'General (Todas)' : \`Sede #${sucursalSeleccionada}\`}</span>
+            <span>Sucursal: {sucursalSeleccionada === 'general' ? 'General (Todas)' : `Sede #${sucursalSeleccionada}`}</span>
         </div>
 
         <div className="flex gap-3 w-full md:w-auto">
@@ -98,7 +96,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* 📊 SECCIÓN 1: TARJETAS DE INDICADORES (KPIs) - AHORA SON 6 CON ICONOGRAFÍA DE FONDO */}
+      {/* SECCIÓN 1: TARJETAS DE INDICADORES (KPIs) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 relative overflow-hidden group">
@@ -160,7 +158,7 @@ const Dashboard = () => {
 
       </div>
 
-      {/* 📋 SECCIÓN 2: TABLAS Y RANKINGS */}
+      {/* SECCIÓN 2: TABLAS Y RANKINGS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         
         {/* LADO IZQUIERDO: Tabla de Ventas (Ocupa 2/3) */}
@@ -230,33 +228,32 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Panel de Acceso Rápido - BOTONES FUNCIONALES */}
+          {/* Panel de Acceso Rápido - BOTONES FUNCIONALES REPARADOS */}
           <div className="bg-slate-900 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden print:hidden">
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500 opacity-20 rounded-full blur-3xl pointer-events-none"></div>
             <h3 className="text-xl font-bold mb-2">Acciones Rápidas</h3>
             <p className="text-slate-400 text-sm mb-6 leading-relaxed">Atajos para las operaciones más comunes de tu negocio.</p>
             <div className="flex flex-col gap-3">
-              {/* ✨ BOTONES FUNCIONALES USANDO useNavigate ✨ */}
-              <button 
-                onClick={() => navigate('/pos')} // Redirigir a la pantalla POS (Asumiendo ruta '/pos')
-                className="bg-blue-600 text-white font-bold py-3 px-4 rounded-xl text-center hover:bg-blue-500 transition-colors shadow-lg shadow-blue-600/30 w-full"
+              {/* Se usaron etiquetas Link reales con las rutas exactas de tu sistema */}
+              <Link 
+                to="/ventas" 
+                className="bg-blue-600 text-white font-bold py-3 px-4 rounded-xl block text-center hover:bg-blue-500 transition-colors shadow-lg shadow-blue-600/30 w-full"
               >
                 Punto de Venta (POS)
-              </button>
-              <button 
-                onClick={() => navigate('/productos')} // Redirigir a la pantalla de inventario (Asumiendo ruta '/productos')
-                className="bg-slate-800 text-slate-300 border border-slate-700 font-bold py-3 px-4 rounded-xl text-center hover:bg-slate-700 transition-colors w-full"
+              </Link>
+              <Link 
+                to="/inventario" 
+                className="bg-slate-800 text-slate-300 border border-slate-700 font-bold py-3 px-4 rounded-xl block text-center hover:bg-slate-700 transition-colors w-full"
               >
                 Gestión de Inventario
-              </button>
+              </Link>
             </div>
           </div>
 
         </div>
       </div>
       
-      {/* ✨ Selector de Sucursales visualmente inyectado para desarrollo (print:hidden) ✨ */}
-      {/* Este panel te permite cambiar de sucursal para probar la lógica. En producción, intégralo con tu selector superior. */}
+      {/* Selector de Sucursales visualmente inyectado para desarrollo (print:hidden) */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8 print:hidden">
         <h3 className="font-bold mb-3 text-gray-800 flex items-center gap-2"><MapPin size={20} className="text-blue-600"/> Demo: Cambiar Sucursal</h3>
         <p className="text-sm text-gray-500 mb-4">Usa estos botones para simular el cambio de sucursal del selector superior y verificar que las estadísticas se actualizan.</p>
@@ -267,7 +264,7 @@ const Dashboard = () => {
                 onClick={() => setSucursalSeleccionada(suc)}
                 className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${sucursalSeleccionada === suc ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
               >
-                 {suc === 'general' ? 'Todas las Sucursales' : \`Sede #${suc}\`}
+                 {suc === 'general' ? 'Todas las Sucursales' : `Sede #${suc}`}
               </button>
            ))}
         </div>
