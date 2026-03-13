@@ -9,9 +9,6 @@ export const CATEGORIA_A_RUTA = {
   'Compras': { path: '/compras', label: 'Compras', Icon: ShoppingBag },
   'Clientes': { path: '/clientes', label: 'Clientes', Icon: Users },
   'Proveedores': { path: '/proveedores', label: 'Proveedores', Icon: Truck },
-  
-  // ✨ AQUÍ ESTÁ EL MÓDULO DE SUCURSALES
   'Sucursales': { path: '/sucursales', label: 'Sucursales', Icon: MapPin },
-  
   'Usuarios': { path: '/usuarios', label: 'Usuarios', Icon: ShieldAlert }
 };
