@@ -7,9 +7,10 @@ import { CATEGORIA_A_RUTA } from '../config/menuConfig';
 const ROLES = ['Supervisor', 'Empleado'];
 const MODULOS = Object.keys(CATEGORIA_A_RUTA);
 
+// Componente ToggleSwitch rediseñado (más suave y moderno)
 const ToggleSwitch = ({ checked, onChange, disabled }) => (
-  <div onClick={() => !disabled && onChange()} className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-300 ease-in-out ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'} ${checked ? 'bg-blue-600' : 'bg-gray-300'}`}>
-    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${checked ? 'translate-x-5' : ''}`} />
+  <div onClick={() => !disabled && onChange()} className={`w-12 h-6 flex items-center rounded-full p-1 transition-all duration-300 ease-in-out ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'} ${checked ? 'bg-emerald-500 shadow-inner' : 'bg-slate-200'}`}>
+    <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-300 ease-in-out ${checked ? 'translate-x-6' : 'translate-x-0'}`} />
   </div>
 );
 
@@ -34,7 +35,6 @@ const Usuarios = () => {
   const [formEditar, setFormEditar] = useState({ nombre_completo: '', area_cargo: '', email: '', rol: 'Empleado', nueva_password: '', admin_password: '', sucursales_asignadas: [] });
   const [errores, setErrores] = useState({});
 
-  // ✨ ESTADOS PARA EL SEMÁFORO Y FILTRO DE SUCURSAL
   const [sucursalActiva, setSucursalActiva] = useState(JSON.parse(localStorage.getItem('sucursalActiva')) || null);
   const esVistaGlobal = sucursalActiva?.id === 'ALL';
 
@@ -83,7 +83,6 @@ const Usuarios = () => {
 
   useEffect(() => { 
     fetchUsuarios(); 
-    // ✨ ESCUCHADOR PARA RECARGAR LA VISTA AL CAMBIAR DE SUCURSAL ARRIBA
     const handleSucursalCambiada = () => {
       setSucursalActiva(JSON.parse(localStorage.getItem('sucursalActiva')));
     };
@@ -91,7 +90,6 @@ const Usuarios = () => {
     return () => window.removeEventListener('sucursalCambiada', handleSucursalCambiada);
   }, []);
 
-  // ✨ FILTRO ESTRICTO: Oculta a la gente que no pertenece a la tienda que estás viendo
   const usuariosFiltrados = usuarios.filter(u => {
     const coincideTexto = (u.nombre_completo || '').toLowerCase().includes(busqueda.toLowerCase()) ||
                           (u.area_cargo || '').toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -99,14 +97,12 @@ const Usuarios = () => {
 
     if (!coincideTexto) return false;
 
-    if (esVistaGlobal) return true; // Si es Global, mostramos todos.
+    if (esVistaGlobal) return true; 
     if (!sucursalActiva) return false;
 
-    // Leemos las sucursales del usuario y vemos si tiene permiso en la actual
     const asignadas = parseJsonArray(u.sucursales_asignadas).map(id => parseInt(id, 10));
     const perteneceASucursal = asignadas.includes(parseInt(sucursalActiva.id, 10));
 
-    // Si es Administrador General, lo mostramos porque tiene acceso a todas partes
     return perteneceASucursal || u.rol === 'Administrador';
   });
 
@@ -216,76 +212,152 @@ const Usuarios = () => {
   };
 
   return (
-    <Layout>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><UserPlus size={24} className="text-blue-600" /> Cuentas de Acceso</h1>
-          <p className="text-sm text-gray-500 font-medium mt-1">
-            {esVistaGlobal ? 'Administrando cuentas globales' : `Viendo cuentas de: ${sucursalActiva?.nombre || '...'}`}
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+    <Layout title="Cuentas de Acceso" moduleIcon={<UserPlus/>}>
+      
+      {/* ✨ CABECERA ✨ */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 md:mb-6 gap-3">
+        <p className="text-[11px] md:text-sm text-gray-500 font-bold px-1 uppercase tracking-wider">
+           {esVistaGlobal ? 'Administración Global' : `Cuentas de Sede: ${sucursalActiva?.nombre || 'Ninguna'}`}
+        </p>
+
+        <div className="flex flex-col sm:flex-row items-center gap-2 md:gap-3 w-full md:w-auto">
           <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-2.5 text-gray-400" size={16}/>
-            <input type="text" placeholder="Buscar usuario..." className="w-full bg-white border border-gray-200 pl-9 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 font-medium shadow-sm" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16}/>
+            <input type="text" placeholder="Buscar usuario o correo..." className="w-full bg-white border border-gray-200 pl-9 pr-4 py-2.5 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 font-bold text-gray-800 transition-all shadow-sm" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
           </div>
           {esAdmin() && (
-            <button onClick={handleOpenCrear} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-colors font-medium shadow-sm">
-              <Plus size={20} /> Credencial
+            <button onClick={handleOpenCrear} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all font-bold shadow-md text-xs md:text-sm">
+              <Plus size={16} /> <span className="hidden md:inline">Nueva Credencial</span><span className="md:hidden">Nuevo</span>
             </button>
           )}
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-        <table className="w-full text-left text-sm text-gray-600">
-          <thead className="bg-gray-50 text-gray-700 uppercase font-semibold">
+      {/* ✨ VISTA MÓVIL: TARJETAS DE USUARIOS ✨ */}
+      <div className="md:hidden flex flex-col gap-3">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+             <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+             <p className="text-xs font-medium">Cargando cuentas...</p>
+          </div>
+        ) : !sucursalActiva ? (
+          <div className="text-center py-10 text-xs text-red-500 bg-red-50 rounded-2xl border border-red-100">
+            ⚠️ Sin sucursal asignada.
+          </div>
+        ) : usuariosFiltrados.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center">
+            <UserPlus size={48} className="text-gray-200 mb-3" strokeWidth={1.5}/>
+            <p className="text-sm font-bold text-gray-600">No se encontraron cuentas</p>
+          </div>
+        ) : (
+          usuariosFiltrados.map((u) => (
+            <div key={u.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative group overflow-hidden">
+               <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-100 pb-3">
+                  <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-lg overflow-hidden shrink-0 border border-blue-100">
+                        {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover"/> : (u.area_cargo || u.nombre_completo)?.charAt(0).toUpperCase()}
+                     </div>
+                     <div className="min-w-0">
+                       <p className="font-extrabold text-gray-800 text-sm leading-tight truncate">{u.rol === 'Administrador' ? 'Administrador' : (u.area_cargo || 'Sin designar')}</p>
+                       <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mt-0.5 truncate">Vinculado a: {u.nombre_completo}</p>
+                     </div>
+                  </div>
+               </div>
+
+               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3 flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                     <span className={`px-2 py-0.5 rounded border text-[9px] font-black uppercase tracking-widest ${u.rol === 'Administrador' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
+                        {u.rol}
+                     </span>
+                     <span className="text-[10px] font-bold text-gray-500 truncate max-w-[150px]">{u.email}</span>
+                  </div>
+                  {u.rol !== 'Administrador' && (
+                    <div className="flex items-center gap-1.5 overflow-hidden mt-1 pt-1.5 border-t border-gray-100">
+                      <Store size={12} className="text-emerald-500 shrink-0"/>
+                      <span className="text-[9px] font-bold text-emerald-700 truncate px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-100" title={obtenerNombresSucursales(u.sucursales_asignadas)}>
+                        Sedes: {obtenerNombresSucursales(u.sucursales_asignadas)}
+                      </span>
+                    </div>
+                  )}
+               </div>
+
+               <div className="flex gap-2">
+                 <button onClick={() => openModalDetalles(u)} className="flex-1 py-2 bg-slate-50 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-100 flex items-center justify-center transition-colors">
+                   <Eye size={16}/>
+                 </button>
+                 {esAdmin() && usuarioActual?.id !== u.id && (
+                   <>
+                     <button onClick={() => openModalEditar(u)} className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg font-bold text-xs hover:bg-blue-100 flex items-center justify-center transition-colors">
+                       <Edit size={16}/>
+                     </button>
+                     <button onClick={() => { setUsuarioSeleccionado(u); setModalEliminar(true); }} className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg flex items-center justify-center hover:bg-red-100 transition-colors">
+                       <Trash2 size={16}/>
+                     </button>
+                   </>
+                 )}
+               </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* ✨ VISTA PC: TABLA DE USUARIOS ✨ */}
+      <div className="hidden md:block bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full text-left text-sm whitespace-nowrap">
+          <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold tracking-wider text-[10px] border-b border-gray-100">
             <tr>
-              <th className="px-6 py-3">Designación en Sistema</th>
-              <th className="px-6 py-3">Correo Login</th>
-              <th className="px-6 py-3">Permiso de Locales</th>
-              <th className="px-6 py-3">Nivel de Acceso</th>
-              <th className="px-6 py-3 text-center">Acciones</th>
+              <th className="px-6 py-4">Designación en Sistema</th>
+              <th className="px-6 py-4">Correo Login</th>
+              <th className="px-6 py-4">Permiso de Locales</th>
+              <th className="px-6 py-4 text-center">Nivel</th>
+              <th className="px-6 py-4 text-center">Acciones</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
-            {loading ? <tr><td colSpan="5" className="text-center py-8">Cargando...</td></tr> : 
-             !sucursalActiva ? <tr><td colSpan="5" className="text-center py-8 text-red-500 font-medium bg-red-50">⚠️ No se ha detectado sucursal.</td></tr> :
-             usuariosFiltrados.length === 0 ? <tr><td colSpan="5" className="text-center py-8 text-gray-400">No hay cuentas asignadas a esta vista.</td></tr> :
+          <tbody className="divide-y divide-gray-50">
+            {loading ? <tr><td colSpan="5" className="text-center py-12 text-gray-400 font-medium">Cargando cuentas...</td></tr> : 
+             !sucursalActiva ? <tr><td colSpan="5" className="text-center py-12 text-red-500 font-medium">⚠️ Sin sucursal asignada.</td></tr> :
+             usuariosFiltrados.length === 0 ? <tr><td colSpan="5" className="text-center py-12 italic text-gray-400">No hay cuentas asignadas a esta vista.</td></tr> :
              usuariosFiltrados.map((u) => (
-              <tr key={u.id} className="hover:bg-gray-50">
+              <tr key={u.id} className="hover:bg-slate-50/80 transition-colors group">
                 <td className="px-6 py-4">
                    <div className="flex items-center gap-3">
-                     <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs overflow-hidden flex-shrink-0">
+                     <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-lg overflow-hidden flex-shrink-0 border border-blue-100">
                        {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover"/> : (u.area_cargo || u.nombre_completo)?.charAt(0).toUpperCase()}
                      </div>
                      <div>
-                       <p className="font-bold text-gray-900">{u.rol === 'Administrador' ? 'Administrador' : (u.area_cargo || 'Sin designar')}</p>
-                       <p className="text-[10px] text-gray-400 truncate">Vinc: {u.nombre_completo}</p>
+                       <p className="font-extrabold text-gray-900">{u.rol === 'Administrador' ? 'Administrador' : (u.area_cargo || 'Sin designar')}</p>
+                       <p className="text-[10px] font-bold text-gray-400 truncate mt-0.5">Vinc: {u.nombre_completo}</p>
                      </div>
                    </div>
                 </td>
-                <td className="px-6 py-4">{u.email}</td>
+                <td className="px-6 py-4 font-bold text-slate-600">{u.email}</td>
                 
                 <td className="px-6 py-4">
                   {u.rol === 'Administrador' ? (
-                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded">Global (Todas)</span>
+                    <span className="text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-1 rounded">Global (Todas las sedes)</span>
                   ) : (
-                    <span className="text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-1 rounded line-clamp-1 max-w-[150px]" title={obtenerNombresSucursales(u.sucursales_asignadas)}>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded line-clamp-1 max-w-[150px]" title={obtenerNombresSucursales(u.sucursales_asignadas)}>
                       {obtenerNombresSucursales(u.sucursales_asignadas)}
                     </span>
                   )}
                 </td>
 
-                <td className="px-6 py-4"><span className={`px-2 py-1 rounded-full text-xs font-bold ${u.rol === 'Administrador' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>{u.rol}</span></td>
-                <td className="px-6 py-4 flex justify-center gap-2 mt-1">
-                  <button onClick={() => openModalDetalles(u)} className="p-1.5 text-gray-400 hover:text-blue-600" title="Ver Permisos"><Eye size={18} /></button>
-                  {esAdmin() && usuarioActual?.id !== u.id && (
-                    <>
-                      <button onClick={() => openModalEditar(u)} className="p-1.5 text-gray-400 hover:text-yellow-600" title="Editar Accesos"><Edit size={18} /></button>
-                      <button onClick={() => { setUsuarioSeleccionado(u); setModalEliminar(true); }} className="p-1.5 text-gray-400 hover:text-red-500" title="Revocar Acceso"><Trash2 size={18} /></button>
-                    </>
-                  )}
+                <td className="px-6 py-4 text-center">
+                  <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border ${u.rol === 'Administrador' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                    {u.rol}
+                  </span>
+                </td>
+
+                <td className="px-6 py-4 text-center">
+                  <div className="flex justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => openModalDetalles(u)} className="p-1.5 text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-200 rounded-lg transition-colors" title="Ver Permisos"><Eye size={16} /></button>
+                    {esAdmin() && usuarioActual?.id !== u.id && (
+                      <>
+                        <button onClick={() => openModalEditar(u)} className="p-1.5 text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors" title="Editar Accesos"><Edit size={16} /></button>
+                        <button onClick={() => { setUsuarioSeleccionado(u); setModalEliminar(true); }} className="p-1.5 text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" title="Revocar Acceso"><Trash2 size={16} /></button>
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -293,73 +365,112 @@ const Usuarios = () => {
         </table>
       </div>
 
-      {/* MODAL DETALLES */}
+      {/* ✨ MODAL DETALLES DE ACCESO (Bottom Sheet Móvil) ✨ */}
       {modalDetalles && usuarioSeleccionado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-all">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <div className="flex justify-between mb-4 border-b pb-3">
-              <h2 className="text-xl font-bold">Detalles de Acceso</h2>
-              <button onClick={() => setModalDetalles(false)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-md transition-all animate-fade-in">
+          <div className="bg-white p-6 sm:p-8 rounded-t-3xl sm:rounded-[2rem] w-full sm:max-w-md shadow-2xl border border-white/50 animate-fade-in-up pb-8 flex flex-col max-h-[90vh]">
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-4 sm:hidden shrink-0"></div>
+            <div className="flex justify-between items-center mb-5 border-b border-gray-100 pb-3 shrink-0">
+              <h2 className="text-lg md:text-xl font-extrabold text-gray-800 flex items-center gap-2"><ShieldCheck className="text-emerald-500"/> Ficha de Acceso</h2>
+              <button onClick={() => setModalDetalles(false)} className="text-gray-400 hover:text-gray-800 bg-gray-50 p-1.5 rounded-full"><X size={18}/></button>
             </div>
-            <div className="space-y-4">
-              <div><label className="text-xs text-gray-500 font-bold uppercase">Identidad en Sistema</label><div className="bg-gray-50 p-2 rounded border font-bold text-blue-800 text-lg">{usuarioSeleccionado.rol === 'Administrador' ? 'Administrador' : (usuarioSeleccionado.area_cargo || 'Sin designar')}</div></div>
-              <div><label className="text-xs text-gray-500 font-bold uppercase">Persona Física</label><div className="text-sm font-medium text-gray-700">{usuarioSeleccionado.nombre_completo}</div></div>
-              <div><label className="text-xs text-gray-500 font-bold uppercase">Correo</label><div className="bg-gray-50 p-2 rounded border text-gray-800">{usuarioSeleccionado.email}</div></div>
-              
-              <div><label className="text-xs text-gray-500 font-bold uppercase">Locales Autorizados</label><div className="text-sm font-bold text-purple-700 mt-1">{usuarioSeleccionado.rol === 'Administrador' ? 'Todos los locales (Acceso Global)' : obtenerNombresSucursales(usuarioSeleccionado.sucursales_asignadas)}</div></div>
+            
+            <div className="space-y-4 overflow-y-auto custom-scrollbar pr-2 pb-4">
+              <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-black text-xl border border-blue-200">
+                   {usuarioSeleccionado.avatar ? <img src={usuarioSeleccionado.avatar} className="w-full h-full object-cover rounded-xl"/> : (usuarioSeleccionado.area_cargo || usuarioSeleccionado.nombre_completo)?.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                   <p className="font-black text-gray-800 text-sm">{usuarioSeleccionado.rol === 'Administrador' ? 'Administrador' : (usuarioSeleccionado.area_cargo || 'Sin designar')}</p>
+                   <p className="text-[10px] font-bold text-gray-500 mt-0.5">Física: {usuarioSeleccionado.nombre_completo}</p>
+                </div>
+              </div>
 
-              <div><label className="text-xs text-gray-500 font-bold uppercase">Rol</label><div className="mt-1"><span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-bold">{usuarioSeleccionado.rol}</span></div></div>
-              <div className="pt-2"><label className="text-xs text-gray-500 font-bold uppercase mb-2 block">Módulos Permitidos</label>
+              <div className="grid grid-cols-2 gap-3">
+                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                   <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Nivel / Rol</label>
+                   <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest ${usuarioSeleccionado.rol === 'Administrador' ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}`}>
+                     {usuarioSeleccionado.rol}
+                   </span>
+                 </div>
+                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                   <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Sedes Activas</label>
+                   <p className="text-xs font-bold text-emerald-600 truncate">{usuarioSeleccionado.rol === 'Administrador' ? 'Global (Todas)' : obtenerNombresSucursales(usuarioSeleccionado.sucursales_asignadas)}</p>
+                 </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">Correo Login</label>
+                <p className="text-sm font-bold text-gray-700 bg-slate-50 p-3 rounded-xl border border-slate-100">{usuarioSeleccionado.email}</p>
+              </div>
+
+              <div className="pt-2">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2 border-l-4 border-blue-500 pl-1.5">Módulos Autorizados</label>
                 <div className="flex flex-wrap gap-2">
-                  {MODULOS.filter(m => tieneView(usuarioSeleccionado, m)).length > 0 ? MODULOS.filter(m => tieneView(usuarioSeleccionado, m)).map(m => <span key={m} className="bg-slate-800 text-white px-3 py-1 rounded text-xs font-semibold flex items-center gap-1"><Eye size={12}/> {m}</span>) : <span className="text-sm text-gray-400 italic">Sin acceso.</span>}
+                  {MODULOS.filter(m => tieneView(usuarioSeleccionado, m)).length > 0 ? (
+                    MODULOS.filter(m => tieneView(usuarioSeleccionado, m)).map(m => (
+                      <span key={m} className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm"><Eye size={12}/> {m}</span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-gray-400 italic font-medium bg-slate-50 px-4 py-2 rounded-xl w-full text-center border border-dashed border-gray-200">No tiene permisos asignados.</span>
+                  )}
                 </div>
               </div>
             </div>
+            <button onClick={() => setModalDetalles(false)} className="w-full mt-4 shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3.5 rounded-xl font-bold transition-colors text-sm">Cerrar Ficha</button>
           </div>
         </div>
       )}
 
-      {/* MODAL EDITAR Y CREAR */}
+      {/* ✨ MODAL EDITAR Y CREAR CREDENCIAL (Bottom Sheet Extendido en Móvil) ✨ */}
       {(modalEditar || modalCrear) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-all p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-white/50">
-            <div className="p-6 border-b flex justify-between items-center bg-white z-10 shadow-sm">
-              <h2 className="text-xl md:text-2xl font-extrabold text-gray-800 flex items-center gap-2">{modalCrear ? <UserPlus className="text-blue-600"/> : <Edit className="text-yellow-500"/>}{modalCrear ? 'Generar Credencial a Empleado' : 'Editar Accesos y Permisos'}</h2>
-              <button onClick={() => modalCrear ? setModalCrear(false) : setModalEditar(false)} className="bg-gray-100 hover:bg-gray-200 p-2 rounded-full text-gray-500"><X size={20}/></button>
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-all animate-fade-in">
+          <div className="bg-white rounded-t-3xl sm:rounded-[2rem] w-full sm:max-w-4xl max-h-[95vh] flex flex-col overflow-hidden border border-white/50 shadow-2xl animate-fade-in-up">
+            
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mt-4 sm:hidden shrink-0"></div>
+            
+            <div className="p-5 sm:p-6 border-b border-gray-100 flex justify-between items-center bg-white z-10 shrink-0">
+              <h2 className="text-lg md:text-2xl font-extrabold text-gray-800 flex items-center gap-2">
+                {modalCrear ? <UserPlus className="text-blue-600"/> : <Edit className="text-yellow-500"/>}
+                {modalCrear ? 'Crear Credencial de Empleado' : 'Editar Accesos y Permisos'}
+              </h2>
+              <button onClick={() => modalCrear ? setModalCrear(false) : setModalEditar(false)} className="bg-gray-50 hover:bg-gray-100 p-2 rounded-full text-gray-500 transition-colors"><X size={18}/></button>
             </div>
             
-            <form onSubmit={modalCrear ? handleCrear : handleGuardarEditarCompleto} className="overflow-y-auto p-4 md:p-8 bg-gray-50/50 space-y-8">
-              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                <h3 className="font-bold text-gray-700 mb-5 border-b border-gray-100 pb-2">Identidad en el Sistema</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <form onSubmit={modalCrear ? handleCrear : handleGuardarEditarCompleto} className="overflow-y-auto p-4 md:p-8 bg-slate-50/50 space-y-6 md:space-y-8 flex-1 custom-scrollbar">
+              
+              <div className="bg-white p-5 md:p-6 rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-sm">
+                <h3 className="font-extrabold text-gray-800 mb-4 md:mb-5 border-b border-dashed border-gray-100 pb-2 text-sm md:text-base">Identidad en el Sistema</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
                   <div>
-                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Vincular a Empleado</label>
+                    <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-1.5 block">Vincular a Empleado</label>
                     {modalCrear ? (
-                      <select className={`w-full border p-3 rounded-xl outline-none font-medium ${errores.empleado_id ? 'border-red-500' : 'border-gray-200 focus:ring-blue-500'}`} value={formCrear.empleado_id} onChange={e => setFormCrear({...formCrear, empleado_id: e.target.value})}>
+                      <select className={`w-full bg-slate-50 border p-3.5 rounded-xl outline-none font-bold text-gray-700 text-sm transition-colors ${errores.empleado_id ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formCrear.empleado_id} onChange={e => setFormCrear({...formCrear, empleado_id: e.target.value})}>
                         <option value="">-- Seleccione del Staff --</option>
                         {empleadosDisponibles.map(emp => <option key={emp.id} value={emp.id}>{emp.nombre_completo}</option>)}
                       </select>
                     ) : (
-                      <input className="w-full border border-gray-200 p-3 rounded-xl bg-gray-50 text-gray-500 font-bold" value={formEditar.nombre_completo} disabled />
+                      <input className="w-full border border-gray-200 p-3.5 rounded-xl bg-gray-50 text-gray-500 font-bold text-sm" value={formEditar.nombre_completo} disabled />
                     )}
                     {errores.empleado_id && <p className="text-[10px] text-red-500 mt-1 font-bold">{errores.empleado_id}</p>}
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Área o Cargo</label>
-                    <input type="text" className={`w-full border p-3 rounded-xl outline-none font-bold text-blue-800 bg-blue-50/30 ${errores.area_cargo ? 'border-red-500' : 'border-gray-200 focus:ring-blue-500'}`} value={modalCrear ? formCrear.area_cargo : formEditar.area_cargo} onChange={e => modalCrear ? setFormCrear({...formCrear, area_cargo: e.target.value}) : setFormEditar({...formEditar, area_cargo: e.target.value})} placeholder="Ej: Cajero Turno Mañana"/>
+                    <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-1.5 block">Área o Cargo</label>
+                    <input type="text" className={`w-full bg-blue-50/50 border p-3.5 rounded-xl outline-none font-bold text-blue-800 text-sm transition-colors ${errores.area_cargo ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-blue-100 focus:ring-2 focus:ring-blue-200 focus:border-blue-500'}`} value={modalCrear ? formCrear.area_cargo : formEditar.area_cargo} onChange={e => modalCrear ? setFormCrear({...formCrear, area_cargo: e.target.value}) : setFormEditar({...formEditar, area_cargo: e.target.value})} placeholder="Ej: Cajero Turno Mañana"/>
                     {errores.area_cargo && <p className="text-[10px] text-red-500 mt-1 font-bold">{errores.area_cargo}</p>}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <div>
-                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Correo Corporativo (Login)</label>
-                    <input type="email" className={`w-full border p-3 rounded-xl outline-none font-medium ${errores.email ? 'border-red-500' : 'border-gray-200 focus:ring-blue-500'}`} value={modalCrear ? formCrear.email : formEditar.email} onChange={e => modalCrear ? setFormCrear({...formCrear, email: e.target.value}) : setFormEditar({...formEditar, email: e.target.value})} placeholder="usuario@empresa.com"/>
+                    <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-1.5 block">Correo Corporativo (Login)</label>
+                    <input type="email" className={`w-full bg-slate-50 border p-3.5 rounded-xl outline-none font-bold text-gray-700 text-sm transition-colors ${errores.email ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={modalCrear ? formCrear.email : formEditar.email} onChange={e => modalCrear ? setFormCrear({...formCrear, email: e.target.value}) : setFormEditar({...formEditar, email: e.target.value})} placeholder="usuario@empresa.com"/>
                     {errores.email && <p className="text-[10px] text-red-500 mt-1 font-bold">{errores.email}</p>}
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Nivel de Privilegios (Rol)</label>
-                    <select className="w-full border border-gray-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium" value={modalCrear ? formCrear.rol : formEditar.rol} onChange={e => {
+                    <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-1.5 block">Nivel de Privilegios (Rol)</label>
+                    <select className="w-full bg-slate-50 border border-gray-200 p-3.5 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 font-bold text-gray-800 text-sm transition-colors" value={modalCrear ? formCrear.rol : formEditar.rol} onChange={e => {
                       const nuevoRol = e.target.value;
                       if(modalCrear) setFormCrear({...formCrear, rol: nuevoRol}); else setFormEditar({...formEditar, rol: nuevoRol});
                     }}>
@@ -368,21 +479,22 @@ const Usuarios = () => {
                   </div>
                 </div>
 
+                {/* ASIGNACIÓN DE SUCURSALES */}
                 {(modalCrear ? formCrear.rol : formEditar.rol) !== 'Administrador' && (
-                  <div className="mt-6 bg-purple-50 p-5 rounded-2xl border border-purple-100">
-                    <label className="text-xs font-bold text-purple-700 uppercase flex items-center gap-2 mb-1"><Store size={16}/> Locales Autorizados</label>
-                    <p className="text-[11px] text-purple-600/80 mb-4">Selecciona una o más sucursales donde este empleado podrá operar.</p>
+                  <div className="mt-6 md:mt-8 bg-purple-50/50 p-4 md:p-5 rounded-2xl border border-purple-100">
+                    <label className="text-xs md:text-sm font-extrabold text-purple-700 uppercase flex items-center gap-2 mb-1"><Store size={16}/> Locales Autorizados</label>
+                    <p className="text-[10px] md:text-[11px] font-bold text-purple-600/80 mb-4">Selecciona las sucursales donde este usuario podrá operar.</p>
                     
-                    {sucursales.length === 0 ? <p className="text-xs italic text-gray-400">No hay sucursales registradas aún.</p> : (
-                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                    {sucursales.length === 0 ? <p className="text-xs italic text-gray-400 font-medium">No hay sucursales registradas aún.</p> : (
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 md:gap-3">
                         {sucursales.map(suc => {
                           const arregloActual = modalCrear ? formCrear.sucursales_asignadas : formEditar.sucursales_asignadas;
                           const isChecked = arregloActual.includes(suc.id);
                           return (
-                            <label key={suc.id} className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${isChecked ? 'bg-purple-600 text-white border-purple-700 shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300'}`}>
+                            <label key={suc.id} className={`flex items-center gap-2.5 p-2.5 md:p-3 rounded-xl border cursor-pointer transition-all ${isChecked ? 'bg-purple-600 text-white border-purple-700 shadow-md shadow-purple-600/20' : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300 shadow-sm'}`}>
                               <input 
                                 type="checkbox" 
-                                className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500 border-gray-300 cursor-pointer hidden" 
+                                className="hidden" 
                                 checked={isChecked}
                                 onChange={(e) => {
                                   const val = e.target.checked;
@@ -394,10 +506,10 @@ const Usuarios = () => {
                                   else setFormEditar({...formEditar, sucursales_asignadas: nuevoArreglo});
                                 }}
                               />
-                              <div className={`w-4 h-4 flex items-center justify-center rounded border ${isChecked ? 'bg-white border-white' : 'bg-gray-50 border-gray-300'}`}>
-                                {isChecked && <CheckCircle size={12} className="text-purple-600" strokeWidth={4}/>}
+                              <div className={`w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded border shrink-0 transition-colors ${isChecked ? 'bg-white border-white' : 'bg-gray-50 border-gray-300'}`}>
+                                {isChecked && <CheckCircle size={14} className="text-purple-600" strokeWidth={3}/>}
                               </div>
-                              <span className="text-xs font-bold truncate select-none">{suc.nombre}</span>
+                              <span className="text-[10px] md:text-xs font-bold truncate select-none leading-none">{suc.nombre}</span>
                             </label>
                           );
                         })}
@@ -407,57 +519,77 @@ const Usuarios = () => {
                 )}
               </div>
 
+              {/* PANEL DE PERMISOS */}
               <div>
-                <h3 className="font-bold text-gray-700 mb-4">Gestión de Permisos por Módulo</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <h3 className="font-extrabold text-gray-800 mb-3 md:mb-4 px-1 text-sm md:text-base border-l-4 border-blue-600 pl-2">Gestión de Permisos por Módulo</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
                   {MODULOS.map(mod => (
-                    <div key={mod} className={`p-5 rounded-2xl border transition-all duration-300 ${permisosLocales.view[mod] ? 'bg-white shadow-md border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
-                      <h4 className={`font-extrabold mb-4 text-lg ${permisosLocales.view[mod] ? 'text-blue-700' : 'text-gray-500'}`}>{mod}</h4>
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center"><span className="text-sm font-medium">Ver Módulo</span><ToggleSwitch checked={permisosLocales.view[mod]} onChange={() => togglePermiso('view', mod)} /></div>
-                        <div className="flex justify-between items-center pt-3 border-t"><span className={`text-sm font-medium ${permisosLocales.view[mod] ? 'text-gray-800' : 'text-gray-400'}`}>Editar / Crear</span><ToggleSwitch checked={permisosLocales.mod[mod]} onChange={() => togglePermiso('mod', mod)} disabled={!permisosLocales.view[mod]} /></div>
+                    <div key={mod} className={`p-4 md:p-5 rounded-2xl border transition-all duration-300 ${permisosLocales.view[mod] ? 'bg-white shadow-sm border-blue-200' : 'bg-slate-50 border-gray-200 opacity-80'}`}>
+                      <h4 className={`font-black mb-3 md:mb-4 text-sm md:text-base flex items-center gap-2 ${permisosLocales.view[mod] ? 'text-blue-700' : 'text-gray-500'}`}>
+                         <span className={`w-2 h-2 rounded-full ${permisosLocales.view[mod] ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`}></span> {mod}
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                           <span className="text-[10px] md:text-xs font-bold text-gray-700">Ver Módulo</span>
+                           <ToggleSwitch checked={permisosLocales.view[mod]} onChange={() => togglePermiso('view', mod)} />
+                        </div>
+                        <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                           <span className={`text-[10px] md:text-xs font-bold ${permisosLocales.view[mod] ? 'text-gray-700' : 'text-gray-400'}`}>Editar / Crear</span>
+                           <ToggleSwitch checked={permisosLocales.mod[mod]} onChange={() => togglePermiso('mod', mod)} disabled={!permisosLocales.view[mod]} />
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-2xl border shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* CLAVES DE SEGURIDAD */}
+              <div className="bg-white p-5 md:p-6 rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                 <div>
-                  <h3 className="font-bold text-gray-700 mb-2 border-b pb-2">{modalCrear ? 'Contraseña Inicial' : 'Resetear Contraseña'}</h3>
-                  <p className="text-[11px] text-gray-500 mb-3">{modalCrear ? 'Mínimo 6 caracteres.' : 'Déjalo en blanco si no deseas cambiarla.'}</p>
-                  <input type="password" placeholder={modalCrear ? "Contraseña requerida..." : "Nueva contraseña..."} className={`w-full border p-3 rounded-xl outline-none font-medium ${errores.password || errores.nueva_password ? 'border-red-500' : 'border-gray-200 focus:ring-blue-500'}`} value={modalCrear ? formCrear.password : formEditar.nueva_password} onChange={e => modalCrear ? setFormCrear({...formCrear, password: e.target.value}) : setFormEditar({...formEditar, nueva_password: e.target.value})}/>
-                  {(errores.password || errores.nueva_password) && <p className="text-[10px] text-red-500 mt-1 font-bold">{errores.password || errores.nueva_password}</p>}
+                  <h3 className="font-extrabold text-gray-800 mb-1 border-b border-dashed border-gray-100 pb-2 text-sm">
+                    {modalCrear ? 'Contraseña Inicial' : 'Resetear Contraseña'}
+                  </h3>
+                  <p className="text-[9px] md:text-[10px] font-bold text-gray-400 mb-3">{modalCrear ? 'Mínimo 6 caracteres requeridos.' : 'Déjalo en blanco si no deseas cambiarla.'}</p>
+                  <input type="password" placeholder={modalCrear ? "Contraseña requerida..." : "Nueva contraseña..."} className={`w-full bg-slate-50 border p-3.5 rounded-xl outline-none font-bold text-gray-800 text-sm transition-colors ${errores.password || errores.nueva_password ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={modalCrear ? formCrear.password : formEditar.nueva_password} onChange={e => modalCrear ? setFormCrear({...formCrear, password: e.target.value}) : setFormEditar({...formEditar, nueva_password: e.target.value})}/>
+                  {(errores.password || errores.nueva_password) && <p className="text-[10px] text-red-500 mt-1 font-bold leading-tight">{errores.password || errores.nueva_password}</p>}
                 </div>
                 
-                <div className="bg-blue-50/50 p-5 rounded-xl border border-blue-100">
-                  <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-1.5"><ShieldCheck size={18}/> Confirmación Obligatoria</h3>
-                  <p className="text-[11px] text-blue-600 mb-3">Tu clave maestra para autorizar.</p>
-                  <input type="password" placeholder="Tu contraseña..." className={`w-full border p-3 rounded-xl outline-none font-medium ${errores.admin_password ? 'border-red-500' : 'border-gray-200 focus:ring-blue-500'}`} value={modalCrear ? formCrear.admin_password : formEditar.admin_password} onChange={e => modalCrear ? setFormCrear({...formCrear, admin_password: e.target.value}) : setFormEditar({...formEditar, admin_password: e.target.value})}/>
-                  {errores.admin_password && <p className="text-[10px] text-red-500 mt-1 font-bold">{errores.admin_password}</p>}
+                <div className="bg-blue-50 p-4 md:p-5 rounded-2xl border border-blue-100 relative overflow-hidden">
+                  <div className="absolute -right-4 -top-4 w-16 h-16 bg-blue-200 rounded-full blur-2xl opacity-50"></div>
+                  <h3 className="font-black text-blue-800 mb-1 flex items-center gap-1.5 text-sm relative z-10"><ShieldCheck size={16}/> Confirmación Administrador</h3>
+                  <p className="text-[9px] md:text-[10px] font-bold text-blue-600/80 mb-3 relative z-10">Ingresa TU contraseña para autorizar cambios.</p>
+                  <input type="password" placeholder="Tu clave maestra..." className={`w-full bg-white border p-3.5 rounded-xl outline-none font-bold text-gray-800 text-sm transition-colors relative z-10 shadow-sm ${errores.admin_password ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-blue-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={modalCrear ? formCrear.admin_password : formEditar.admin_password} onChange={e => modalCrear ? setFormCrear({...formCrear, admin_password: e.target.value}) : setFormEditar({...formEditar, admin_password: e.target.value})}/>
+                  {errores.admin_password && <p className="text-[10px] text-red-500 mt-1 font-bold relative z-10 leading-tight">{errores.admin_password}</p>}
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-gray-200">
-                <button type="button" onClick={() => modalCrear ? setModalCrear(false) : setModalEditar(false)} className="w-full sm:w-1/3 border border-gray-200 py-3.5 rounded-xl text-gray-600 font-bold hover:bg-gray-100">Cancelar</button>
-                <button type="submit" disabled={modalCrear && empleadosDisponibles.length === 0} className="w-full sm:w-2/3 bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/30 disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed">
-                  {modalCrear ? 'Otorgar Acceso y Crear Usuario' : 'Confirmar y Guardar Cambios'}
-                </button>
-              </div>
             </form>
+
+            <div className="flex flex-col sm:flex-row gap-3 p-4 md:p-6 border-t border-gray-100 bg-white shrink-0">
+              <button type="button" onClick={() => modalCrear ? setModalCrear(false) : setModalEditar(false)} className="w-full sm:w-1/3 border border-gray-200 py-3.5 md:py-4 rounded-xl text-gray-600 font-bold hover:bg-gray-50 transition-colors text-sm">Cancelar</button>
+              <button type="submit" onClick={modalCrear ? handleCrear : handleGuardarEditarCompleto} disabled={modalCrear && empleadosDisponibles.length === 0} className="w-full sm:w-2/3 bg-blue-600 text-white py-3.5 md:py-4 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/30 disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none disabled:cursor-not-allowed transition-all active:scale-95 flex items-center justify-center gap-2 text-sm">
+                <CheckCircle size={18}/> {modalCrear ? 'Generar Credencial' : 'Guardar Cambios'}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
+      {/* ✨ MODAL REVOCAR ACCESO ✨ */}
       {modalEliminar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-all p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center border border-white/50">
-            <div className="h-16 w-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-5 text-red-600"><AlertTriangle size={32} /></div>
-            <h3 className="text-2xl font-extrabold text-gray-800">¿Revocar Acceso?</h3>
-            <p className="text-sm text-gray-500 mt-3 font-medium px-4">Esta acción eliminará el usuario del sistema. <strong>El empleado seguirá en el Directorio.</strong></p>
-            <div className="flex gap-4 mt-8">
-              <button onClick={() => setModalEliminar(false)} className="flex-1 border border-gray-200 py-3 rounded-xl font-bold text-gray-600 hover:bg-gray-50">Cancelar</button>
-              <button onClick={handleEliminar} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700">Sí, Revocar Acceso</button>
+        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-fade-in">
+          <div className="bg-white rounded-t-3xl sm:rounded-[2rem] p-6 md:p-8 w-full sm:max-w-sm text-center shadow-2xl animate-fade-in-up pb-8">
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 sm:hidden"></div>
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-50 border-4 border-red-100 mb-4 text-red-500 shadow-inner">
+              <AlertTriangle size={32}/>
+            </div>
+            <h3 className="text-xl font-extrabold text-gray-800 mb-2">¿Revocar Acceso?</h3>
+            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
+              El usuario ya no podrá ingresar al sistema. <strong>El empleado físico seguirá en el Directorio.</strong>
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setModalEliminar(false)} className="flex-1 py-3.5 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors text-sm">Cancelar</button>
+              <button onClick={handleEliminar} className="flex-1 py-3.5 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/30 text-sm">Sí, Revocar</button>
             </div>
           </div>
         </div>

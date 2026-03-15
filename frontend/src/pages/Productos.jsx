@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import Layout from '../components/Layout';
-import { Package, Search, Plus, Edit, Trash2, X, List, Grid, AlertTriangle, TrendingUp, BarChart3, Store, UploadCloud, FileJson, Image as ImageIcon, Link as LinkIcon, ChevronDown, ReceiptText, Star } from 'lucide-react';
+import { Package, Search, Plus, Edit, Trash2, X, List, Grid, AlertTriangle, TrendingUp, BarChart3, Store, UploadCloud, FileJson, Image as ImageIcon, Link as LinkIcon, ChevronDown, CheckCircle, ReceiptText } from 'lucide-react';
 
 const Productos = () => {
   const [productos, setProductos] = useState([]);
@@ -16,6 +16,7 @@ const Productos = () => {
   
   const [modalOpen, setModalOpen] = useState(false);
   const [modalImportarOpen, setModalImportarOpen] = useState(false);
+  const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
   
   const [formData, setFormData] = useState({ id: null, nombre: '', descripcion: '', precio: '', codigo: '', categoria_id: '', imagen_url: '', stock_sucursales: {} });
   const [imagenFile, setImagenFile] = useState(null); 
@@ -36,7 +37,6 @@ const Productos = () => {
 
   const fetchData = async () => {
     const currentSucursal = JSON.parse(localStorage.getItem('sucursalActiva'));
-    
     if (!currentSucursal) {
       setProductos([]);
       setLoading(false);
@@ -66,7 +66,6 @@ const Productos = () => {
     return () => window.removeEventListener('sucursalCambiada', handleSucursalCambiada);
   }, [filtroEstado]);
 
-  // ✨ AQUÍ ESTABA EL ERROR: Faltaba la palabra "const"
   const convertirABase64 = (archivo) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -102,12 +101,23 @@ const Productos = () => {
       
       setModalOpen(false);
       fetchData();
-    } catch (err) { alert('Error al guardar el producto'); }
+    } catch (err) { 
+       console.error("Error al guardar:", err);
+    }
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm("¿Seguro que deseas eliminar este producto?")) {
-      try { await api.delete(`/productos/${id}`); fetchData(); } catch (err) { alert('Error al eliminar'); }
+  const handleDeleteClick = (id) => {
+    setDeleteModal({ open: true, id });
+  };
+
+  const confirmDelete = async () => {
+    try { 
+      await api.delete(`/productos/${deleteModal.id}`); 
+      setDeleteModal({ open: false, id: null });
+      fetchData(); 
+    } catch (err) { 
+      console.error(err); 
+      setDeleteModal({ open: false, id: null });
     }
   };
 
@@ -146,10 +156,12 @@ const Productos = () => {
       try {
         const json = JSON.parse(event.target.result);
         await api.post('/productos/bulk', { productos: json }); 
-        alert("Productos importados con éxito");
         setModalImportarOpen(false);
         fetchData();
-      } catch (error) { alert("Error al importar el JSON. Verifica el formato."); }
+        alert("Productos importados con éxito");
+      } catch (error) { 
+        alert("Error al importar el JSON. Verifica el formato."); 
+      }
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -180,32 +192,49 @@ const Productos = () => {
   return (
     <Layout title="Inventario">
       
-      <p className="text-sm md:text-base text-gray-500 font-medium mb-6 px-1">
-          {esVistaGlobal ? 'Viendo catálogo global de la empresa' : (sucursalActiva ? `Viendo inventario de: ${sucursalActiva.nombre}` : 'No hay sucursal seleccionada')}
-      </p>
-
-      <div className="flex gap-2 mb-6 bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm w-fit overflow-x-auto max-w-full">
-        <button onClick={() => setTabActiva('catalogo')} className={`flex items-center gap-2 px-4 md:px-5 py-2 rounded-lg font-bold text-xs md:text-sm transition-colors whitespace-nowrap ${tabActiva === 'catalogo' ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}>
-          <List size={16}/> Catálogo Operativo
-        </button>
-        {esVistaGlobal && (
-          <button onClick={() => setTabActiva('control')} className={`flex items-center gap-2 px-4 md:px-5 py-2 rounded-lg font-bold text-xs md:text-sm transition-colors whitespace-nowrap ${tabActiva === 'control' ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}>
-            <BarChart3 size={16}/> Monitores Globales
+      <div className="flex justify-between items-end mb-3 md:mb-5">
+        <p className="text-[11px] md:text-sm text-gray-500 font-bold px-1 uppercase tracking-wider">
+            {esVistaGlobal ? 'Catálogo Global' : `Sede: ${sucursalActiva?.nombre || 'Ninguna'}`}
+        </p>
+        
+        <div className="flex bg-slate-200/50 p-1 rounded-lg">
+          <button onClick={() => setTabActiva('catalogo')} className={`px-3 py-1.5 rounded-md font-bold text-[10px] md:text-xs transition-all ${tabActiva === 'catalogo' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>
+            Catálogo
           </button>
-        )}
+          {esVistaGlobal && (
+            <button onClick={() => setTabActiva('control')} className={`px-3 py-1.5 rounded-md font-bold text-[10px] md:text-xs transition-all ${tabActiva === 'control' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>
+              Global
+            </button>
+          )}
+        </div>
       </div>
 
       {tabActiva === 'catalogo' && (
         <div className="animate-fade-in">
           
-          <div className="flex flex-col lg:flex-row gap-4 mb-6 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 text-gray-400" size={18}/>
-              <input type="text" placeholder="Buscar producto o SKU..." className="w-full bg-slate-50 border border-gray-200 pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none focus:border-blue-500 transition-colors" value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+          {/* ✨ CONTROLES ARREGLADOS: Sin overflow oculto, botones visibles y accesibles ✨ */}
+          <div className="flex flex-col gap-3 mb-4 md:mb-6 bg-white p-3 md:p-4 rounded-2xl border border-gray-100 shadow-sm relative z-20">
+            
+            {/* Fila 1: Buscador y Botón Nuevo (Siempre visibles y priorizados) */}
+            <div className="flex gap-2 w-full">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 text-gray-400" size={16}/>
+                <input 
+                  type="text" 
+                  placeholder="Buscar producto o SKU..." 
+                  className="w-full bg-slate-50 border border-gray-200 pl-9 pr-3 py-2 md:py-2.5 rounded-xl text-xs md:text-sm outline-none focus:border-blue-500 transition-colors h-[40px]" 
+                  value={busqueda} 
+                  onChange={e => setBusqueda(e.target.value)} 
+                />
+              </div>
+              <button onClick={() => abrirModal()} className="h-[40px] px-4 bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-md hover:bg-blue-700 transition-all text-xs md:text-sm shrink-0">
+                <Plus size={16}/> <span className="hidden sm:inline">Nuevo</span>
+              </button>
             </div>
-            <div className="flex flex-wrap gap-3 items-center w-full lg:w-auto">
-               <CustomDropdown 
-                label="Filtro"
+
+            {/* Fila 2: Filtro, Importar JSON y Vistas (Totalmente responsivos) */}
+            <div className="flex justify-between items-center w-full gap-2">
+              <CustomDropdown 
                 value={filtroEstado}
                 onChange={setFiltradoEstado}
                 options={[
@@ -213,105 +242,142 @@ const Productos = () => {
                     {value: 'inactivos', label: 'Inactivos'},
                     {value: 'todos', label: 'Todos'}
                 ]}
+                className="h-[40px] bg-slate-50 border-gray-200 text-xs md:text-sm w-[130px] md:w-auto"
               />
-              
-              <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-                <button onClick={() => setVista('tabla')} className={`p-1.5 rounded-lg transition-all ${vista === 'tabla' ? 'bg-white shadow text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><List size={18}/></button>
-                <button onClick={() => setVista('galeria')} className={`p-1.5 rounded-lg transition-all ${vista === 'galeria' ? 'bg-white shadow text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><Grid size={18}/></button>
+
+              <div className="flex gap-2 items-center shrink-0">
+                <button onClick={() => setModalImportarOpen(true)} className="h-[40px] w-[40px] sm:w-auto sm:px-4 bg-emerald-50 text-emerald-600 rounded-xl font-bold flex items-center justify-center gap-1.5 border border-emerald-200 hover:bg-emerald-100 transition-all text-xs md:text-sm" title="Importar JSON">
+                  <UploadCloud size={16}/> <span className="hidden sm:inline">JSON</span>
+                </button>
+                
+                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 h-[40px] items-center">
+                  <button onClick={() => setVista('tabla')} className={`p-1.5 rounded-lg transition-all ${vista === 'tabla' ? 'bg-white shadow text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><List size={16}/></button>
+                  <button onClick={() => setVista('galeria')} className={`p-1.5 rounded-lg transition-all ${vista === 'galeria' ? 'bg-white shadow text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><Grid size={16}/></button>
+                </div>
               </div>
-
-              <button onClick={() => setModalImportarOpen(true)} className="flex-1 lg:flex-none justify-center bg-emerald-50 text-emerald-600 px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 border border-emerald-200 hover:bg-emerald-100 transition-all text-sm md:text-base">
-                <UploadCloud size={18}/> <span className="hidden sm:inline">Importar</span> JSON
-              </button>
-              <input type="file" accept=".json" className="hidden" ref={fileInputRef} onChange={handleImportJSON} />
-
-              <button onClick={() => abrirModal()} className="flex-1 lg:flex-none justify-center bg-blue-600 text-white px-4 md:px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-md hover:bg-blue-700 transition-all text-sm md:text-base">
-                <Plus size={18}/> Nuevo
-              </button>
             </div>
+
           </div>
 
           {vista === 'tabla' ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden overflow-x-auto w-full">
-              <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold tracking-wider text-[10px]">
-                  <tr>
-                    <th className="px-6 py-4">Foto</th>
-                    <th className="px-6 py-4">Código</th>
-                    <th className="px-6 py-4">Nombre del Producto</th>
-                    <th className="px-6 py-4">Categoría</th> 
-                    <th className="px-6 py-4 text-right">Precio Base</th>
-                    <th className="px-6 py-4 text-center">{esVistaGlobal ? 'Stock Global' : 'Stock Local'}</th>
-                    <th className="px-6 py-4 text-center">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {loading ? <tr><td colSpan="7" className="text-center py-10 font-medium">Cargando catálogo...</td></tr> : 
-                   !sucursalActiva ? <tr><td colSpan="7" className="text-center py-10 text-gray-400 font-medium bg-red-50">⚠️ No se ha detectado sucursal. Comunícate con el Administrador.</td></tr> :
-                   productosFiltrados.length === 0 ? <tr><td colSpan="7" className="text-center py-10 italic text-gray-400">No hay productos disponibles.</td></tr> :
-                   productosFiltrados.map((prod) => {
-                    const stockVisual = parseInt(prod.stock || 0);
-                    return (
-                    <tr key={prod.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-3">
-                        <div className="w-10 h-10 rounded-lg border bg-white overflow-hidden flex items-center justify-center">
-                           {prod.imagen ? <img src={renderImagen(prod.imagen)} alt="prod" className="w-full h-full object-cover"/> : <ImageIcon size={18} className="text-gray-300"/>}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-xs font-bold text-gray-400 tracking-wider">{prod.codigo || '---'}</td>
-                      <td className="px-6 py-4 font-bold text-slate-800"><p className="truncate max-w-[200px]" title={prod.nombre}>{prod.nombre}</p></td>
-                      <td className="px-6 py-4"><span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">{prod.categoria_nombre || 'General'}</span></td>
-                      <td className="px-6 py-4 text-right font-extrabold text-emerald-700">S/ {parseFloat(prod.precio).toFixed(2)}</td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold border ${stockVisual > 10 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : stockVisual > 0 ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                          {stockVisual} un.
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <button onClick={() => abrirModal(prod)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded mr-2 transition-colors"><Edit size={16}/></button>
-                        <button onClick={() => handleDelete(prod.id)} className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"><Trash2 size={16}/></button>
-                      </td>
+            <>
+              {/* VISTA LISTA MÓVIL (Horizontales) */}
+              <div className="md:hidden flex flex-col gap-2.5">
+                {loading ? <p className="text-center py-10 text-xs font-medium">Cargando catálogo...</p> : 
+                 !sucursalActiva ? <p className="text-center py-10 text-xs text-red-500 bg-red-50 rounded-xl">⚠️ Sin sucursal asignada.</p> :
+                 productosFiltrados.length === 0 ? <p className="text-center py-10 text-xs italic text-gray-400">No hay productos.</p> :
+                 productosFiltrados.map((prod) => {
+                  const stockVisual = parseInt(prod.stock || 0);
+                  return (
+                    <div key={prod.id} className="bg-white rounded-2xl border border-gray-100 p-2.5 flex items-stretch gap-3 shadow-sm relative overflow-hidden">
+                       <div className="w-20 h-20 bg-slate-50 rounded-xl border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+                          {prod.imagen ? <img src={renderImagen(prod.imagen)} alt="prod" className="w-full h-full object-cover"/> : <ImageIcon size={24} className="text-gray-300"/>}
+                       </div>
+                       <div className="flex-1 flex flex-col justify-between py-0.5">
+                          <div>
+                            <div className="flex justify-between items-start gap-2">
+                               <h3 className="font-bold text-gray-800 text-xs leading-tight line-clamp-2">{prod.nombre}</h3>
+                               <div className="flex gap-1 shrink-0">
+                                  <button onClick={() => abrirModal(prod)} className="text-blue-500 bg-blue-50 p-1.5 rounded-lg"><Edit size={12}/></button>
+                                  <button onClick={() => handleDeleteClick(prod.id)} className="text-red-500 bg-red-50 p-1.5 rounded-lg"><Trash2 size={12}/></button>
+                               </div>
+                            </div>
+                            <p className="text-[9px] font-bold text-gray-400 uppercase mt-0.5">{prod.codigo || 'SIN CÓDIGO'}</p>
+                          </div>
+                          <div className="flex justify-between items-end mt-1">
+                             <span className="font-black text-emerald-600 text-sm">S/ {parseFloat(prod.precio).toFixed(2)}</span>
+                             <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded md ${stockVisual > 0 ? 'bg-slate-100 text-slate-600' : 'bg-red-100 text-red-600'}`}>
+                               Stock: {stockVisual}
+                             </span>
+                          </div>
+                       </div>
+                    </div>
+                  )
+                 })}
+              </div>
+
+              {/* VISTA TABLA PC */}
+              <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden overflow-x-auto w-full">
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold tracking-wider text-[10px]">
+                    <tr>
+                      <th className="px-6 py-4">Foto</th>
+                      <th className="px-6 py-4">Código</th>
+                      <th className="px-6 py-4">Producto</th>
+                      <th className="px-6 py-4">Categoría</th> 
+                      <th className="px-6 py-4 text-right">Precio</th>
+                      <th className="px-6 py-4 text-center">Stock</th>
+                      <th className="px-6 py-4 text-center">Acciones</th>
                     </tr>
-                   )})}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {loading ? <tr><td colSpan="7" className="text-center py-10 font-medium">Cargando...</td></tr> : 
+                     !sucursalActiva ? <tr><td colSpan="7" className="text-center py-10 text-gray-400 font-medium">⚠️ Sin sucursal.</td></tr> :
+                     productosFiltrados.map((prod) => {
+                      const stockVisual = parseInt(prod.stock || 0);
+                      return (
+                      <tr key={prod.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-3">
+                          <div className="w-10 h-10 rounded-lg border bg-white overflow-hidden flex items-center justify-center">
+                             {prod.imagen ? <img src={renderImagen(prod.imagen)} alt="prod" className="w-full h-full object-cover"/> : <ImageIcon size={18} className="text-gray-300"/>}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-xs font-bold text-gray-400 tracking-wider">{prod.codigo || '---'}</td>
+                        <td className="px-6 py-4 font-bold text-slate-800"><p className="truncate max-w-[200px]" title={prod.nombre}>{prod.nombre}</p></td>
+                        <td className="px-6 py-4"><span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">{prod.categoria_nombre || 'General'}</span></td>
+                        <td className="px-6 py-4 text-right font-extrabold text-emerald-700">S/ {parseFloat(prod.precio).toFixed(2)}</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${stockVisual > 10 ? 'bg-emerald-50 text-emerald-700' : stockVisual > 0 ? 'bg-yellow-50 text-yellow-700' : 'bg-red-50 text-red-700'}`}>
+                            {stockVisual} un.
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <button onClick={() => abrirModal(prod)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded mr-2"><Edit size={14}/></button>
+                          <button onClick={() => handleDeleteClick(prod.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded"><Trash2 size={14}/></button>
+                        </td>
+                      </tr>
+                     )})}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 lg:gap-6 gap-4">
+            /* VISTA GRID GALERÍA */
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 lg:gap-5 gap-2.5">
               {!sucursalActiva ? (
-                <div className="col-span-full text-center py-10 text-red-500 font-medium bg-red-50 rounded-2xl border border-red-200">
-                  ⚠️ No tienes ninguna sucursal autorizada. Pídele al Administrador que te asigne una.
+                <div className="col-span-full text-center py-10 text-xs text-red-500 font-medium bg-red-50 rounded-2xl">
+                  ⚠️ Pídele al Administrador que te asigne una sucursal.
                 </div>
               ) : productosFiltrados.map((prod) => {
                 const stockVisual = parseInt(prod.stock || 0);
                 return (
-                <div key={prod.id} className="bg-white rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-xl transition-all flex flex-col group overflow-hidden">
-                  <div className="h-32 md:h-48 bg-slate-50 border-b border-slate-100 flex items-center justify-center p-4 relative">
+                <div key={prod.id} className="bg-white rounded-2xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all flex flex-col group overflow-hidden">
+                  <div className="h-24 md:h-36 bg-slate-50 flex items-center justify-center p-2 md:p-4 relative">
                     {prod.imagen ? (
-                      <img src={renderImagen(prod.imagen)} alt={prod.nombre} className="max-w-full max-h-full object-contain drop-shadow-md rounded" />
+                      <img src={renderImagen(prod.imagen)} alt={prod.nombre} className="max-w-full max-h-full object-contain drop-shadow-sm rounded" />
                     ) : (
-                      <div className="text-slate-300 flex flex-col items-center"><Package size={40} strokeWidth={1.5} /></div>
+                      <div className="text-slate-300 flex flex-col items-center"><Package size={32} strokeWidth={1.5} /></div>
                     )}
                   </div>
-                  <div className="p-3 md:p-5 flex-1 flex flex-col">
-                    <p className="text-[9px] md:text-[10px] font-extrabold text-slate-400 mb-1 tracking-widest uppercase">{prod.codigo || 'SIN CÓDIGO'}</p>
-                    <h3 className="font-extrabold text-slate-800 text-xs md:text-sm leading-tight mb-1 md:mb-2 group-hover:text-blue-600 transition-colors line-clamp-2" title={prod.nombre}>{prod.nombre}</h3>
-                    <p className="text-[10px] md:text-xs text-gray-400 line-clamp-1 mb-2">{prod.descripcion || 'Sin descripción'}</p>
+                  <div className="p-2.5 md:p-3.5 flex-1 flex flex-col bg-white z-10">
+                    <p className="text-[8px] md:text-[9px] font-extrabold text-slate-400 mb-0.5 tracking-widest uppercase truncate">{prod.codigo || 'SIN CÓDIGO'}</p>
+                    <h3 className="font-extrabold text-slate-800 text-[11px] md:text-sm leading-tight mb-1 group-hover:text-blue-600 transition-colors line-clamp-2" title={prod.nombre}>{prod.nombre}</h3>
+                    <p className="text-[9px] md:text-[11px] text-gray-400 line-clamp-1 mb-1.5 leading-tight">{prod.descripcion || 'Sin descripción'}</p>
                     
-                    <div className="mt-auto flex flex-col xl:flex-row xl:justify-between xl:items-end gap-1 pt-2 md:pt-3 border-t border-dashed border-gray-200">
-                      <span className="text-base md:text-lg lg:text-xl font-black text-emerald-600">S/ {parseFloat(prod.precio).toFixed(2)}</span>
-                      <span className={`text-[10px] md:text-xs font-extrabold px-2 py-0.5 md:px-2.5 md:py-1 rounded-md w-fit ${stockVisual > 0 ? 'bg-slate-100 text-slate-600' : 'bg-red-100 text-red-600'}`}>
+                    <div className="mt-auto flex justify-between items-center pt-2 border-t border-gray-100">
+                      <span className="text-sm md:text-lg font-black text-emerald-600">S/ {parseFloat(prod.precio).toFixed(2)}</span>
+                      <span className={`text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 rounded ${stockVisual > 0 ? 'bg-slate-100 text-slate-600' : 'bg-red-100 text-red-600'}`}>
                         {stockVisual} un.
                       </span>
                     </div>
                   </div>
-                  <div className="bg-slate-50 p-2 md:p-3 border-t border-slate-100 flex justify-between items-center">
-                    <span className="text-[9px] md:text-[10px] font-extrabold uppercase text-purple-700 bg-purple-100 px-1.5 md:px-2.5 py-1 md:py-1.5 rounded-lg border border-purple-200 flex items-center gap-1 truncate max-w-[80px] md:max-w-none">
-                      <Store size={10} className="shrink-0"/> <span className="truncate">{esVistaGlobal ? 'Global' : sucursalActiva?.nombre}</span>
+                  <div className="bg-slate-50 p-2 border-t border-slate-100 flex justify-between items-center">
+                    <span className="text-[8px] md:text-[9px] font-extrabold uppercase text-purple-700 bg-purple-100 px-1.5 py-0.5 md:py-1 rounded border border-purple-200 flex items-center gap-1 truncate max-w-[60px] md:max-w-none">
+                      {esVistaGlobal ? 'Global' : 'Local'}
                     </span>
-                    <div className="flex gap-1 md:gap-2 shrink-0">
-                      <button onClick={() => abrirModal(prod)} className="p-1.5 md:p-2 bg-white text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg border border-slate-200 shadow-sm transition-colors"><Edit size={14}/></button>
-                      <button onClick={() => handleDelete(prod.id)} className="p-1.5 md:p-2 bg-white text-red-500 hover:bg-red-600 hover:text-white rounded-lg border border-slate-200 shadow-sm transition-colors"><Trash2 size={14}/></button>
+                    <div className="flex gap-1 shrink-0">
+                      <button onClick={() => abrirModal(prod)} className="p-1 md:p-1.5 bg-white text-blue-600 hover:bg-blue-600 hover:text-white rounded border border-slate-200 transition-colors"><Edit size={12}/></button>
+                      <button onClick={() => handleDeleteClick(prod.id)} className="p-1 md:p-1.5 bg-white text-red-500 hover:bg-red-600 hover:text-white rounded border border-slate-200 transition-colors"><Trash2 size={12}/></button>
                     </div>
                   </div>
                 </div>
@@ -321,6 +387,7 @@ const Productos = () => {
         </div>
       )}
 
+      {/* PESTAÑA MONITORES GLOBAL */}
       {tabActiva === 'control' && esVistaGlobal && (
         <div className="animate-fade-in space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
@@ -346,94 +413,61 @@ const Productos = () => {
               <div className="bg-emerald-50 p-4 rounded-2xl text-emerald-600"><TrendingUp size={28}/></div>
             </div>
           </div>
-
-          <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-200">
-            <h3 className="text-base md:text-lg font-extrabold text-gray-800 mb-6 flex items-center gap-2"><BarChart3 className="text-blue-600"/> Distribución Física por Sucursal</h3>
-            <div className="h-64 flex items-end gap-2 md:gap-4 border-b border-gray-200 pb-2 overflow-x-auto whitespace-nowrap w-full">
-              {Object.keys(stockPorSucursal).length === 0 ? (
-                 <p className="text-gray-400 font-medium m-auto">No hay stock distribuido aún.</p>
-              ) : (
-                Object.entries(stockPorSucursal).map(([sucursal, cantidad], idx) => {
-                  const heightPercentage = (cantidad / maxStockChart) * 100;
-                  const barColor = idx % 2 === 0 ? 'bg-blue-500' : 'bg-purple-500';
-                  return (
-                    <div key={sucursal} className="flex flex-col items-center justify-end flex-1 min-w-[60px] md:min-w-[80px] group h-full">
-                      <span className="text-[10px] md:text-xs font-bold text-gray-500 mb-2 md:opacity-0 group-hover:opacity-100 transition-opacity">{cantidad} un.</span>
-                      <div className={`w-full max-w-[60px] md:max-w-[80px] rounded-t-lg transition-all duration-700 ease-in-out hover:brightness-110 ${barColor}`} style={{ height: `${heightPercentage}%`, minHeight: '20px' }}></div>
-                      <span className="text-[9px] md:text-[10px] font-extrabold text-gray-600 mt-2 md:mt-3 text-center truncate w-full px-1">{sucursal}</span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
         </div>
       )}
 
-      {/* MODAL IMPORTAR JSON */}
-      {modalImportarOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 md:p-8 animate-fade-in-up">
-            <div className="flex justify-between items-center mb-5 border-b border-gray-100 pb-4">
-               <h2 className="text-lg md:text-xl font-extrabold text-gray-800 flex items-center gap-2"><FileJson className="text-blue-600"/> Importar Productos (JSON)</h2>
-               <button onClick={() => setModalImportarOpen(false)} className="text-gray-400 hover:text-gray-800 bg-gray-100 p-2 rounded-full transition-colors"><X size={18}/></button>
-            </div>
+      {/* ✨ MODAL DE ELIMINACIÓN TIPO APP (Diseño Bottom Sheet en celular) ✨ */}
+      {deleteModal.open && (
+        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-t-3xl sm:rounded-[2rem] p-6 md:p-8 w-full sm:max-w-sm text-center shadow-2xl animate-fade-in-up">
+            {/* Pequeña barra superior en móvil para indicar que es un panel deslizable */}
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 sm:hidden"></div>
             
-            <div className="mb-6">
-              <p className="text-sm md:text-base text-gray-600 mb-3">
-                Para evitar errores en la base de datos, tu archivo <b>.json</b> debe ser estrictamente una lista <code className="bg-gray-100 px-1 rounded text-blue-600 font-bold">[]</code> que contenga los productos. Aquí tienes un ejemplo:
-              </p>
-              
-              <div className="bg-slate-900 rounded-xl p-4 md:p-5 overflow-x-auto shadow-inner border border-slate-700">
-                <pre className="text-xs md:text-sm text-emerald-400 font-mono">
-{`[
-  {
-    "nombre": "AMD Ryzen 7 5700G",
-    "descripcion": "Procesador AMD 8 Núcleos",
-    "codigo": "CPU-AMD-570G",
-    "precio": 900.00,
-    "stock": 11,
-    "categoria_id": 1,
-    "imagen_url": "https://ejemplo.com/foto.jpg"
-  }
-]`}
-                </pre>
-              </div>
+            <div className="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={24} />
             </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 mt-8">
-              <button onClick={() => setModalImportarOpen(false)} className="flex-1 py-3 md:py-3.5 font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">Cancelar</button>
-              <button onClick={() => fileInputRef.current.click()} className="flex-1 py-3 md:py-3.5 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-colors">
-                <UploadCloud size={20}/> Seleccionar Archivo .json
+            <h3 className="text-lg md:text-xl font-extrabold text-gray-800 mb-2">Eliminar Producto</h3>
+            <p className="text-xs md:text-sm text-gray-500 mb-6 leading-relaxed">
+              Esta acción es permanente. Se borrará de <b>todas las sucursales</b>.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteModal({open: false, id: null})} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors text-sm">
+                Cancelar
+              </button>
+              <button onClick={confirmDelete} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-600/30 transition-colors text-sm">
+                Eliminar
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL CREAR/EDITAR PRODUCTO */}
+      {/* ✨ MODAL DE EDICIÓN MEJORADA (Diseño Bottom Sheet Compacto para celular) ✨ */}
       {modalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 md:p-8 animate-fade-in-up border border-white/50 max-h-[95vh] overflow-y-auto custom-scrollbar">
-            <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4 sticky top-0 bg-white z-10 pt-2">
-              <h2 className="text-xl font-extrabold text-gray-800 flex items-center gap-2">
-                <Edit className="text-blue-600"/> {formData.id ? 'Editar Producto' : 'Registrar Nuevo Producto'}
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-2xl flex flex-col max-h-[90vh] animate-fade-in-up overflow-hidden">
+            
+            {/* HEADER FIJO */}
+            <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-white shrink-0">
+              <h2 className="text-base md:text-lg font-extrabold text-gray-800 flex items-center gap-2">
+                <Edit className="text-blue-600" size={20}/> {formData.id ? 'Editar Producto' : 'Nuevo Producto'}
               </h2>
-              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-800 bg-gray-100 p-2 rounded-full transition-colors"><X size={18}/></button>
+              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 p-1.5 md:p-2 rounded-full transition-colors"><X size={18}/></button>
             </div>
             
-            <form onSubmit={handleSubmit} className="space-y-6">
+            {/* CUERPO CON SCROLL */}
+            <form id="productForm" onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4">
               
-              <div className="bg-slate-50/50 p-4 md:p-5 rounded-2xl border border-slate-200">
-                <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Package size={14}/> Datos Principales</h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-1">
-                      <label className="text-[10px] font-bold text-gray-500 uppercase">Nombre *</label>
-                      <input type="text" required placeholder="Ej: Micrófono HyperX" className="w-full border p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-gray-800 mt-1 bg-white shadow-sm transition-shadow" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} />
+              <div className="bg-slate-50/50 p-3 sm:p-4 rounded-2xl border border-slate-100">
+                <h3 className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2"><Package size={14}/> Datos Base</h3>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Nombre *</label>
+                      <input type="text" required placeholder="Ej: Micrófono HyperX" className="w-full border border-gray-200 p-2 md:p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-xs md:text-sm font-bold text-gray-800 mt-1 bg-white" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} />
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold text-gray-500 uppercase">Categoría</label>
+                      <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase mb-1 block">Categoría</label>
                        <CustomDropdown 
                          value={formData.categoria_id}
                          onChange={val => setFormData({...formData, categoria_id: val})}
@@ -441,60 +475,57 @@ const Productos = () => {
                              {value: '', label: '-- Sin categoría --'},
                              ...categorias.map(c => ({value: c.id, label: c.nombre}))
                          ]}
-                         placeholder="-- Elige una categoría --"
+                         placeholder="Elige una categoría"
+                         className="w-full h-[38px] md:h-[42px] border-gray-200 text-xs md:text-sm bg-white"
                        />
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-bold text-gray-500 uppercase">Descripción</label>
-                    <textarea rows="2" placeholder="Detalles del producto..." className="w-full border p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-medium mt-1 bg-white shadow-sm resize-none text-gray-700" value={formData.descripcion} onChange={e => setFormData({...formData, descripcion: e.target.value})}></textarea>
+                    <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Descripción</label>
+                    <textarea rows="2" placeholder="Detalles del producto..." className="w-full border border-gray-200 p-2 md:p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-xs md:text-sm font-medium mt-1 bg-white resize-none text-gray-700" value={formData.descripcion} onChange={e => setFormData({...formData, descripcion: e.target.value})}></textarea>
                   </div>
 
-                  <div className="border border-blue-100 bg-blue-50/30 p-4 rounded-xl space-y-3">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Imagen del Producto</label>
-                    <div className="flex gap-4 mb-3">
-                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer select-none">
-                        <input type="radio" name="tipoImagen" checked={tipoImagen === 'url'} onChange={() => setTipoImagen('url')} className="text-blue-600 focus:ring-blue-500 w-4 h-4" />
-                        <LinkIcon size={16} className="text-gray-400"/> Pegar Link (URL)
+                  <div className="border border-blue-100 bg-blue-50/30 p-3 sm:p-4 rounded-xl space-y-2">
+                    <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase block mb-1">Imagen del Producto</label>
+                    <div className="flex gap-4 mb-2">
+                      <label className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold text-gray-700 cursor-pointer">
+                        <input type="radio" name="tipoImagen" checked={tipoImagen === 'url'} onChange={() => setTipoImagen('url')} className="text-blue-600 focus:ring-blue-500 w-3 h-3 sm:w-4 sm:h-4" />
+                        <LinkIcon size={14} className="text-gray-400"/> Pegar URL
                       </label>
-                      <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer select-none">
-                        <input type="radio" name="tipoImagen" checked={tipoImagen === 'archivo'} onChange={() => setTipoImagen('archivo')} className="text-blue-600 focus:ring-blue-500 w-4 h-4" />
-                        <UploadCloud size={16} className="text-gray-400"/> Subir desde PC
+                      <label className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold text-gray-700 cursor-pointer">
+                        <input type="radio" name="tipoImagen" checked={tipoImagen === 'archivo'} onChange={() => setTipoImagen('archivo')} className="text-blue-600 focus:ring-blue-500 w-3 h-3 sm:w-4 sm:h-4" />
+                        <UploadCloud size={14} className="text-gray-400"/> Subir de PC
                       </label>
                     </div>
                     {tipoImagen === 'url' ? (
-                      <input type="text" placeholder="https://ejemplo.com/foto.jpg" className="w-full border p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-medium bg-white shadow-sm" value={formData.imagen_url} onChange={e => setFormData({...formData, imagen_url: e.target.value})} />
+                      <input type="text" placeholder="https://ejemplo.com/foto.jpg" className="w-full border border-gray-200 p-2 sm:p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-medium bg-white text-xs sm:text-sm" value={formData.imagen_url} onChange={e => setFormData({...formData, imagen_url: e.target.value})} />
                     ) : (
-                      <div className="bg-white border rounded-xl overflow-hidden flex shadow-sm">
-                        <input type="file" accept="image/*" onChange={e => setImagenFile(e.target.files[0])} className="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-none file:border-0 file:text-sm file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer transition-colors" />
+                      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex">
+                        <input type="file" accept="image/*" onChange={e => setImagenFile(e.target.files[0])} className="w-full text-[10px] sm:text-xs text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-none file:border-0 file:text-[10px] sm:file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
                       </div>
                     )}
-                    {tipoImagen === 'url' && renderImagen(formData.imagen_url) && <p className="text-xs text-blue-600 truncate mt-2">Imagen enlazada lista</p>}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] font-bold text-gray-500 uppercase">SKU / Código</label>
-                      <input type="text" placeholder="PROD-001" className="w-full border p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-gray-700 mt-1 uppercase bg-white shadow-sm" value={formData.codigo} onChange={e => setFormData({...formData, codigo: e.target.value})} />
+                      <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">SKU / Código</label>
+                      <input type="text" placeholder="PROD-001" className="w-full border border-gray-200 p-2 md:p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-bold text-gray-700 mt-1 uppercase bg-white text-xs md:text-sm" value={formData.codigo} onChange={e => setFormData({...formData, codigo: e.target.value})} />
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold text-gray-500 uppercase">Precio (S/) *</label>
-                      <input type="number" step="0.01" required placeholder="0.00" className="w-full border p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-black text-emerald-600 mt-1 bg-white shadow-sm" value={formData.precio} onChange={e => setFormData({...formData, precio: e.target.value})} />
+                      <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Precio (S/) *</label>
+                      <input type="number" step="0.01" required placeholder="0.00" className="w-full border border-gray-200 p-2 md:p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-black text-emerald-600 mt-1 bg-white text-xs md:text-sm" value={formData.precio} onChange={e => setFormData({...formData, precio: e.target.value})} />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-slate-50/50 p-4 md:p-5 rounded-2xl border border-slate-200">
-                <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Store size={14}/> Distribución Física de Stock</h3>
-                
+              <div className="bg-slate-50/50 p-3 sm:p-4 rounded-xl border border-slate-100">
+                <h3 className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2"><Store size={14}/> Distribución de Stock</h3>
                 {sucursales.length === 0 ? (
-                  <div className="text-sm text-blue-600 bg-blue-50 p-4 rounded-xl border border-blue-100 font-medium">
-                    Aún no has creado Sucursales. Ve al módulo "Sucursales" para crear tus locales.
-                  </div>
+                  <div className="text-[10px] sm:text-xs text-blue-600 bg-blue-50 p-3 rounded-lg border border-blue-100 font-medium">Aún no has creado Sucursales.</div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {sucursales.map(suc => {
                       const usuarioDatos = JSON.parse(localStorage.getItem('usuario') || '{}');
                       let asignadas = [];
@@ -506,37 +537,59 @@ const Productos = () => {
                           if (Array.isArray(p)) asignadas = p;
                         }
                       } catch(e){}
-                      
                       const puedeEditar = usuarioDatos.rol === 'Administrador' || asignadas.map(id => parseInt(id)).includes(parseInt(suc.id));
                       if (!puedeEditar) return null;
-
                       return (
-                        <div key={suc.id} className="bg-white border border-gray-200 p-3 rounded-xl shadow-sm hover:border-blue-300 transition-colors group">
-                          <label className="text-[10px] font-extrabold text-gray-600 group-hover:text-blue-600 uppercase block mb-1.5 truncate transition-colors" title={suc.nombre}>{suc.nombre}</label>
-                          <input 
-                            type="number" 
-                            min="0"
-                            placeholder="0 un."
-                            className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 text-sm font-black text-gray-800 outline-none focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
-                            value={formData.stock_sucursales[suc.id] || ''}
-                            onChange={(e) => handleStockChange(suc.id, e.target.value)}
-                          />
+                        <div key={suc.id} className="bg-white border border-gray-200 p-2 rounded-lg shadow-sm group">
+                          <label className="text-[9px] sm:text-[10px] font-extrabold text-gray-500 group-hover:text-blue-600 uppercase block mb-1 truncate transition-colors" title={suc.nombre}>{suc.nombre}</label>
+                          <input type="number" min="0" placeholder="0 un." className="w-full bg-slate-50 border border-slate-100 rounded p-1.5 text-xs sm:text-sm font-black text-gray-800 outline-none focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all" value={formData.stock_sucursales[suc.id] || ''} onChange={(e) => handleStockChange(suc.id, e.target.value)} />
                         </div>
                       )
                     })}
                   </div>
                 )}
               </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-3.5 font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors order-2 sm:order-1">
-                  Cancelar
-                </button>
-                <button type="submit" className="flex-1 py-3.5 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/30 transition-colors order-1 sm:order-2 flex items-center justify-center gap-2">
-                  {formData.id ? <><Edit size={18}/> Actualizar Producto</> : <><Plus size={18}/> Guardar Producto</>}
-                </button>
-              </div>
             </form>
+
+            {/* FOOTER FIJO */}
+            <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-3 shrink-0 rounded-b-3xl">
+              <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-3 font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition-colors text-sm shadow-sm">
+                Cancelar
+              </button>
+              <button type="submit" form="productForm" className="flex-1 py-3 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/30 transition-colors flex items-center justify-center gap-2 text-sm">
+                {formData.id ? <><CheckCircle size={16}/> Actualizar</> : <><Plus size={16}/> Guardar</>}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL IMPORTAR JSON */}
+      {modalImportarOpen && (
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-md w-full p-6 animate-fade-in-up">
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-4 sm:hidden"></div>
+            <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+               <h2 className="text-base font-extrabold text-gray-800 flex items-center gap-2"><FileJson className="text-blue-600" size={18}/> Importar JSON</h2>
+               <button onClick={() => setModalImportarOpen(false)} className="text-gray-400 hover:bg-gray-100 p-1.5 rounded-full"><X size={16}/></button>
+            </div>
+            <p className="text-xs text-gray-600 mb-3">Tu archivo debe ser un arreglo <code className="bg-gray-100 px-1 rounded text-blue-600 font-bold">[]</code>:</p>
+            <div className="bg-slate-900 rounded-xl p-4 overflow-x-auto shadow-inner border border-slate-700 mb-5">
+              <pre className="text-[10px] text-emerald-400 font-mono">
+{`[
+  {
+    "nombre": "Producto",
+    "precio": 90.00,
+    "stock": 10,
+    "categoria_id": 1
+  }
+]`}
+              </pre>
+            </div>
+            <button onClick={() => fileInputRef.current.click()} className="w-full py-3 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl flex items-center justify-center gap-2 text-sm shadow-lg shadow-blue-600/30">
+              <UploadCloud size={16}/> Seleccionar Archivo
+            </button>
           </div>
         </div>
       )}
@@ -545,7 +598,7 @@ const Productos = () => {
 };
 
 // DROPDOWN PERSONALIZADO
-const CustomDropdown = ({ label, value, onChange, options, placeholder }) => {
+const CustomDropdown = ({ label, value, onChange, options, placeholder, className = "" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -556,37 +609,35 @@ const CustomDropdown = ({ label, value, onChange, options, placeholder }) => {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const selectedOption = options.find(option => option.value === value);
   const displayLabel = selectedOption ? selectedOption.label : (placeholder || label || "Seleccionar");
 
   return (
-    <div className="relative w-full sm:w-auto" ref={dropdownRef}>
+    <div className="relative w-auto shrink-0 z-20" ref={dropdownRef}>
       <button 
         type="button" 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between transition-all w-full bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl px-4 py-2.5 text-slate-700 shadow-sm cursor-pointer"
+        className={`flex items-center justify-between transition-all w-full bg-white border border-gray-200 rounded-xl px-3 text-slate-700 cursor-pointer shadow-sm ${className}`}
       >
-        <span className="text-sm font-bold truncate max-w-[200px]">
+        <span className="font-bold truncate">
           {label && <span className="text-gray-400 font-medium mr-1.5">{label}:</span>}
           {displayLabel}
         </span>
-        <ChevronDown size={16} className={`text-gray-400 ml-3 shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown size={14} className={`text-gray-400 ml-2 shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 mt-2 w-full min-w-[200px] rounded-2xl shadow-xl border border-gray-100 bg-white top-full left-0 overflow-hidden animate-fade-in-down">
-          <div className="max-h-60 overflow-y-auto custom-scrollbar py-1.5">
+        <div className="absolute mt-1 w-full min-w-[140px] rounded-xl shadow-xl border border-gray-100 bg-white top-full left-0 overflow-hidden animate-fade-in-down">
+          <div className="max-h-60 overflow-y-auto custom-scrollbar py-1">
             {options.map(option => (
               <button
                 key={option.value}
                 type="button"
                 onClick={() => { onChange(option.value); setIsOpen(false); }}
-                className={`w-full text-left px-4 py-3 text-sm font-bold flex items-center gap-3 transition-colors ${
+                className={`w-full text-left px-3 py-2 text-xs font-bold transition-colors ${
                   value === option.value
                     ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
                     : 'text-gray-700 hover:bg-gray-50 border-l-4 border-transparent'

@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-// ✨ Agregamos ChevronDown a los iconos importados
 import { LayoutDashboard, LogOut, Menu, Activity, User, Contact, MapPin, Building2, ChevronDown } from 'lucide-react';
 import api from '../services/api';
 import { CATEGORIA_A_RUTA } from '../config/menuConfig';
 
-const Layout = ({ children, title }) => {
+const Layout = ({ children, title, moduleIcon }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
@@ -137,7 +136,7 @@ const Layout = ({ children, title }) => {
           {!sidebarOpen && <span className="font-bold text-xl text-blue-500 hidden md:block">R</span>}
         </div>
 
-        {/* ✨ SELECTOR DE SUCURSAL PERSONALIZADO PARA MÓVILES ✨ */}
+        {/* SELECTOR DE SUCURSAL PARA MÓVILES */}
         {!isSucursalesRoute && sidebarOpen && (
           <div className="md:hidden px-4 py-4 border-b border-slate-800 bg-slate-800/30">
             <p className="text-[10px] text-slate-400 font-bold uppercase mb-2 px-1">Sucursal Actual</p>
@@ -147,7 +146,7 @@ const Layout = ({ children, title }) => {
               usuario={usuario} 
               onSelect={(suc) => {
                 seleccionarSucursal(suc);
-                setSidebarOpen(false); // Cierra el menú al seleccionar en móvil
+                setSidebarOpen(false); 
               }} 
               isMobile={true} 
             />
@@ -161,20 +160,21 @@ const Layout = ({ children, title }) => {
         </nav>
       </aside>
 
-      {/* ÁREA DE CONTENIDO PRINCIPAL */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
-        <header className="h-16 bg-white shadow-sm flex items-center justify-between px-4 md:px-6 lg:px-8 z-10 border-b border-gray-100 shrink-0">
+        
+        {/* ✨ AQUÍ ESTÁ EL ARREGLO: Cambiamos z-10 por z-30 para que NADA del contenido se le suba encima ✨ */}
+        <header className="h-16 bg-white shadow-sm flex items-center justify-between px-4 md:px-6 lg:px-8 z-30 border-b border-gray-100 shrink-0 relative">
           
           <div className="flex flex-1 items-center justify-start gap-2 md:gap-4 overflow-hidden">
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors shrink-0"><Menu size={22} /></button>
             {title && (
-              <h1 className="text-lg md:text-xl font-extrabold text-gray-800 truncate select-none">
+              <h1 className="text-lg md:text-xl font-extrabold text-gray-800 truncate select-none flex items-center gap-2">
+                {moduleIcon && <span className="text-blue-600 hidden sm:block">{moduleIcon}</span>}
                 {title}
               </h1>
             )}
           </div>
           
-          {/* ✨ SELECTOR DE SUCURSAL PERSONALIZADO PARA PC ✨ */}
           <div className="flex items-center justify-center hidden md:flex shrink-0 px-2">
             {!isSucursalesRoute && (
                <CustomDropdown 
@@ -198,10 +198,11 @@ const Layout = ({ children, title }) => {
               </div>
             </button>
 
+            {/* Menú de Perfil Flotante (Con z-index altísimo) */}
             {profileMenuOpen && (
               <>
-                <div className="fixed inset-0 z-30" onClick={() => setProfileMenuOpen(false)}></div>
-                <div className="absolute right-0 top-14 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 z-40 overflow-hidden animate-fade-in-down p-1">
+                <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)}></div>
+                <div className="absolute right-0 top-14 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-fade-in-down p-1">
                   <div className="p-3 border-b border-gray-50 sm:hidden text-center">
                      <p className="text-sm font-bold text-gray-800 truncate">{usuario.nombre}</p>
                      <p className="text-[10px] uppercase font-bold text-gray-400 mt-0.5">{usuario.rol}</p>
@@ -214,7 +215,8 @@ const Layout = ({ children, title }) => {
           </div>
         </header>
         
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50">
+        {/* Usamos z-0 aquí para asegurarnos de que quede debajo de la cabecera */}
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 z-0">
           <div className="max-w-[1600px] mx-auto w-full p-4 md:p-6 lg:p-8">
             {children}
           </div>
@@ -224,10 +226,6 @@ const Layout = ({ children, title }) => {
   );
 };
 
-/* =========================================================================
-   ✨ COMPONENTE NUEVO: DROPDOWN PERSONALIZADO DE SUCURSALES ✨
-   Reemplaza al feo <select> nativo y se adapta al tema Oscuro/Claro
-========================================================================= */
 const CustomDropdown = ({ sucursalActiva, sucursalesPermitidas, usuario, onSelect, isMobile }) => {
   const [isOpen, setIsOpen] = useState(false);
   const hasOptions = sucursalesPermitidas.length > 1 || usuario.rol === 'Administrador';
@@ -240,10 +238,8 @@ const CustomDropdown = ({ sucursalActiva, sucursalesPermitidas, usuario, onSelec
   return (
     <div className="relative w-full md:w-auto">
       
-      {/* Capa invisible para cerrar al hacer clic afuera */}
       {isOpen && <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>}
 
-      {/* Botón Principal */}
       <button 
         onClick={() => hasOptions && setIsOpen(!isOpen)}
         disabled={!hasOptions}
@@ -268,7 +264,6 @@ const CustomDropdown = ({ sucursalActiva, sucursalesPermitidas, usuario, onSelec
         )}
       </button>
 
-      {/* Menú Desplegable */}
       {isOpen && (
         <div className={`absolute z-50 mt-2 w-[240px] rounded-2xl shadow-xl border overflow-hidden animate-fade-in-down ${
           isMobile ? 'bg-slate-800 border-slate-700 top-full left-0' : 'bg-white border-gray-100 top-full left-1/2 -translate-x-1/2'

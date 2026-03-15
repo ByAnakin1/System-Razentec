@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import Layout from '../components/Layout';
-import { Plus, Edit, Trash2, X, AlertTriangle, Search, CheckCircle, Info, Building2, Eye, Store } from 'lucide-react';
+import { Plus, Edit, Trash2, X, AlertTriangle, Search, CheckCircle, Building2, Eye, Store, Phone, Mail, MapPin } from 'lucide-react';
 
 const Proveedores = () => {
   const [proveedores, setProveedores] = useState([]);
@@ -23,7 +23,6 @@ const Proveedores = () => {
   const [sucursalActiva, setSucursalActiva] = useState(JSON.parse(localStorage.getItem('sucursalActiva')) || null);
   const esVistaGlobal = sucursalActiva?.id === 'ALL';
 
-  // ✨ COMPROBACIÓN DE PERMISOS
   const [usuarioActual, setUsuarioActual] = useState(JSON.parse(localStorage.getItem('usuario') || '{}'));
   const esAdmin = usuarioActual.rol === 'Administrador';
 
@@ -31,7 +30,7 @@ const Proveedores = () => {
     try {
       let cat = usuarioActual?.categorias;
       if (typeof cat === 'string') cat = JSON.parse(cat);
-      if (typeof cat === 'string') cat = JSON.parse(cat); // Doble parseo preventivo
+      if (typeof cat === 'string') cat = JSON.parse(cat); 
       return Array.isArray(cat) ? cat : [];
     } catch(e) { return []; }
   };
@@ -89,6 +88,10 @@ const Proveedores = () => {
     if (formData.ruc && !/^\d{11}$/.test(formData.ruc.trim())) errors.ruc = 'El RUC debe tener exactamente 11 números';
     if (formData.telefono && !/^\d{9}$/.test(formData.telefono.trim())) errors.telefono = 'El teléfono debe tener exactamente 9 números';
     if (esVistaGlobal && !formData.sucursal_id) errors.sucursal_id = 'Debes asignar una sucursal';
+    
+    // Validación de correo opcional pero correcta
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = 'Formato de correo inválido';
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -111,80 +114,163 @@ const Proveedores = () => {
   };
 
   return (
-    <Layout>
+    <Layout title="Proveedores" moduleIcon={<Building2/>}>
       {toast && (
-        <div className={`fixed top-4 right-4 z-[60] flex items-center gap-3 px-6 py-4 rounded-xl shadow-lg text-white animate-fade-in-down ${toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`}>
-          {toast.type === 'success' ? <CheckCircle size={24} /> : <AlertTriangle size={24} />}
-          <p className="font-semibold">{toast.message}</p>
+        <div className={`fixed top-4 right-4 md:top-6 md:right-6 z-[100] flex items-center gap-3 px-5 py-3 md:px-6 md:py-4 rounded-xl md:rounded-2xl shadow-2xl text-white animate-fade-in-down ${toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`}>
+          {toast.type === 'success' ? <CheckCircle size={20} className="md:w-6 md:h-6" /> : <AlertTriangle size={20} className="md:w-6 md:h-6" />}
+          <p className="font-bold text-xs md:text-sm">{toast.message}</p>
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><Building2 size={28} className="text-blue-600"/> Proveedores</h1>
-          <p className="text-sm text-gray-500 font-medium mt-1">{esVistaGlobal ? 'Administrando proveedores globales' : `Viendo proveedores de: ${sucursalActiva?.nombre || '...'}`}</p>
-        </div>
-        
+      {/* CABECERA */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 md:mb-6 gap-3">
+        <p className="text-[11px] md:text-sm text-gray-500 font-bold px-1 uppercase tracking-wider">
+           {esVistaGlobal ? 'Directorio Global' : `Directorio de: ${sucursalActiva?.nombre || 'Ninguna'}`}
+        </p>
+
         {sucursalActiva && (
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            <div className="relative flex-1 md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input type="text" placeholder="Buscar por nombre o RUC..." className="w-full border p-2 pl-10 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <div className="flex flex-col md:flex-row w-full sm:w-auto gap-2 md:gap-3">
+            <div className="flex gap-2 w-full md:w-auto">
+               <div className="relative flex-1 md:w-64">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                 <input type="text" placeholder="Buscar por Razón Social o RUC..." className="w-full bg-white border border-gray-200 pl-9 pr-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 font-bold text-gray-800 text-xs md:text-sm transition-all shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+               </div>
+               <select className="bg-white border border-gray-200 px-3 py-2.5 rounded-xl outline-none font-bold text-gray-700 text-xs md:text-sm shadow-sm" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+                 <option value="activos">Activos</option>
+                 <option value="inactivos">Papelera</option>
+                 <option value="todos">Todos</option>
+               </select>
             </div>
-            <select className="border p-2 rounded-lg outline-none cursor-pointer font-medium bg-white" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
-              <option value="activos">Activos</option><option value="inactivos">Papelera</option><option value="todos">Todos</option>
-            </select>
-            {/* ✨ SOLO MUESTRA BOTÓN CREAR SI TIENE PERMISO */}
             {tienePermisoEditar && (
-              <button onClick={() => openModal()} className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors">
-                <Plus size={20} /> Nuevo
+              <button onClick={() => openModal()} className="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-md hover:bg-blue-700 transition-all active:scale-95 text-xs md:text-sm w-full md:w-auto mt-2 md:mt-0">
+                <Plus size={16} /> Nuevo Proveedor
               </button>
             )}
           </div>
         )}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-220px)]">
-          <table className="w-full text-left text-sm text-gray-600 table-fixed">
-            <thead className="bg-gray-50 text-gray-700 uppercase font-semibold sticky top-0 z-10">
+      {/* VISTA MÓVIL: TARJETAS DE PROVEEDORES */}
+      <div className="md:hidden flex flex-col gap-3">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+             <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+             <p className="text-xs font-medium">Cargando proveedores...</p>
+          </div>
+        ) : !sucursalActiva ? (
+          <div className="text-center py-10 text-xs text-red-500 bg-red-50 rounded-2xl border border-red-100">
+            ⚠️ Sin sucursal asignada.
+          </div>
+        ) : filtrados.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center">
+            <Building2 size={48} className="text-gray-200 mb-3" strokeWidth={1.5}/>
+            <p className="text-sm font-bold text-gray-600">No se encontraron proveedores</p>
+          </div>
+        ) : (
+          filtrados.map((prov) => (
+            <div key={prov.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative group overflow-hidden">
+               <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-100 pb-3">
+                  <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <span className="font-black text-lg uppercase">{prov.razon_social.charAt(0)}</span>
+                     </div>
+                     <div>
+                       <p className="font-bold text-gray-800 text-sm leading-tight line-clamp-2">{prov.razon_social}</p>
+                       <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mt-0.5">RUC: {prov.ruc || 'S/C'}</p>
+                     </div>
+                  </div>
+               </div>
+
+               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3 grid grid-cols-2 gap-2">
+                  <div className="flex items-center gap-1.5 overflow-hidden">
+                    <Phone size={12} className="text-emerald-500 shrink-0"/>
+                    <span className="text-[10px] font-bold text-gray-600 truncate">{prov.telefono || 'Sin celular'}</span>
+                  </div>
+                  {esAdmin && (
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <Store size={12} className={prov.sucursal_id ? "text-purple-400 shrink-0" : "text-red-400 shrink-0"}/>
+                      <span className={`text-[9px] font-bold truncate px-1.5 py-0.5 rounded ${prov.sucursal_id ? "text-purple-700 bg-purple-100/50" : "text-red-600 bg-red-100/50"}`}>
+                        {prov.sucursal_id ? prov.sucursal_nombre : 'Sin asignar'}
+                      </span>
+                    </div>
+                  )}
+               </div>
+
+               <div className="flex gap-2">
+                 <button onClick={() => setModalDetalles(prov)} className="flex-1 py-2 bg-slate-50 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-100 flex items-center justify-center transition-colors">
+                   <Eye size={16}/>
+                 </button>
+                 {tienePermisoEditar && (
+                   <>
+                     <button onClick={() => openModal(prov)} className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg font-bold text-xs hover:bg-blue-100 flex items-center justify-center transition-colors">
+                       <Edit size={16}/>
+                     </button>
+                     {prov.estado && (
+                       <button onClick={() => {setProvToDelete(prov); setDeleteModalOpen(true);}} className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg flex items-center justify-center hover:bg-red-100 transition-colors">
+                         <Trash2 size={16}/>
+                       </button>
+                     )}
+                   </>
+                 )}
+               </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* VISTA PC: TABLA DE PROVEEDORES */}
+      <div className="hidden md:block bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-220px)] custom-scrollbar">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+            <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold tracking-wider text-[10px] sticky top-0 z-10 border-b border-gray-100">
               <tr>
-                <th className="px-4 py-3 w-[25%]">Razón Social</th>
-                <th className="px-4 py-3 w-[15%]">Documento (RUC)</th>
-                {esAdmin && <th className="px-4 py-3 w-[15%]">Ubicación</th>}
-                <th className="px-4 py-3 w-[15%]">Contacto</th>
-                <th className="px-4 py-3 w-[25%]">Email & Dirección</th>
-                <th className="px-4 py-3 text-center w-[15%]">Acciones</th>
+                <th className="px-6 py-4">Razón Social</th>
+                <th className="px-6 py-4">RUC</th>
+                {esAdmin && <th className="px-6 py-4">Ubicación</th>}
+                <th className="px-6 py-4">Contacto</th>
+                <th className="px-6 py-4">Email & Dirección</th>
+                <th className="px-6 py-4 text-center">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
-              {loading ? <tr><td colSpan={esAdmin?"6":"5"} className="text-center p-8 text-gray-500">Cargando...</td></tr> : 
-               !sucursalActiva ? <tr><td colSpan={esAdmin?"6":"5"} className="text-center py-10 text-red-500 font-medium bg-red-50">⚠️ No se ha detectado sucursal.</td></tr> :
-               filtrados.length === 0 ? <tr><td colSpan={esAdmin?"6":"5"} className="text-center p-12 text-gray-400">No hay proveedores registrados en esta sede.</td></tr> : 
+            <tbody className="divide-y divide-gray-50">
+              {loading ? <tr><td colSpan={esAdmin?"6":"5"} className="text-center py-12 text-gray-400 font-medium">Cargando directorio...</td></tr> : 
+               !sucursalActiva ? <tr><td colSpan={esAdmin?"6":"5"} className="text-center py-12 text-red-500 font-medium">⚠️ Sin sucursal asignada.</td></tr> :
+               filtrados.length === 0 ? <tr><td colSpan={esAdmin?"6":"5"} className="text-center py-12 italic text-gray-400">No hay proveedores registrados.</td></tr> : 
                filtrados.map((prov) => (
-                <tr key={prov.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-bold text-gray-900 truncate" title={prov.razon_social}>{prov.razon_social}</td>
-                  <td className="px-4 py-3"><span className="bg-gray-100 border text-gray-600 px-2 py-1 rounded-md text-xs font-bold">{prov.ruc || 'S/D'}</span></td>
+                <tr key={prov.id} className="hover:bg-slate-50/80 transition-colors group">
+                  <td className="px-6 py-4 font-bold text-gray-800">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xs">
+                         {prov.razon_social.charAt(0)}
+                      </div>
+                      <span className="truncate max-w-[200px]" title={prov.razon_social}>{prov.razon_social}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4"><span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-md text-[10px] font-bold border border-gray-200 tracking-wider">{prov.ruc || 'S/D'}</span></td>
                   
                   {esAdmin && (
-                    <td className="px-4 py-3">
-                       <span className={`text-[10px] font-bold px-2 py-1 rounded ${prov.sucursal_id ? 'text-blue-700 bg-blue-50 border border-blue-100' : 'text-red-700 bg-red-50 border border-red-100'}`}>
-                         {prov.sucursal_id ? prov.sucursal_nombre : '⚠️ Sin Sucursal (Editar)'}
+                    <td className="px-6 py-4">
+                       <span className={`text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 w-max uppercase tracking-wider ${prov.sucursal_id ? 'text-purple-700 bg-purple-50 border border-purple-100' : 'text-red-600 bg-red-50 border border-red-100'}`}>
+                         <Store size={10}/> {prov.sucursal_id ? prov.sucursal_nombre : 'Sin Asignar'}
                        </span>
                     </td>
                   )}
 
-                  <td className="px-4 py-3 truncate">{prov.telefono || '-'}</td>
-                  <td className="px-4 py-3"><p className="truncate text-blue-600 text-xs font-medium">{prov.email || 'Sin correo'}</p><p className="truncate text-gray-400 text-[10px] mt-0.5">{prov.direccion || 'Sin dirección'}</p></td>
-                  <td className="px-4 py-3 flex justify-center gap-2">
-                    <button onClick={() => setModalDetalles(prov)} className="text-blue-600 hover:bg-blue-50 p-1.5 rounded transition-colors" title="Ver Detalles"><Eye size={18} /></button>
-                    {/* ✨ SOLO MUESTRA ACCIONES DE EDICIÓN SI TIENE PERMISO */}
-                    {tienePermisoEditar && (
-                      <>
-                        <button onClick={() => openModal(prov)} className="text-yellow-600 hover:bg-yellow-50 p-1.5 rounded transition-colors" title="Editar"><Edit size={18} /></button>
-                        {prov.estado && <button onClick={() => {setProvToDelete(prov); setDeleteModalOpen(true);}} className="text-red-500 hover:bg-red-50 p-1.5 rounded transition-colors" title="Eliminar"><Trash2 size={18} /></button>}
-                      </>
-                    )}
+                  <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-1.5 mt-2"><Phone size={12} className="text-emerald-500"/> {prov.telefono || '---'}</td>
+                  <td className="px-6 py-4">
+                    <p className="truncate text-blue-600 text-xs font-bold mb-0.5 max-w-[150px]">{prov.email || 'Sin correo'}</p>
+                    <p className="truncate text-gray-400 text-[10px] font-medium max-w-[150px]" title={prov.direccion}>{prov.direccion || 'Sin dirección'}</p>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => setModalDetalles(prov)} className="p-1.5 text-slate-500 bg-slate-50 hover:bg-slate-200 rounded-lg transition-colors" title="Ver Detalles"><Eye size={14} /></button>
+                      {tienePermisoEditar && (
+                        <>
+                          <button onClick={() => openModal(prov)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors" title="Editar"><Edit size={14} /></button>
+                          {prov.estado && <button onClick={() => {setProvToDelete(prov); setDeleteModalOpen(true);}} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" title="Eliminar"><Trash2 size={14} /></button>}
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -193,70 +279,131 @@ const Proveedores = () => {
         </div>
       </div>
 
+      {/* MODAL DETALLES (Bottom Sheet Móvil) */}
       {modalDetalles && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-all p-4">
-          <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl border border-white/50 animate-fade-in-up">
-            <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-3">
-              <h2 className="text-xl font-extrabold text-gray-800 flex items-center gap-2"><Building2 className="text-blue-600"/> Ficha Proveedor</h2>
-              <button onClick={() => setModalDetalles(null)} className="text-gray-400 hover:text-gray-800 bg-gray-100 p-1.5 rounded-full"><X size={20}/></button>
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-all animate-fade-in">
+          <div className="bg-white p-6 sm:p-8 rounded-t-3xl sm:rounded-[2rem] w-full sm:max-w-sm shadow-2xl border border-white/50 animate-fade-in-up pb-8">
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-4 sm:hidden shrink-0"></div>
+            <div className="flex justify-between items-center mb-5 border-b border-gray-100 pb-3">
+              <h2 className="text-lg md:text-xl font-extrabold text-gray-800 flex items-center gap-2"><Building2 className="text-blue-600"/> Ficha Proveedor</h2>
+              <button onClick={() => setModalDetalles(null)} className="text-gray-400 hover:text-gray-800 bg-gray-50 p-1.5 rounded-full"><X size={18}/></button>
             </div>
             <div className="space-y-4">
-               <div><label className="text-[10px] font-bold text-gray-500 uppercase block">Razón Social</label><p className="text-lg font-black text-gray-800">{modalDetalles.razon_social}</p></div>
-               <div><label className="text-[10px] font-bold text-gray-500 uppercase block">RUC</label><p className="font-medium text-gray-700">{modalDetalles.ruc || 'N/A'}</p></div>
-               <div><label className="text-[10px] font-bold text-gray-500 uppercase block">Pertenece a:</label>
-                 <div className="mt-1 inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100 font-bold text-sm">
-                   <Store size={14}/> {modalDetalles.sucursal_id ? modalDetalles.sucursal_nombre : '⚠️ Requiere Asignación del Administrador'}
+               <div>
+                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Razón Social</label>
+                 <p className="text-base md:text-lg font-black text-gray-800 leading-tight">{modalDetalles.razon_social}</p>
+               </div>
+               <div className="grid grid-cols-2 gap-4">
+                 <div>
+                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">RUC</label>
+                   <p className="text-sm font-bold text-gray-700">{modalDetalles.ruc || 'N/A'}</p>
+                 </div>
+                 <div>
+                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Teléfono</label>
+                   <p className="text-sm font-bold text-gray-700 flex items-center gap-1"><Phone size={12} className="text-emerald-500"/> {modalDetalles.telefono || 'N/A'}</p>
+                 </div>
+               </div>
+               <div>
+                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Correo Electrónico</label>
+                 <p className="text-sm font-bold text-blue-600 flex items-center gap-1"><Mail size={12}/> {modalDetalles.email || 'N/A'}</p>
+               </div>
+               <div>
+                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Dirección Físicia</label>
+                 <p className="text-sm font-bold text-gray-700 flex items-start gap-1"><MapPin size={12} className="mt-1 shrink-0 text-red-500"/> {modalDetalles.direccion || 'N/A'}</p>
+               </div>
+               <div>
+                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">Afiliación a Sede</label>
+                 <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-bold text-xs ${modalDetalles.sucursal_id ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                   <Store size={14}/> {modalDetalles.sucursal_id ? modalDetalles.sucursal_nombre : '⚠️ Requiere Asignación'}
                  </div>
                </div>
             </div>
+            <button onClick={() => setModalDetalles(null)} className="w-full mt-6 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3.5 rounded-xl font-bold transition-colors text-sm">Cerrar Ficha</button>
           </div>
         </div>
       )}
 
+      {/* ✨ MODAL CREAR / EDITAR PROVEEDOR (Bottom Sheet Móvil con Validación Fuerte) ✨ */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl p-6 md:p-8 w-full max-w-lg shadow-2xl animate-fade-in-up">
-            <div className="flex justify-between mb-6 border-b pb-3">
-               <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">{isEditing ? <Edit className="text-blue-600"/> : <Building2 className="text-blue-600"/>} {isEditing ? 'Editar Proveedor' : 'Nuevo Proveedor'}</h2>
-               <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:bg-gray-100 p-1 rounded-full"><X/></button>
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-all animate-fade-in">
+          <div className="bg-white p-5 sm:p-8 rounded-t-3xl sm:rounded-[2rem] w-full sm:max-w-lg shadow-2xl animate-fade-in-up flex flex-col max-h-[90vh]">
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-4 sm:hidden shrink-0"></div>
+            
+            <div className="flex justify-between items-center mb-5 border-b border-gray-100 pb-3 shrink-0">
+               <h2 className="text-lg md:text-xl font-extrabold text-gray-800 flex items-center gap-2">{isEditing ? <Edit className="text-blue-600" size={20}/> : <Building2 className="text-blue-600" size={20}/>} {isEditing ? 'Editar Proveedor' : 'Nuevo Proveedor'}</h2>
+               <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-800 bg-gray-50 p-1.5 rounded-full"><X size={18}/></button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div><label className="text-xs font-bold text-gray-500 uppercase block mb-1">Razón Social / Nombre *</label><input className={`w-full border p-3 rounded-xl outline-none focus:ring-2 ${formErrors.razon_social ? 'border-red-500 focus:ring-red-500' : 'focus:ring-blue-500'}`} value={formData.razon_social ?? ''} onChange={(e) => setFormData({...formData, razon_social: e.target.value})} />{formErrors.razon_social && <p className="text-red-500 text-xs mt-1">{formErrors.razon_social}</p>}</div>
-              <div className="flex gap-4">
-                <div className="w-1/2"><label className="text-xs font-bold text-gray-500 uppercase block mb-1">Documento (RUC)</label><input maxLength={11} className={`w-full border p-3 rounded-xl mt-1 outline-none focus:ring-2 ${formErrors.ruc ? 'border-red-500 focus:ring-red-500' : 'focus:ring-blue-500'}`} value={formData.ruc ?? ''} onChange={(e) => setFormData({...formData, ruc: e.target.value.replace(/\D/g, '')})} />{formErrors.ruc && <p className="text-red-500 text-xs mt-1">{formErrors.ruc}</p>}</div>
-                <div className="w-1/2"><label className="text-xs font-bold text-gray-500 uppercase block mb-1">Teléfono de contacto</label><input maxLength={9} className={`w-full border p-3 rounded-xl mt-1 outline-none focus:ring-2 ${formErrors.telefono ? 'border-red-500 focus:ring-red-500' : 'focus:ring-blue-500'}`} value={formData.telefono ?? ''} onChange={(e) => setFormData({...formData, telefono: e.target.value.replace(/\D/g, '')})} />{formErrors.telefono && <p className="text-red-500 text-xs mt-1">{formErrors.telefono}</p>}</div>
+            
+            <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto custom-scrollbar pb-4 px-1">
+              <div>
+                <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">Razón Social / Nombre *</label>
+                <input className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-800 text-sm transition-colors ${formErrors.razon_social ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.razon_social ?? ''} onChange={(e) => {setFormData({...formData, razon_social: e.target.value}); if (formErrors.razon_social) setFormErrors({...formErrors, razon_social: null}); }} autoFocus/>
+                {formErrors.razon_social && <p className="text-[10px] text-red-500 mt-1 font-bold">{formErrors.razon_social}</p>}
               </div>
-              <div><label className="text-xs font-bold text-gray-500 uppercase block mb-1">Correo Electrónico</label><input type="email" className="w-full border p-3 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-blue-500" value={formData.email ?? ''} onChange={(e) => setFormData({...formData, email: e.target.value})} /></div>
-              <div><label className="text-xs font-bold text-gray-500 uppercase block mb-1">Dirección Física</label><input className="w-full border p-3 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-blue-500" value={formData.direccion ?? ''} onChange={(e) => setFormData({...formData, direccion: e.target.value})} /></div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">RUC</label>
+                  {/* ✨ FIX: type="text" con inputMode="numeric" y validación .slice() fuerte ✨ */}
+                  <input type="text" inputMode="numeric" className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-800 tracking-wider text-sm transition-colors ${formErrors.ruc ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.ruc ?? ''} onChange={(e) => { setFormData({...formData, ruc: e.target.value.replace(/\D/g, '').slice(0, 11)}); if (formErrors.ruc) setFormErrors({...formErrors, ruc: null}); }} placeholder="11 dígitos"/>
+                  {formErrors.ruc && <p className="text-[9px] text-red-500 mt-1 font-bold leading-tight">{formErrors.ruc}</p>}
+                </div>
+                <div>
+                  <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">Teléfono</label>
+                  {/* ✨ FIX: type="text" con inputMode="numeric" y validación .slice() fuerte ✨ */}
+                  <input type="text" inputMode="numeric" className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-800 tracking-wider text-sm transition-colors ${formErrors.telefono ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.telefono ?? ''} onChange={(e) => { setFormData({...formData, telefono: e.target.value.replace(/\D/g, '').slice(0, 9)}); if (formErrors.telefono) setFormErrors({...formErrors, telefono: null}); }} placeholder="9 dígitos"/>
+                  {formErrors.telefono && <p className="text-[9px] text-red-500 mt-1 font-bold leading-tight">{formErrors.telefono}</p>}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">Correo Electrónico</label>
+                <input type="email" className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-700 text-sm transition-colors ${formErrors.email ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.email ?? ''} onChange={(e) => {setFormData({...formData, email: e.target.value}); if (formErrors.email) setFormErrors({...formErrors, email: null}); }} placeholder="ejemplo@empresa.com"/>
+                {formErrors.email && <p className="text-[9px] text-red-500 mt-1 font-bold leading-tight">{formErrors.email}</p>}
+              </div>
+              
+              <div>
+                <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">Dirección Física</label>
+                <input className="w-full bg-slate-50 border border-gray-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none font-bold text-gray-700 text-sm transition-colors" value={formData.direccion ?? ''} onChange={(e) => setFormData({...formData, direccion: e.target.value})} placeholder="Av. Central 123"/>
+              </div>
 
               {esAdmin && (
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 block">Asignar a Sucursal *</label>
-                  <select className={`w-full border p-3 rounded-xl outline-none font-bold text-gray-700 bg-white focus:ring-2 ${formErrors.sucursal_id ? 'border-red-500 focus:ring-red-500' : 'focus:ring-blue-500'}`} value={formData.sucursal_id} onChange={e => {setFormData({...formData, sucursal_id: e.target.value}); if(formErrors.sucursal_id) setFormErrors({...formErrors, sucursal_id: null})}}>
-                    <option value="">-- Selecciona una Sucursal --</option>
+                  <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1 mt-2">Afiliar a Sede *</label>
+                  <select className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-700 text-sm transition-colors ${formErrors.sucursal_id ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.sucursal_id} onChange={e => {setFormData({...formData, sucursal_id: e.target.value}); if(formErrors.sucursal_id) setFormErrors({...formErrors, sucursal_id: null})}}>
+                    <option value="">-- Selecciona una Sede --</option>
                     {sucursales.map(suc => <option key={suc.id} value={suc.id}>{suc.nombre}</option>)}
                   </select>
-                  {formErrors.sucursal_id && <p className="text-red-500 text-xs mt-1">{formErrors.sucursal_id}</p>}
+                  {formErrors.sucursal_id && <p className="text-[9px] text-red-500 mt-1 font-bold leading-tight">{formErrors.sucursal_id}</p>}
                 </div>
               )}
 
-              <div className="flex gap-3 mt-6 pt-4 border-t"><button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 border rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition-colors">Cancelar</button><button type="submit" className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/30 transition-colors">Guardar</button></div>
+              <div className="flex gap-3 pt-4 border-t border-gray-100 mt-4">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3.5 border border-gray-200 bg-gray-50 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors text-sm">Cancelar</button>
+                <button type="submit" className="flex-1 bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-600/30 hover:bg-blue-700 active:scale-95 transition-all text-sm flex items-center justify-center gap-1.5"><CheckCircle size={16}/> Guardar</button>
+              </div>
             </form>
           </div>
         </div>
       )}
       
+      {/* ✨ MODAL ELIMINAR ✨ */}
       {deleteModalOpen && provToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center animate-fade-in-up">
-              <div className="mx-auto w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-4"><AlertTriangle size={32}/></div>
-              <h3 className="text-xl font-extrabold mb-2 text-gray-800">¿Eliminar Proveedor?</h3>
-              <p className="text-sm text-gray-500 mb-6">Desactivarás al proveedor <strong>"{provToDelete.razon_social}"</strong>.</p>
-              <div className="flex gap-3">
-                 <button onClick={() => setDeleteModalOpen(false)} className="flex-1 py-3 border rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition-colors">Cancelar</button>
-                 <button onClick={handleDelete} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 shadow-lg shadow-red-600/30 transition-colors">Sí, Eliminar</button>
-              </div>
-           </div>
+        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-fade-in">
+          <div className="bg-white rounded-t-3xl sm:rounded-[2rem] p-6 md:p-8 w-full sm:max-w-sm text-center shadow-2xl animate-fade-in-up pb-8">
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 sm:hidden"></div>
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-50 border-4 border-red-100 mb-4 text-red-500 shadow-inner">
+              <AlertTriangle size={32}/>
+            </div>
+            <h3 className="text-xl font-extrabold text-gray-800 mb-2">¿Eliminar Proveedor?</h3>
+            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
+              Desactivarás a <strong className="text-gray-800">"{provToDelete.razon_social}"</strong> de la base de datos.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteModalOpen(false)} className="flex-1 py-3.5 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors text-sm">Cancelar</button>
+              <button onClick={handleDelete} className="flex-1 py-3.5 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/30 text-sm">Sí, Eliminar</button>
+            </div>
+          </div>
         </div>
       )}
     </Layout>
