@@ -7,7 +7,6 @@ import { CATEGORIA_A_RUTA } from '../config/menuConfig';
 const ROLES = ['Supervisor', 'Empleado'];
 const MODULOS = Object.keys(CATEGORIA_A_RUTA);
 
-// Componente ToggleSwitch rediseñado (más suave y moderno)
 const ToggleSwitch = ({ checked, onChange, disabled }) => (
   <div onClick={() => !disabled && onChange()} className={`w-12 h-6 flex items-center rounded-full p-1 transition-all duration-300 ease-in-out ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'} ${checked ? 'bg-emerald-500 shadow-inner' : 'bg-slate-200'}`}>
     <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-300 ease-in-out ${checked ? 'translate-x-6' : 'translate-x-0'}`} />
@@ -214,7 +213,7 @@ const Usuarios = () => {
   return (
     <Layout title="Cuentas de Acceso" moduleIcon={<UserPlus/>}>
       
-      {/* ✨ CABECERA ✨ */}
+      {/* CABECERA */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 md:mb-6 gap-3">
         <p className="text-[11px] md:text-sm text-gray-500 font-bold px-1 uppercase tracking-wider">
            {esVistaGlobal ? 'Administración Global' : `Cuentas de Sede: ${sucursalActiva?.nombre || 'Ninguna'}`}
@@ -233,8 +232,8 @@ const Usuarios = () => {
         </div>
       </div>
 
-      {/* ✨ VISTA MÓVIL: TARJETAS DE USUARIOS ✨ */}
-      <div className="md:hidden flex flex-col gap-3">
+      {/* ✨ FIX: VISTA MÓVIL Y TABLET HASTA lg ✨ */}
+      <div className="lg:hidden flex flex-col gap-3">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
              <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -250,59 +249,61 @@ const Usuarios = () => {
             <p className="text-sm font-bold text-gray-600">No se encontraron cuentas</p>
           </div>
         ) : (
-          usuariosFiltrados.map((u) => (
-            <div key={u.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative group overflow-hidden">
-               <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-100 pb-3">
-                  <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-lg overflow-hidden shrink-0 border border-blue-100">
-                        {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover"/> : (u.area_cargo || u.nombre_completo)?.charAt(0).toUpperCase()}
-                     </div>
-                     <div className="min-w-0">
-                       <p className="font-extrabold text-gray-800 text-sm leading-tight truncate">{u.rol === 'Administrador' ? 'Administrador' : (u.area_cargo || 'Sin designar')}</p>
-                       <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mt-0.5 truncate">Vinculado a: {u.nombre_completo}</p>
-                     </div>
-                  </div>
-               </div>
-
-               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3 flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                     <span className={`px-2 py-0.5 rounded border text-[9px] font-black uppercase tracking-widest ${u.rol === 'Administrador' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
-                        {u.rol}
-                     </span>
-                     <span className="text-[10px] font-bold text-gray-500 truncate max-w-[150px]">{u.email}</span>
-                  </div>
-                  {u.rol !== 'Administrador' && (
-                    <div className="flex items-center gap-1.5 overflow-hidden mt-1 pt-1.5 border-t border-gray-100">
-                      <Store size={12} className="text-emerald-500 shrink-0"/>
-                      <span className="text-[9px] font-bold text-emerald-700 truncate px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-100" title={obtenerNombresSucursales(u.sucursales_asignadas)}>
-                        Sedes: {obtenerNombresSucursales(u.sucursales_asignadas)}
-                      </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+            {usuariosFiltrados.map((u) => (
+              <div key={u.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative group overflow-hidden">
+                 <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-100 pb-3">
+                    <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-lg overflow-hidden shrink-0 border border-blue-100">
+                          {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover"/> : (u.area_cargo || u.nombre_completo)?.charAt(0).toUpperCase()}
+                       </div>
+                       <div className="min-w-0">
+                         <p className="font-extrabold text-gray-800 text-sm leading-tight truncate">{u.rol === 'Administrador' ? 'Administrador' : (u.area_cargo || 'Sin designar')}</p>
+                         <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mt-0.5 truncate">Vinculado a: {u.nombre_completo}</p>
+                       </div>
                     </div>
-                  )}
-               </div>
+                 </div>
 
-               <div className="flex gap-2">
-                 <button onClick={() => openModalDetalles(u)} className="flex-1 py-2 bg-slate-50 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-100 flex items-center justify-center transition-colors">
-                   <Eye size={16}/>
-                 </button>
-                 {esAdmin() && usuarioActual?.id !== u.id && (
-                   <>
-                     <button onClick={() => openModalEditar(u)} className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg font-bold text-xs hover:bg-blue-100 flex items-center justify-center transition-colors">
-                       <Edit size={16}/>
-                     </button>
-                     <button onClick={() => { setUsuarioSeleccionado(u); setModalEliminar(true); }} className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg flex items-center justify-center hover:bg-red-100 transition-colors">
-                       <Trash2 size={16}/>
-                     </button>
-                   </>
-                 )}
-               </div>
-            </div>
-          ))
+                 <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3 flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                       <span className={`px-2 py-0.5 rounded border text-[9px] font-black uppercase tracking-widest ${u.rol === 'Administrador' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
+                          {u.rol}
+                       </span>
+                       <span className="text-[10px] font-bold text-gray-500 truncate max-w-[150px]">{u.email}</span>
+                    </div>
+                    {u.rol !== 'Administrador' && (
+                      <div className="flex items-center gap-1.5 overflow-hidden mt-1 pt-1.5 border-t border-gray-100">
+                        <Store size={12} className="text-emerald-500 shrink-0"/>
+                        <span className="text-[9px] font-bold text-emerald-700 truncate px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-100" title={obtenerNombresSucursales(u.sucursales_asignadas)}>
+                          Sedes: {obtenerNombresSucursales(u.sucursales_asignadas)}
+                        </span>
+                      </div>
+                    )}
+                 </div>
+
+                 <div className="flex gap-2">
+                   <button onClick={() => openModalDetalles(u)} className="flex-1 py-2 bg-slate-50 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-100 flex items-center justify-center transition-colors">
+                     <Eye size={16}/>
+                   </button>
+                   {esAdmin() && usuarioActual?.id !== u.id && (
+                     <>
+                       <button onClick={() => openModalEditar(u)} className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg font-bold text-xs hover:bg-blue-100 flex items-center justify-center transition-colors">
+                         <Edit size={16}/>
+                       </button>
+                       <button onClick={() => { setUsuarioSeleccionado(u); setModalEliminar(true); }} className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg flex items-center justify-center hover:bg-red-100 transition-colors">
+                         <Trash2 size={16}/>
+                       </button>
+                     </>
+                   )}
+                 </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* ✨ VISTA PC: TABLA DE USUARIOS ✨ */}
-      <div className="hidden md:block bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+      {/* ✨ FIX: VISTA PC (Oculta en Tablets. Visible solo en lg) ✨ */}
+      <div className="hidden lg:block bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold tracking-wider text-[10px] border-b border-gray-100">
             <tr>
@@ -349,7 +350,8 @@ const Usuarios = () => {
                 </td>
 
                 <td className="px-6 py-4 text-center">
-                  <div className="flex justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* ✨ FIX: Botones SIEMPRE visibles en PC, sin efecto opacity-0 ✨ */}
+                  <div className="flex justify-center gap-1.5 transition-opacity">
                     <button onClick={() => openModalDetalles(u)} className="p-1.5 text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-200 rounded-lg transition-colors" title="Ver Permisos"><Eye size={16} /></button>
                     {esAdmin() && usuarioActual?.id !== u.id && (
                       <>
@@ -365,7 +367,7 @@ const Usuarios = () => {
         </table>
       </div>
 
-      {/* ✨ MODAL DETALLES DE ACCESO (Bottom Sheet Móvil) ✨ */}
+      {/* MODAL DETALLES DE ACCESO (Bottom Sheet Móvil) */}
       {modalDetalles && usuarioSeleccionado && (
         <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-md transition-all animate-fade-in">
           <div className="bg-white p-6 sm:p-8 rounded-t-3xl sm:rounded-[2rem] w-full sm:max-w-md shadow-2xl border border-white/50 animate-fade-in-up pb-8 flex flex-col max-h-[90vh]">
@@ -422,7 +424,7 @@ const Usuarios = () => {
         </div>
       )}
 
-      {/* ✨ MODAL EDITAR Y CREAR CREDENCIAL (Bottom Sheet Extendido en Móvil) ✨ */}
+      {/* MODAL EDITAR Y CREAR CREDENCIAL */}
       {(modalEditar || modalCrear) && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-all animate-fade-in">
           <div className="bg-white rounded-t-3xl sm:rounded-[2rem] w-full sm:max-w-4xl max-h-[95vh] flex flex-col overflow-hidden border border-white/50 shadow-2xl animate-fade-in-up">
@@ -575,7 +577,7 @@ const Usuarios = () => {
         </div>
       )}
 
-      {/* ✨ MODAL REVOCAR ACCESO ✨ */}
+      {/* MODAL REVOCAR ACCESO */}
       {modalEliminar && (
         <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-fade-in">
           <div className="bg-white rounded-t-3xl sm:rounded-[2rem] p-6 md:p-8 w-full sm:max-w-sm text-center shadow-2xl animate-fade-in-up pb-8">

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import Layout from '../components/Layout';
-// ✨ AQUÍ ESTÁ EL FIX: Agregué CheckCircle a los importes ✨
 import { Users, Search, Plus, Edit, Trash2, X, AlertTriangle, Eye, Store, UserCircle, Phone, MapPin, CreditCard, CheckCircle } from 'lucide-react';
 
 const Clientes = () => {
@@ -124,8 +123,8 @@ const Clientes = () => {
         )}
       </div>
 
-      {/* VISTA MÓVIL: TARJETAS DE CONTACTO */}
-      <div className="md:hidden flex flex-col gap-3">
+      {/* ✨ FIX: VISTA TÁCTIL (MÓVIL Y TABLET) ✨ */}
+      <div className="lg:hidden flex flex-col gap-3">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
              <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -141,53 +140,55 @@ const Clientes = () => {
             <p className="text-sm font-bold text-gray-600">No se encontraron clientes</p>
           </div>
         ) : (
-          clientesFiltrados.map((c) => (
-            <div key={c.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative group overflow-hidden">
-               <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-100 pb-3">
-                  <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                        <span className="font-black text-lg uppercase">{c.nombre_completo.charAt(0)}</span>
-                     </div>
-                     <div>
-                       <p className="font-bold text-gray-800 text-sm leading-tight line-clamp-2">{c.nombre_completo}</p>
-                       <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mt-0.5"><CreditCard size={10}/> DNI: {c.documento_identidad || 'S/C'}</p>
-                     </div>
-                  </div>
-               </div>
-
-               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3 grid grid-cols-2 gap-2">
-                  <div className="flex items-center gap-1.5 overflow-hidden">
-                    <Phone size={12} className="text-emerald-500 shrink-0"/>
-                    <span className="text-[10px] font-bold text-gray-600 truncate">{c.telefono || 'Sin celular'}</span>
-                  </div>
-                  {esAdmin && (
-                    <div className="flex items-center gap-1.5 overflow-hidden">
-                      <Store size={12} className={c.sucursal_id ? "text-purple-400 shrink-0" : "text-red-400 shrink-0"}/>
-                      <span className={`text-[9px] font-bold truncate px-1.5 py-0.5 rounded ${c.sucursal_id ? "text-purple-700 bg-purple-100/50" : "text-red-600 bg-red-100/50"}`}>
-                        {c.sucursal_id ? c.sucursal_nombre : 'Sin asignar'}
-                      </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+            {clientesFiltrados.map((c) => (
+              <div key={c.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative group overflow-hidden">
+                 <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-100 pb-3">
+                    <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                          <span className="font-black text-lg uppercase">{c.nombre_completo.charAt(0)}</span>
+                       </div>
+                       <div>
+                         <p className="font-bold text-gray-800 text-sm leading-tight line-clamp-2">{c.nombre_completo}</p>
+                         <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mt-0.5"><CreditCard size={10}/> DNI: {c.documento_identidad || 'S/C'}</p>
+                       </div>
                     </div>
-                  )}
-               </div>
+                 </div>
 
-               <div className="flex gap-2">
-                 <button onClick={() => setModalDetalles(c)} className="flex-1 py-2 bg-slate-50 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-100 flex items-center justify-center transition-colors">
-                   <Eye size={16}/>
-                 </button>
-                 <button onClick={() => openModal(c)} className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg font-bold text-xs hover:bg-blue-100 flex items-center justify-center transition-colors">
-                   <Edit size={16}/>
-                 </button>
-                 <button onClick={() => setModalDelete(c)} className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg flex items-center justify-center hover:bg-red-100 transition-colors">
-                   <Trash2 size={16}/>
-                 </button>
-               </div>
-            </div>
-          ))
+                 <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3 grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <Phone size={12} className="text-emerald-500 shrink-0"/>
+                      <span className="text-[10px] font-bold text-gray-600 truncate">{c.telefono || 'Sin celular'}</span>
+                    </div>
+                    {esAdmin && (
+                      <div className="flex items-center gap-1.5 overflow-hidden">
+                        <Store size={12} className={c.sucursal_id ? "text-purple-400 shrink-0" : "text-red-400 shrink-0"}/>
+                        <span className={`text-[9px] font-bold truncate px-1.5 py-0.5 rounded ${c.sucursal_id ? "text-purple-700 bg-purple-100/50" : "text-red-600 bg-red-100/50"}`}>
+                          {c.sucursal_id ? c.sucursal_nombre : 'Sin asignar'}
+                        </span>
+                      </div>
+                    )}
+                 </div>
+
+                 <div className="flex gap-2">
+                   <button onClick={() => setModalDetalles(c)} className="flex-1 py-2 bg-slate-50 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-100 flex items-center justify-center transition-colors">
+                     <Eye size={16}/>
+                   </button>
+                   <button onClick={() => openModal(c)} className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg font-bold text-xs hover:bg-blue-100 flex items-center justify-center transition-colors">
+                     <Edit size={16}/>
+                   </button>
+                   <button onClick={() => setModalDelete(c)} className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg flex items-center justify-center hover:bg-red-100 transition-colors">
+                     <Trash2 size={16}/>
+                   </button>
+                 </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* VISTA PC: TABLA DE CLIENTES */}
-      <div className="hidden md:block bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+      {/* ✨ FIX: VISTA PC (Tabla visible solo en pantallas muy grandes) ✨ */}
+      <div className="hidden lg:block bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold tracking-wider text-[10px] border-b border-gray-100">
             <tr>
@@ -227,7 +228,8 @@ const Clientes = () => {
                 )}
 
                 <td className="px-6 py-4 text-center">
-                  <div className="flex justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* ✨ FIX: Botones SIEMPRE VISIBLES ✨ */}
+                  <div className="flex justify-center gap-1.5 transition-opacity">
                     <button onClick={() => setModalDetalles(c)} className="p-1.5 text-slate-500 bg-slate-50 hover:bg-slate-200 rounded-lg transition-colors" title="Detalles"><Eye size={14}/></button>
                     <button onClick={() => openModal(c)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors" title="Editar"><Edit size={14}/></button>
                     <button onClick={() => setModalDelete(c)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" title="Eliminar"><Trash2 size={14}/></button>
@@ -310,12 +312,12 @@ const Clientes = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">DNI</label>
-                  <input className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-800 tracking-wider text-sm transition-colors [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${errores.documento_identidad ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.documento_identidad} onChange={e => { setFormData({...formData, documento_identidad: e.target.value.replace(/\D/g, '').slice(0, 8)}); if (errores.documento_identidad) setErrores({...errores, documento_identidad: null}); }} placeholder="8 dígitos" type="number" />
+                  <input type="text" inputMode="numeric" className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-800 tracking-wider text-sm transition-colors ${errores.documento_identidad ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.documento_identidad} onChange={e => { setFormData({...formData, documento_identidad: e.target.value.replace(/\D/g, '').slice(0, 8)}); if (errores.documento_identidad) setErrores({...errores, documento_identidad: null}); }} placeholder="8 dígitos" />
                   {errores.documento_identidad && <p className="text-[9px] text-red-500 mt-1 font-bold leading-tight">{errores.documento_identidad}</p>}
                 </div>
                 <div>
                   <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">Celular</label>
-                  <input className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-800 tracking-wider text-sm transition-colors [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${errores.telefono ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.telefono} onChange={e => { setFormData({...formData, telefono: e.target.value.replace(/\D/g, '').slice(0, 9)}); if (errores.telefono) setErrores({...errores, telefono: null}); }} placeholder="9 dígitos" type="number" />
+                  <input type="text" inputMode="numeric" className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-800 tracking-wider text-sm transition-colors ${errores.telefono ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.telefono} onChange={e => { setFormData({...formData, telefono: e.target.value.replace(/\D/g, '').slice(0, 9)}); if (errores.telefono) setErrores({...errores, telefono: null}); }} placeholder="9 dígitos" />
                   {errores.telefono && <p className="text-[9px] text-red-500 mt-1 font-bold leading-tight">{errores.telefono}</p>}
                 </div>
               </div>

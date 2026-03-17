@@ -225,7 +225,7 @@ const Auditoria = () => {
         </p>
       </div>
 
-      {/* ✨ CONTROLES DE FECHA Y BÚSQUEDA (Optimizados para móvil) ✨ */}
+      {/* ✨ CONTROLES DE FECHA Y BÚSQUEDA ✨ */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-4 md:mb-6 bg-white p-3 md:p-4 rounded-2xl shadow-sm border border-gray-100 gap-3">
         
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-50 md:bg-transparent p-2 md:p-0 rounded-xl md:rounded-none w-full xl:w-auto">
@@ -257,8 +257,8 @@ const Auditoria = () => {
         </div>
       </div>
 
-      {/* ✨ VISTA MÓVIL: TARJETAS DE USUARIOS ✨ */}
-      <div className="md:hidden flex flex-col gap-3">
+      {/* ✨ FIX: VISTA TÁCTIL (Móvil y Tablet hasta lg) ✨ */}
+      <div className="lg:hidden flex flex-col gap-3">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
              <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -275,55 +275,57 @@ const Auditoria = () => {
             <p className="text-xs text-gray-400 mt-1">No hay logs para la fecha/sede seleccionada.</p>
           </div>
         ) : (
-          usuariosMostrados.map((u) => (
-            <div key={u.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative group overflow-hidden">
-               <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-100 pb-3">
-                  <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-black text-lg overflow-hidden shrink-0 border border-slate-200">
-                        {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover"/> : u.nombre.charAt(0).toUpperCase()}
-                     </div>
-                     <div className="min-w-0">
-                       <p className="font-bold text-gray-800 text-sm leading-tight truncate">{u.nombre}</p>
-                       <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{u.rol === 'Administrador' ? 'ADMINISTRADOR' : u.area}</p>
-                     </div>
-                  </div>
-               </div>
-
-               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3 grid grid-cols-2 gap-2">
-                  <div className="flex flex-col items-start gap-1 overflow-hidden">
-                    <span className="text-[9px] font-extrabold uppercase text-gray-400 tracking-widest">Última Acción</span>
-                    {u.ultima_accion ? (
-                      <span className="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1"><Clock size={10} className="text-blue-400"/> {formatearFecha(u.ultima_accion)}</span>
-                    ) : (
-                      <span className="text-[10px] font-medium text-gray-400 italic">Ninguna</span>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-end gap-1 overflow-hidden">
-                    <span className="text-[9px] font-extrabold uppercase text-gray-400 tracking-widest">Registros</span>
-                    <span className="text-[10px] font-black text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md border border-blue-200">
-                      {u.total_acciones} Acciones
-                    </span>
-                  </div>
-               </div>
-
-               {esVistaGlobal && u.rol !== 'Administrador' && (
-                 <div className="mb-3">
-                   <span className="text-[9px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-1 rounded flex items-center gap-1 w-max">
-                     <Store size={10}/> {obtenerNombresSucursales(u.sucursales_asignadas)}
-                   </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+            {usuariosMostrados.map((u) => (
+              <div key={u.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative group overflow-hidden">
+                 <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-100 pb-3">
+                    <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-black text-lg overflow-hidden shrink-0 border border-slate-200">
+                          {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover"/> : u.nombre.charAt(0).toUpperCase()}
+                       </div>
+                       <div className="min-w-0">
+                         <p className="font-bold text-gray-800 text-sm leading-tight truncate">{u.nombre}</p>
+                         <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{u.rol === 'Administrador' ? 'ADMINISTRADOR' : u.area}</p>
+                       </div>
+                    </div>
                  </div>
-               )}
 
-               <button onClick={() => { setSelectedUser(u); setSearchDetail(''); }} className="w-full py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-xs hover:bg-blue-100 flex items-center justify-center gap-1.5 transition-colors shadow-sm">
-                 <Eye size={14}/> Ver Expediente
-               </button>
-            </div>
-          ))
+                 <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3 grid grid-cols-2 gap-2">
+                    <div className="flex flex-col items-start gap-1 overflow-hidden">
+                      <span className="text-[9px] font-extrabold uppercase text-gray-400 tracking-widest">Última Acción</span>
+                      {u.ultima_accion ? (
+                        <span className="text-[10px] font-bold text-slate-600 truncate flex items-center gap-1"><Clock size={10} className="text-blue-400"/> {formatearFecha(u.ultima_accion)}</span>
+                      ) : (
+                        <span className="text-[10px] font-medium text-gray-400 italic">Ninguna</span>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1 overflow-hidden">
+                      <span className="text-[9px] font-extrabold uppercase text-gray-400 tracking-widest">Registros</span>
+                      <span className="text-[10px] font-black text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md border border-blue-200">
+                        {u.total_acciones} Acciones
+                      </span>
+                    </div>
+                 </div>
+
+                 {esVistaGlobal && u.rol !== 'Administrador' && (
+                   <div className="mb-3">
+                     <span className="text-[9px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-1 rounded flex items-center gap-1 w-max">
+                       <Store size={10}/> {obtenerNombresSucursales(u.sucursales_asignadas)}
+                     </span>
+                   </div>
+                 )}
+
+                 <button onClick={() => { setSelectedUser(u); setSearchDetail(''); }} className="w-full py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-xs hover:bg-blue-100 flex items-center justify-center gap-1.5 transition-colors shadow-sm">
+                   <Eye size={14}/> Ver Expediente
+                 </button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* ✨ VISTA PC: TABLA DE USUARIOS ✨ */}
-      <div className="hidden md:block bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+      {/* ✨ FIX: VISTA PC (Tabla visible solo en monitores lg o superiores) ✨ */}
+      <div className="hidden lg:block bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold tracking-wider text-[10px] border-b border-gray-100">
             <tr>
@@ -371,7 +373,8 @@ const Auditoria = () => {
                   )}
                 </td>
                 <td className="px-6 py-4 text-center">
-                  <div className="flex justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* ✨ FIX: Botones SIEMPRE visibles en PC ✨ */}
+                  <div className="flex justify-center transition-opacity">
                     <button onClick={() => { setSelectedUser(u); setSearchDetail(''); }} className="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-xl text-xs font-bold transition-colors shadow-sm border border-gray-200 hover:border-blue-200 flex items-center gap-1.5">
                       <Eye size={14}/> Expediente
                     </button>
@@ -383,7 +386,7 @@ const Auditoria = () => {
         </table>
       </div>
 
-      {/* ✨ MODAL EXPEDIENTE (Bottom Sheet Móvil / Modal PC) ✨ */}
+      {/* ✨ MODAL EXPEDIENTE ✨ */}
       {selectedUser && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-all animate-fade-in">
           <div className="bg-white rounded-t-3xl sm:rounded-[2rem] w-full sm:max-w-5xl flex flex-col h-[90vh] sm:h-[85vh] overflow-hidden animate-fade-in-up border border-white/20 shadow-2xl">
@@ -418,11 +421,11 @@ const Auditoria = () => {
               </div>
             </div>
 
-            {/* ✨ LISTA TIPO TIMELINE (Móvil) / TABLA (PC) ✨ */}
+            {/* ✨ FIX: LISTA TIPO TIMELINE (Móvil y Tablet hasta lg) / TABLA (PC) ✨ */}
             <div className="flex-1 overflow-y-auto bg-slate-50/50 relative [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               
-              {/* Móvil: Timeline (Tarjetas) */}
-              <div className="md:hidden p-3 space-y-3">
+              {/* Móvil y Tablet: Timeline */}
+              <div className="lg:hidden p-3 space-y-3">
                 {getLogsExpediente().length === 0 ? (
                    <div className="text-center py-10 text-gray-400 italic text-xs font-bold">No hay registros que coincidan.</div>
                 ) : (
@@ -442,7 +445,7 @@ const Auditoria = () => {
               </div>
 
               {/* PC: Tabla */}
-              <div className="hidden md:block w-full h-full">
+              <div className="hidden lg:block w-full h-full">
                 <table className="w-full text-left text-sm text-gray-600 border-collapse">
                   <thead className="sticky top-0 z-30 bg-white shadow-sm">
                     <tr>
@@ -464,7 +467,8 @@ const Auditoria = () => {
                           <td className="px-6 py-4">{getActionPill(log.accion)}</td>
                           <td className="px-6 py-4 text-xs font-medium text-slate-500 truncate max-w-[300px] xl:max-w-md" title={log.detalles}>{log.detalles}</td>
                           <td className="px-6 py-4 text-center">
-                            <button className="p-1.5 text-blue-400 group-hover:text-blue-600 bg-blue-50 group-hover:bg-blue-100 rounded-lg transition-colors shadow-sm" title="Ver Detalle Técnico">
+                            {/* ✨ FIX: Botón siempre visible en PC ✨ */}
+                            <button className="p-1.5 text-blue-500 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 rounded-lg transition-colors shadow-sm" title="Ver Detalle Técnico">
                               <Eye size={16}/>
                             </button>
                           </td>
@@ -482,7 +486,7 @@ const Auditoria = () => {
         </div>
       )}
 
-      {/* ✨ MODAL DETALLE TÉCNICO DEL LOG (Bottom Sheet) ✨ */}
+      {/* MODAL DETALLE TÉCNICO DEL LOG */}
       {logDetail && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-all animate-fade-in">
           <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md p-6 sm:p-8 border border-white/50 animate-fade-in-up relative pb-8 sm:pb-8 flex flex-col max-h-[80vh]">
