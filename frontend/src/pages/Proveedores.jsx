@@ -89,7 +89,6 @@ const Proveedores = () => {
     if (formData.telefono && !/^\d{9}$/.test(formData.telefono.trim())) errors.telefono = 'El teléfono debe tener exactamente 9 números';
     if (esVistaGlobal && !formData.sucursal_id) errors.sucursal_id = 'Debes asignar una sucursal';
     
-    // Validación de correo opcional pero correcta
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = 'Formato de correo inválido';
 
     setFormErrors(errors);
@@ -122,36 +121,39 @@ const Proveedores = () => {
         </div>
       )}
 
-      {/* CABECERA */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 md:mb-6 gap-3">
-        <p className="text-[11px] md:text-sm text-gray-500 font-bold px-1 uppercase tracking-wider">
-           {esVistaGlobal ? 'Directorio Global' : `Directorio de: ${sucursalActiva?.nombre || 'Ninguna'}`}
-        </p>
+      {/* ✨ CABECERA ROBUSTA EN 2 FILAS (Evita que el iPad aplaste los textos) ✨ */}
+      <div className="flex flex-col gap-3 mb-4 md:mb-6">
+        
+        {/* Fila 1: Título y Botón Principal */}
+        <div className="flex justify-between items-center">
+          <p className="text-[11px] md:text-sm text-gray-500 font-bold px-1 uppercase tracking-wider">
+             {esVistaGlobal ? 'Directorio Global' : `Directorio de: ${sucursalActiva?.nombre || 'Ninguna'}`}
+          </p>
+          {sucursalActiva && tienePermisoEditar && (
+            <button onClick={() => openModal()} className="bg-blue-600 text-white px-4 py-2 md:py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-md hover:bg-blue-700 transition-all active:scale-95 text-xs md:text-sm shrink-0">
+              <Plus size={16} /> <span className="hidden sm:inline">Nuevo Proveedor</span><span className="sm:hidden">Nuevo</span>
+            </button>
+          )}
+        </div>
 
+        {/* Fila 2: Buscador y Filtro (Ocupando todo el ancho) */}
         {sucursalActiva && (
-          <div className="flex flex-col md:flex-row w-full sm:w-auto gap-2 md:gap-3">
-            <div className="flex gap-2 w-full md:w-auto">
-               <div className="relative flex-1 md:w-64">
-                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                 <input type="text" placeholder="Buscar por Razón Social o RUC..." className="w-full bg-white border border-gray-200 pl-9 pr-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 font-bold text-gray-800 text-xs md:text-sm transition-all shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-               </div>
-               <select className="bg-white border border-gray-200 px-3 py-2.5 rounded-xl outline-none font-bold text-gray-700 text-xs md:text-sm shadow-sm" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
-                 <option value="activos">Activos</option>
-                 <option value="inactivos">Papelera</option>
-                 <option value="todos">Todos</option>
-               </select>
-            </div>
-            {tienePermisoEditar && (
-              <button onClick={() => openModal()} className="bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-md hover:bg-blue-700 transition-all active:scale-95 text-xs md:text-sm w-full md:w-auto mt-2 md:mt-0">
-                <Plus size={16} /> Nuevo Proveedor
-              </button>
-            )}
+          <div className="flex gap-2 w-full">
+             <div className="relative flex-1">
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+               <input type="text" placeholder="Buscar por Razón Social o RUC..." className="w-full bg-white border border-gray-200 pl-9 pr-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 font-bold text-gray-800 text-xs md:text-sm transition-all shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+             </div>
+             <select className="bg-white border border-gray-200 px-3 py-2.5 rounded-xl outline-none font-bold text-gray-700 text-xs md:text-sm shadow-sm shrink-0" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+               <option value="activos">Activos</option>
+               <option value="inactivos">Papelera</option>
+               <option value="todos">Todos</option>
+             </select>
           </div>
         )}
       </div>
 
-      {/* VISTA MÓVIL: TARJETAS DE PROVEEDORES */}
-      <div className="md:hidden flex flex-col gap-3">
+      {/* ✨ VISTA TÁCTIL (Móvil y Tablet hasta breakpoint lg) ✨ */}
+      <div className="lg:hidden flex flex-col gap-3">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
              <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -167,59 +169,61 @@ const Proveedores = () => {
             <p className="text-sm font-bold text-gray-600">No se encontraron proveedores</p>
           </div>
         ) : (
-          filtrados.map((prov) => (
-            <div key={prov.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative group overflow-hidden">
-               <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-100 pb-3">
-                  <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                        <span className="font-black text-lg uppercase">{prov.razon_social.charAt(0)}</span>
-                     </div>
-                     <div>
-                       <p className="font-bold text-gray-800 text-sm leading-tight line-clamp-2">{prov.razon_social}</p>
-                       <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mt-0.5">RUC: {prov.ruc || 'S/C'}</p>
-                     </div>
-                  </div>
-               </div>
-
-               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3 grid grid-cols-2 gap-2">
-                  <div className="flex items-center gap-1.5 overflow-hidden">
-                    <Phone size={12} className="text-emerald-500 shrink-0"/>
-                    <span className="text-[10px] font-bold text-gray-600 truncate">{prov.telefono || 'Sin celular'}</span>
-                  </div>
-                  {esAdmin && (
-                    <div className="flex items-center gap-1.5 overflow-hidden">
-                      <Store size={12} className={prov.sucursal_id ? "text-purple-400 shrink-0" : "text-red-400 shrink-0"}/>
-                      <span className={`text-[9px] font-bold truncate px-1.5 py-0.5 rounded ${prov.sucursal_id ? "text-purple-700 bg-purple-100/50" : "text-red-600 bg-red-100/50"}`}>
-                        {prov.sucursal_id ? prov.sucursal_nombre : 'Sin asignar'}
-                      </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+            {filtrados.map((prov) => (
+              <div key={prov.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative group overflow-hidden">
+                 <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-100 pb-3">
+                    <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                          <span className="font-black text-lg uppercase">{prov.razon_social.charAt(0)}</span>
+                       </div>
+                       <div>
+                         <p className="font-bold text-gray-800 text-sm leading-tight line-clamp-2">{prov.razon_social}</p>
+                         <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mt-0.5">RUC: {prov.ruc || 'S/C'}</p>
+                       </div>
                     </div>
-                  )}
-               </div>
+                 </div>
 
-               <div className="flex gap-2">
-                 <button onClick={() => setModalDetalles(prov)} className="flex-1 py-2 bg-slate-50 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-100 flex items-center justify-center transition-colors">
-                   <Eye size={16}/>
-                 </button>
-                 {tienePermisoEditar && (
-                   <>
-                     <button onClick={() => openModal(prov)} className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg font-bold text-xs hover:bg-blue-100 flex items-center justify-center transition-colors">
-                       <Edit size={16}/>
-                     </button>
-                     {prov.estado && (
-                       <button onClick={() => {setProvToDelete(prov); setDeleteModalOpen(true);}} className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg flex items-center justify-center hover:bg-red-100 transition-colors">
-                         <Trash2 size={16}/>
+                 <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3 grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <Phone size={12} className="text-emerald-500 shrink-0"/>
+                      <span className="text-[10px] font-bold text-gray-600 truncate">{prov.telefono || 'Sin celular'}</span>
+                    </div>
+                    {esAdmin && (
+                      <div className="flex items-center gap-1.5 overflow-hidden">
+                        <Store size={12} className={prov.sucursal_id ? "text-purple-400 shrink-0" : "text-red-400 shrink-0"}/>
+                        <span className={`text-[9px] font-bold truncate px-1.5 py-0.5 rounded ${prov.sucursal_id ? "text-purple-700 bg-purple-100/50" : "text-red-600 bg-red-100/50"}`}>
+                          {prov.sucursal_id ? prov.sucursal_nombre : 'Sin asignar'}
+                        </span>
+                      </div>
+                    )}
+                 </div>
+
+                 <div className="flex gap-2">
+                   <button onClick={() => setModalDetalles(prov)} className="flex-1 py-2 bg-slate-50 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-100 flex items-center justify-center transition-colors">
+                     <Eye size={16}/>
+                   </button>
+                   {tienePermisoEditar && (
+                     <>
+                       <button onClick={() => openModal(prov)} className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg font-bold text-xs hover:bg-blue-100 flex items-center justify-center transition-colors">
+                         <Edit size={16}/>
                        </button>
-                     )}
-                   </>
-                 )}
-               </div>
-            </div>
-          ))
+                       {prov.estado && (
+                         <button onClick={() => {setProvToDelete(prov); setDeleteModalOpen(true);}} className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg flex items-center justify-center hover:bg-red-100 transition-colors">
+                           <Trash2 size={16}/>
+                         </button>
+                       )}
+                     </>
+                   )}
+                 </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* VISTA PC: TABLA DE PROVEEDORES */}
-      <div className="hidden md:block bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+      {/* ✨ VISTA PC: Tabla de Proveedores (Solo visible en pantallas grandes lg) ✨ */}
+      <div className="hidden lg:block bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-220px)] custom-scrollbar">
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold tracking-wider text-[10px] sticky top-0 z-10 border-b border-gray-100">
@@ -262,7 +266,8 @@ const Proveedores = () => {
                     <p className="truncate text-gray-400 text-[10px] font-medium max-w-[150px]" title={prov.direccion}>{prov.direccion || 'Sin dirección'}</p>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <div className="flex justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* ✨ FIX: Botones SIEMPRE visibles en PC, sin efecto opacity-0 ✨ */}
+                    <div className="flex justify-center gap-1.5 transition-opacity">
                       <button onClick={() => setModalDetalles(prov)} className="p-1.5 text-slate-500 bg-slate-50 hover:bg-slate-200 rounded-lg transition-colors" title="Ver Detalles"><Eye size={14} /></button>
                       {tienePermisoEditar && (
                         <>
@@ -323,7 +328,7 @@ const Proveedores = () => {
         </div>
       )}
 
-      {/* ✨ MODAL CREAR / EDITAR PROVEEDOR (Bottom Sheet Móvil con Validación Fuerte) ✨ */}
+      {/* MODAL CREAR / EDITAR PROVEEDOR */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-all animate-fade-in">
           <div className="bg-white p-5 sm:p-8 rounded-t-3xl sm:rounded-[2rem] w-full sm:max-w-lg shadow-2xl animate-fade-in-up flex flex-col max-h-[90vh]">
@@ -344,13 +349,11 @@ const Proveedores = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">RUC</label>
-                  {/* ✨ FIX: type="text" con inputMode="numeric" y validación .slice() fuerte ✨ */}
                   <input type="text" inputMode="numeric" className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-800 tracking-wider text-sm transition-colors ${formErrors.ruc ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.ruc ?? ''} onChange={(e) => { setFormData({...formData, ruc: e.target.value.replace(/\D/g, '').slice(0, 11)}); if (formErrors.ruc) setFormErrors({...formErrors, ruc: null}); }} placeholder="11 dígitos"/>
                   {formErrors.ruc && <p className="text-[9px] text-red-500 mt-1 font-bold leading-tight">{formErrors.ruc}</p>}
                 </div>
                 <div>
                   <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">Teléfono</label>
-                  {/* ✨ FIX: type="text" con inputMode="numeric" y validación .slice() fuerte ✨ */}
                   <input type="text" inputMode="numeric" className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-800 tracking-wider text-sm transition-colors ${formErrors.telefono ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.telefono ?? ''} onChange={(e) => { setFormData({...formData, telefono: e.target.value.replace(/\D/g, '').slice(0, 9)}); if (formErrors.telefono) setFormErrors({...formErrors, telefono: null}); }} placeholder="9 dígitos"/>
                   {formErrors.telefono && <p className="text-[9px] text-red-500 mt-1 font-bold leading-tight">{formErrors.telefono}</p>}
                 </div>
@@ -387,7 +390,7 @@ const Proveedores = () => {
         </div>
       )}
       
-      {/* ✨ MODAL ELIMINAR ✨ */}
+      {/* MODAL ELIMINAR */}
       {deleteModalOpen && provToDelete && (
         <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-fade-in">
           <div className="bg-white rounded-t-3xl sm:rounded-[2rem] p-6 md:p-8 w-full sm:max-w-sm text-center shadow-2xl animate-fade-in-up pb-8">

@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, LogOut, Menu, Activity, User, Contact, MapPin, Building2, ChevronDown } from 'lucide-react';
+// ✨ AQUÍ ESTÁ EL FIX: Agregué 'Store' a la lista de importaciones ✨
+import { LayoutDashboard, LogOut, Menu, Activity, User, Contact, MapPin, Building2, ChevronDown, Store } from 'lucide-react';
 import api from '../services/api';
 import { CATEGORIA_A_RUTA } from '../config/menuConfig';
 
 const Layout = ({ children, title, moduleIcon }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
+  // En PC (lg) empieza abierto. En móvil/tablet (md, sm) empieza cerrado.
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
   const [usuario, setUsuario] = useState(JSON.parse(localStorage.getItem('usuario') || '{"nombre": "Usuario"}'));
   const [menuItems, setMenuItems] = useState([]);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -16,8 +18,22 @@ const Layout = ({ children, title, moduleIcon }) => {
   const [sucursalesPermitidas, setSucursalesPermitidas] = useState([]);
   const [sucursalActiva, setSucursalActiva] = useState(JSON.parse(localStorage.getItem('sucursalActiva')) || null);
 
+  // Escuchar el tamaño de la pantalla para cerrar el menú si lo rotan a vertical
   useEffect(() => {
-    if (window.innerWidth < 768) {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    // Al cambiar de ruta en móvil/tablet, cierra el menú
+    if (window.innerWidth < 1024) {
       setSidebarOpen(false);
     }
     
@@ -119,26 +135,26 @@ const Layout = ({ children, title, moduleIcon }) => {
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden relative">
       
-      {/* CAPA OSCURA PARA MÓVILES */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden transition-opacity"
-          onClick={() => setSidebarOpen(false)}
-        ></div>
-      )}
+      {/* ✨ CAPA OSCURA PARA MÓVILES/TABLETS ✨ */}
+      <div 
+        className={`fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300 ${sidebarOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
+        onClick={() => setSidebarOpen(false)}
+      ></div>
 
-      {/* PANEL LATERAL */}
-      <aside className={`fixed md:relative inset-y-0 left-0 bg-slate-900 text-white transition-all duration-300 flex flex-col z-50 shadow-2xl md:shadow-xl h-full
-        ${sidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64 md:translate-x-0 md:w-20'}
+      {/* ✨ PANEL LATERAL (OFF-CANVAS EN MÓVIL/TABLET) ✨ */}
+      <aside className={`fixed lg:relative inset-y-0 left-0 bg-slate-900 text-white transition-transform duration-300 ease-in-out flex flex-col z-50 shadow-2xl lg:shadow-xl h-full w-64 lg:w-20 lg:hover:w-64 group
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="h-16 flex items-center justify-center border-b border-slate-800 shrink-0">
-          <h1 className={`font-bold text-xl tracking-wide ${!sidebarOpen && 'hidden md:hidden'}`}>Razentec <span className="text-blue-500">SaaS</span></h1>
-          {!sidebarOpen && <span className="font-bold text-xl text-blue-500 hidden md:block">R</span>}
+          <h1 className={`font-bold text-xl tracking-wide lg:hidden lg:group-hover:block transition-all`}>
+            Razentec <span className="text-blue-500">SaaS</span>
+          </h1>
+          <span className="font-bold text-xl text-blue-500 hidden lg:block lg:group-hover:hidden">R</span>
         </div>
 
-        {/* SELECTOR DE SUCURSAL PARA MÓVILES */}
-        {!isSucursalesRoute && sidebarOpen && (
-          <div className="md:hidden px-4 py-4 border-b border-slate-800 bg-slate-800/30">
+        {/* SELECTOR DE SUCURSAL PARA MÓVILES/TABLETS DENTRO DEL MENÚ */}
+        {!isSucursalesRoute && (
+          <div className="lg:hidden px-4 py-4 border-b border-slate-800 bg-slate-800/30">
             <p className="text-[10px] text-slate-400 font-bold uppercase mb-2 px-1">Sucursal Actual</p>
             <CustomDropdown 
               sucursalActiva={sucursalActiva} 
@@ -155,18 +171,23 @@ const Layout = ({ children, title, moduleIcon }) => {
 
         <nav className="flex-1 py-6 space-y-1.5 px-3 overflow-y-auto custom-scrollbar">
           {menuItems.map((item) => (
-            <BotonMenu key={item.path} to={item.path} icon={<item.Icon size={20} />} text={item.label} isOpen={sidebarOpen} currentPath={location.pathname} />
+            <BotonMenu key={item.path} to={item.path} icon={<item.Icon size={20} />} text={item.label} currentPath={location.pathname} />
           ))}
         </nav>
       </aside>
 
-      <div className="flex-1 flex flex-col overflow-hidden relative">
+      {/* CONTENIDO PRINCIPAL */}
+      <div className="flex-1 flex flex-col overflow-hidden relative w-full">
         
-        {/* ✨ AQUÍ ESTÁ EL ARREGLO: Cambiamos z-10 por z-30 para que NADA del contenido se le suba encima ✨ */}
+        {/* HEADER SUPERIOR */}
         <header className="h-16 bg-white shadow-sm flex items-center justify-between px-4 md:px-6 lg:px-8 z-30 border-b border-gray-100 shrink-0 relative">
           
-          <div className="flex flex-1 items-center justify-start gap-2 md:gap-4 overflow-hidden">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors shrink-0"><Menu size={22} /></button>
+          <div className="flex flex-1 items-center justify-start gap-3 overflow-hidden">
+            {/* Botón de Hamburguesa visible en móvil y tablet (hasta lg) */}
+            <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-gray-100 rounded-xl text-gray-500 transition-colors shrink-0 lg:hidden focus:ring-2 focus:ring-blue-100 outline-none">
+              <Menu size={24} />
+            </button>
+            
             {title && (
               <h1 className="text-lg md:text-xl font-extrabold text-gray-800 truncate select-none flex items-center gap-2">
                 {moduleIcon && <span className="text-blue-600 hidden sm:block">{moduleIcon}</span>}
@@ -175,7 +196,8 @@ const Layout = ({ children, title, moduleIcon }) => {
             )}
           </div>
           
-          <div className="flex items-center justify-center hidden md:flex shrink-0 px-2">
+          {/* Selector de Sucursal en la barra superior (Solo visible en PC) */}
+          <div className="hidden lg:flex items-center justify-center shrink-0 px-2">
             {!isSucursalesRoute && (
                <CustomDropdown 
                  sucursalActiva={sucursalActiva} 
@@ -187,35 +209,41 @@ const Layout = ({ children, title, moduleIcon }) => {
             )}
           </div>
           
+          {/* Perfil del Usuario */}
           <div className="flex-1 flex items-center justify-end gap-3 relative shrink-0">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-extrabold text-gray-800 leading-none">{usuario.nombre || 'Usuario'}</p>
-              <p className="text-[11px] font-medium text-gray-500 mt-1">{usuario.rol || 'Empleado'}</p>
+              <p className="text-[10px] uppercase tracking-widest font-bold text-blue-600 mt-1">{usuario.rol || 'Empleado'}</p>
             </div>
-            <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="focus:outline-none transition-transform hover:scale-105">
-              <div className="h-9 w-9 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-md ring-2 ring-transparent hover:ring-blue-200 overflow-hidden shrink-0">
+            <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="focus:outline-none transition-transform hover:scale-105 active:scale-95">
+              <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-md ring-2 ring-transparent hover:ring-blue-200 overflow-hidden shrink-0 border border-white">
                 {usuario.avatar ? <img src={usuario.avatar} alt="Avatar" className="w-full h-full object-cover" /> : usuario.nombre?.charAt(0)?.toUpperCase() || 'U'}
               </div>
             </button>
 
-            {/* Menú de Perfil Flotante (Con z-index altísimo) */}
+            {/* Menú de Perfil Flotante */}
             {profileMenuOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)}></div>
-                <div className="absolute right-0 top-14 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-fade-in-down p-1">
-                  <div className="p-3 border-b border-gray-50 sm:hidden text-center">
-                     <p className="text-sm font-bold text-gray-800 truncate">{usuario.nombre}</p>
-                     <p className="text-[10px] uppercase font-bold text-gray-400 mt-0.5">{usuario.rol}</p>
+                <div className="absolute right-0 top-14 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-fade-in-down p-1.5">
+                  <div className="p-4 border-b border-gray-50 sm:hidden flex items-center gap-3">
+                     <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-lg shrink-0">
+                       {usuario.avatar ? <img src={usuario.avatar} className="w-full h-full object-cover rounded-full" /> : usuario.nombre?.charAt(0)?.toUpperCase() || 'U'}
+                     </div>
+                     <div className="min-w-0">
+                       <p className="text-sm font-bold text-gray-800 truncate">{usuario.nombre}</p>
+                       <p className="text-[9px] uppercase font-bold text-blue-600 tracking-wider mt-0.5 truncate">{usuario.rol}</p>
+                     </div>
                   </div>
-                  <Link to="/perfil" onClick={() => setProfileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-colors"><User size={16} /> Mi Perfil</Link>
-                  <button onClick={handleLogout} className="flex items-center gap-3 w-full text-left px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-colors mt-1"><LogOut size={16} /> Cerrar Sesión</button>
+                  <Link to="/perfil" onClick={() => setProfileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-gray-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-colors mt-1"><User size={16} /> Mi Perfil</Link>
+                  <button onClick={handleLogout} className="flex items-center gap-3 w-full text-left px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-colors mt-1"><LogOut size={16} /> Cerrar Sesión</button>
                 </div>
               </>
             )}
           </div>
         </header>
         
-        {/* Usamos z-0 aquí para asegurarnos de que quede debajo de la cabecera */}
+        {/* ÁREA DE CONTENIDO */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 z-0">
           <div className="max-w-[1600px] mx-auto w-full p-4 md:p-6 lg:p-8">
             {children}
@@ -226,6 +254,7 @@ const Layout = ({ children, title, moduleIcon }) => {
   );
 };
 
+// COMPONENTE DROPDOWN
 const CustomDropdown = ({ sucursalActiva, sucursalesPermitidas, usuario, onSelect, isMobile }) => {
   const [isOpen, setIsOpen] = useState(false);
   const hasOptions = sucursalesPermitidas.length > 1 || usuario.rol === 'Administrador';
@@ -245,17 +274,17 @@ const CustomDropdown = ({ sucursalActiva, sucursalesPermitidas, usuario, onSelec
         disabled={!hasOptions}
         className={`flex items-center justify-between transition-all w-full md:w-auto ${
           isMobile 
-            ? 'bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-200' 
-            : 'bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-full px-4 py-1.5 shadow-sm text-slate-700'
-        } ${!hasOptions ? 'opacity-70 cursor-default' : 'cursor-pointer'}`}
+            ? 'bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl px-4 py-3 text-slate-200' 
+            : 'bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl px-4 py-2 shadow-sm text-slate-700'
+        } ${!hasOptions ? 'opacity-70 cursor-default' : 'cursor-pointer active:scale-95'}`}
       >
         <div className="flex items-center truncate">
           {sucursalActiva?.id === 'ALL' ? (
             <Building2 size={16} className={`${isMobile ? 'text-slate-400' : 'text-gray-500'} mr-2 shrink-0`}/>
           ) : (
-            <MapPin size={16} className={`${isMobile ? 'text-blue-400' : 'text-blue-600'} mr-2 shrink-0`}/>
+            <Store size={16} className={`${isMobile ? 'text-blue-400' : 'text-blue-600'} mr-2 shrink-0`}/>
           )}
-          <span className={`text-sm font-bold truncate max-w-[150px] md:max-w-[200px]`}>
+          <span className={`text-xs md:text-sm font-extrabold truncate max-w-[180px] md:max-w-[200px]`}>
             {currentLabel}
           </span>
         </div>
@@ -265,21 +294,21 @@ const CustomDropdown = ({ sucursalActiva, sucursalesPermitidas, usuario, onSelec
       </button>
 
       {isOpen && (
-        <div className={`absolute z-50 mt-2 w-[240px] rounded-2xl shadow-xl border overflow-hidden animate-fade-in-down ${
+        <div className={`absolute z-50 mt-2 w-[260px] rounded-2xl shadow-2xl border overflow-hidden animate-fade-in-down ${
           isMobile ? 'bg-slate-800 border-slate-700 top-full left-0' : 'bg-white border-gray-100 top-full left-1/2 -translate-x-1/2'
         }`}>
-          <div className="max-h-60 overflow-y-auto custom-scrollbar py-1.5">
+          <div className="max-h-64 overflow-y-auto custom-scrollbar p-1.5">
             
             {usuario.rol === 'Administrador' && (
               <button
                 onClick={() => { onSelect({ id: 'ALL', nombre: 'Todas las Sucursales' }); setIsOpen(false); }}
-                className={`w-full text-left px-4 py-3 text-sm font-bold flex items-center gap-3 transition-colors ${
+                className={`w-full text-left px-4 py-3 text-xs md:text-sm font-extrabold rounded-xl flex items-center gap-3 transition-colors mb-1 ${
                   sucursalActiva?.id === 'ALL'
-                    ? (isMobile ? 'bg-slate-700 text-blue-400 border-l-4 border-blue-500' : 'bg-blue-50 text-blue-700 border-l-4 border-blue-600')
-                    : (isMobile ? 'text-slate-300 hover:bg-slate-700 border-l-4 border-transparent' : 'text-gray-700 hover:bg-gray-50 border-l-4 border-transparent')
+                    ? (isMobile ? 'bg-slate-700 text-blue-400' : 'bg-blue-50 text-blue-700')
+                    : (isMobile ? 'text-slate-300 hover:bg-slate-700' : 'text-gray-700 hover:bg-slate-50')
                 }`}
               >
-                <Building2 size={16} /> Todas las Sucursales
+                <Building2 size={16} className="shrink-0"/> Todas las Sucursales
               </button>
             )}
 
@@ -287,13 +316,13 @@ const CustomDropdown = ({ sucursalActiva, sucursalesPermitidas, usuario, onSelec
               <button
                 key={suc.id}
                 onClick={() => { onSelect(suc); setIsOpen(false); }}
-                className={`w-full text-left px-4 py-3 text-sm font-bold flex items-center gap-3 transition-colors ${
+                className={`w-full text-left px-4 py-3 text-xs md:text-sm font-extrabold rounded-xl flex items-center gap-3 transition-colors mb-0.5 last:mb-0 ${
                   sucursalActiva?.id === suc.id
-                    ? (isMobile ? 'bg-slate-700 text-blue-400 border-l-4 border-blue-500' : 'bg-blue-50 text-blue-700 border-l-4 border-blue-600')
-                    : (isMobile ? 'text-slate-300 hover:bg-slate-700 border-l-4 border-transparent' : 'text-gray-700 hover:bg-gray-50 border-l-4 border-transparent')
+                    ? (isMobile ? 'bg-slate-700 text-blue-400' : 'bg-blue-50 text-blue-700')
+                    : (isMobile ? 'text-slate-300 hover:bg-slate-700' : 'text-gray-700 hover:bg-slate-50')
                 }`}
               >
-                <MapPin size={16} /> {suc.nombre}
+                <Store size={16} className="shrink-0"/> <span className="truncate">{suc.nombre}</span>
               </button>
             ))}
 
@@ -304,12 +333,13 @@ const CustomDropdown = ({ sucursalActiva, sucursalesPermitidas, usuario, onSelec
   );
 };
 
-const BotonMenu = ({ to, icon, text, isOpen, currentPath }) => {
+// BOTÓN MENÚ CON ANIMACIÓN DE TEXTO AL CERRARSE EN PC
+const BotonMenu = ({ to, icon, text, currentPath }) => {
   const active = currentPath === to;
   return (
-    <Link to={to} className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all font-medium text-sm ${active ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+    <Link to={to} className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all font-bold text-sm ${active ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
       <div className="shrink-0">{icon}</div>
-      <span className={`whitespace-nowrap ${!isOpen ? 'md:hidden' : ''}`}>{text}</span>
+      <span className={`whitespace-nowrap truncate lg:hidden lg:group-hover:block transition-all`}>{text}</span>
     </Link>
   );
 };

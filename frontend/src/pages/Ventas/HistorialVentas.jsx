@@ -91,8 +91,8 @@ const HistorialVentas = () => {
         </p>
       </div>
 
-      {/* ✨ VISTA MÓVIL: Tarjetas de Transacciones ✨ */}
-      <div className="md:hidden flex flex-col gap-3">
+      {/* ✨ VISTA MÓVIL Y TABLET: Tarjetas de Transacciones organizadas en Grid ✨ */}
+      <div className="lg:hidden flex flex-col gap-3">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
              <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -109,57 +109,56 @@ const HistorialVentas = () => {
             <p className="text-xs text-gray-400 mt-1">Realiza tu primera venta en el POS.</p>
           </div>
         ) : (
-          ventas.map((venta) => (
-            <div key={venta.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative group overflow-hidden">
-               {/* Banda superior de la tarjeta */}
-               <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-100 pb-3">
-                  <div className="flex items-center gap-2">
-                     <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                        <ReceiptText size={18}/>
-                     </div>
-                     <div>
-                       <p className="font-extrabold text-gray-800 text-sm">#{String(venta.id).padStart(5, '0')}</p>
-                       <p className="text-[9px] font-bold text-gray-400 flex items-center gap-1 mt-0.5"><CalendarDays size={10}/> {formatearFecha(venta.created_at)}</p>
-                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Total</p>
-                    <p className="font-black text-emerald-600 text-lg leading-none">S/ {parseFloat(venta.total).toFixed(2)}</p>
-                  </div>
-               </div>
-
-               {/* Info del Cliente y Sucursal */}
-               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3 flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2">
-                    <User size={12} className="text-gray-400 shrink-0"/>
-                    <span className="text-[11px] font-bold text-gray-700 truncate">{venta.cliente_nombre || 'Público General'}</span>
-                  </div>
-                  {esVistaGlobal && (
-                    <div className="flex items-center gap-2">
-                      <Store size={12} className="text-purple-400 shrink-0"/>
-                      <span className="text-[10px] font-bold text-purple-700 bg-purple-100/50 px-1.5 rounded truncate">
-                        {venta.sucursal_nombre || 'No asignado'}
-                      </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+            {ventas.map((venta) => (
+              <div key={venta.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative group overflow-hidden">
+                 <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-100 pb-3">
+                    <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                          <ReceiptText size={18}/>
+                       </div>
+                       <div>
+                         <p className="font-extrabold text-gray-800 text-sm">#{String(venta.id).padStart(5, '0')}</p>
+                         <p className="text-[9px] font-bold text-gray-400 flex items-center gap-1 mt-0.5"><CalendarDays size={10}/> {formatearFecha(venta.created_at)}</p>
+                       </div>
                     </div>
-                  )}
-               </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Total</p>
+                      <p className="font-black text-emerald-600 text-lg leading-none">S/ {parseFloat(venta.total).toFixed(2)}</p>
+                    </div>
+                 </div>
 
-               {/* Botones de Acción */}
-               <div className="flex gap-2">
-                 <button onClick={() => navigate(`/ventas/${venta.id}`)} className="flex-1 py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-xs hover:bg-blue-100 flex items-center justify-center gap-1.5 transition-colors">
-                   <FileText size={14}/> Ver Boleta
-                 </button>
-                 <button onClick={() => handleOpenDelete(venta.id)} className="w-12 py-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 flex items-center justify-center transition-colors">
-                   <Trash2 size={16}/>
-                 </button>
-               </div>
-            </div>
-          ))
+                 <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <User size={12} className="text-gray-400 shrink-0"/>
+                      <span className="text-[11px] font-bold text-gray-700 truncate">{venta.cliente_nombre || 'Público General'}</span>
+                    </div>
+                    {esVistaGlobal && (
+                      <div className="flex items-center gap-2">
+                        <Store size={12} className="text-purple-400 shrink-0"/>
+                        <span className="text-[10px] font-bold text-purple-700 bg-purple-100/50 px-1.5 rounded truncate">
+                          {venta.sucursal_nombre || 'No asignado'}
+                        </span>
+                      </div>
+                    )}
+                 </div>
+
+                 <div className="flex gap-2">
+                   <button onClick={() => navigate(`/ventas/${venta.id}`)} className="flex-1 py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold text-xs hover:bg-blue-100 flex items-center justify-center gap-1.5 transition-colors">
+                     <FileText size={14}/> Ver Boleta
+                   </button>
+                   <button onClick={() => handleOpenDelete(venta.id)} className="w-12 py-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 flex items-center justify-center transition-colors">
+                     <Trash2 size={16}/>
+                   </button>
+                 </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* ✨ VISTA PC: Tabla Elegante ✨ */}
-      <div className="hidden md:block bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+      {/* ✨ VISTA PC: Tabla Elegante (Oculta en Celular y Tablet) ✨ */}
+      <div className="hidden lg:block bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold tracking-wider text-[10px] border-b border-gray-100">
             <tr>
@@ -194,7 +193,8 @@ const HistorialVentas = () => {
                 </td>
                 <td className="px-6 py-4 text-right font-black text-emerald-600 bg-emerald-50/20">S/ {parseFloat(venta.total).toFixed(2)}</td>
                 <td className="px-6 py-4 text-center">
-                  <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Botones SIEMPRE visibles */}
+                  <div className="flex justify-center gap-2 transition-opacity">
                     <button onClick={() => navigate(`/ventas/${venta.id}`)} className="px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-colors">
                       <FileText size={14} /> Boleta
                     </button>
@@ -209,7 +209,7 @@ const HistorialVentas = () => {
         </table>
       </div>
 
-      {/* ✨ MODAL ELIMINAR (Bottom Sheet Móvil) ✨ */}
+      {/* MODAL ELIMINAR (Bottom Sheet Móvil) */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-fade-in">
           <div className="bg-white rounded-t-3xl sm:rounded-[2rem] p-6 md:p-8 w-full sm:max-w-sm text-center shadow-2xl animate-fade-in-up pb-8">
@@ -233,7 +233,7 @@ const HistorialVentas = () => {
         </div>
       )}
       
-      {/* ✨ MODAL ÉXITO ✨ */}
+      {/* MODAL ÉXITO */}
       {showSuccess && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
            <div className="bg-white px-8 py-6 rounded-3xl shadow-xl flex flex-col items-center animate-bounce border border-white/50">
