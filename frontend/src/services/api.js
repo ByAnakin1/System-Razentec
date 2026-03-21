@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://system-razentec.onrender.com/api', // Cambia a tu URL de Render cuando lo subas
+  baseURL: 'http://localhost:3000/api', // Cambia a tu URL de Render cuando lo subas
   headers: {
     'Content-Type': 'application/json',
   },

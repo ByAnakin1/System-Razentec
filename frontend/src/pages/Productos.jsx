@@ -174,35 +174,22 @@ const Productos = () => {
   
   const totalStock = productos.reduce((acc, p) => acc + parseInt(p.stock || 0), 0);
   const stockBajo = productos.filter(p => parseInt(p.stock || 0) < 5).length;
-  
-  const stockPorSucursal = {};
-  productos.forEach(p => {
-    let detalles = p.inventario_detalle;
-    if (typeof detalles === 'string') { try { detalles = JSON.parse(detalles); } catch(e) { detalles = []; } }
-    if (Array.isArray(detalles)) {
-      detalles.forEach(inv => {
-        if(inv && inv.sucursal_nombre) {
-          stockPorSucursal[inv.sucursal_nombre] = (stockPorSucursal[inv.sucursal_nombre] || 0) + parseInt(inv.stock || 0);
-        }
-      });
-    }
-  });
-  const maxStockChart = Math.max(...Object.values(stockPorSucursal), 1); 
 
   return (
-    <Layout title="Inventario">
+    <Layout title="Inventario" moduleIcon={<Package />}>
       
-      <div className="flex justify-between items-end mb-3 md:mb-5">
-        <p className="text-[11px] md:text-sm text-gray-500 font-bold px-1 uppercase tracking-wider">
+      {/* TABS Y SUCURSAL */}
+      <div className="flex justify-between items-end mb-4 md:mb-6">
+        <p className="text-[11px] md:text-sm text-gray-500 dark:text-blue-300/70 font-bold px-1 uppercase tracking-wider transition-colors">
             {esVistaGlobal ? 'Catálogo Global' : `Sede: ${sucursalActiva?.nombre || 'Ninguna'}`}
         </p>
         
-        <div className="flex bg-slate-200/50 p-1 rounded-lg">
-          <button onClick={() => setTabActiva('catalogo')} className={`px-3 py-1.5 rounded-md font-bold text-[10px] md:text-xs transition-all ${tabActiva === 'catalogo' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>
+        <div className="flex bg-slate-200/50 dark:bg-slate-800/50 backdrop-blur-md p-1 rounded-xl border border-transparent dark:border-white/5 transition-colors">
+          <button onClick={() => setTabActiva('catalogo')} className={`px-4 py-2 rounded-lg font-bold text-[10px] md:text-xs transition-all ${tabActiva === 'catalogo' ? 'bg-white dark:bg-blue-600 text-blue-700 dark:text-white shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-300'}`}>
             Catálogo
           </button>
           {esVistaGlobal && (
-            <button onClick={() => setTabActiva('control')} className={`px-3 py-1.5 rounded-md font-bold text-[10px] md:text-xs transition-all ${tabActiva === 'control' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>
+            <button onClick={() => setTabActiva('control')} className={`px-4 py-2 rounded-lg font-bold text-[10px] md:text-xs transition-all ${tabActiva === 'control' ? 'bg-white dark:bg-blue-600 text-blue-700 dark:text-white shadow-sm' : 'text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-300'}`}>
               Global
             </button>
           )}
@@ -212,27 +199,27 @@ const Productos = () => {
       {tabActiva === 'catalogo' && (
         <div className="animate-fade-in">
           
-          {/* ✨ CONTROLES ARREGLADOS: Sin overflow oculto, botones visibles y accesibles ✨ */}
-          <div className="flex flex-col gap-3 mb-4 md:mb-6 bg-white p-3 md:p-4 rounded-2xl border border-gray-100 shadow-sm relative z-20">
+          {/* ✨ CONTROLES (LIQUID GLASS) ✨ */}
+          <div className="flex flex-col gap-3 mb-6 md:mb-8 bg-white/60 dark:bg-blue-950/30 backdrop-blur-2xl p-3 md:p-4 rounded-[1.5rem] md:rounded-[2rem] border border-white/80 dark:border-white/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] relative z-20 transition-colors duration-300">
             
-            {/* Fila 1: Buscador y Botón Nuevo (Siempre visibles y priorizados) */}
+            {/* Fila 1: Buscador y Botón Nuevo */}
             <div className="flex gap-2 w-full">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 text-gray-400" size={16}/>
+                <Search className="absolute left-3 top-2.5 text-gray-400 dark:text-blue-400/70" size={18}/>
                 <input 
                   type="text" 
                   placeholder="Buscar producto o SKU..." 
-                  className="w-full bg-slate-50 border border-gray-200 pl-9 pr-3 py-2 md:py-2.5 rounded-xl text-xs md:text-sm outline-none focus:border-blue-500 transition-colors h-[40px]" 
+                  className="w-full bg-white/80 dark:bg-blue-950/50 border border-gray-200/80 dark:border-white/10 pl-10 pr-4 py-2 md:py-2.5 rounded-xl text-xs md:text-sm outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 text-gray-800 dark:text-white transition-all h-[42px] md:h-[44px] shadow-sm backdrop-blur-md" 
                   value={busqueda} 
                   onChange={e => setBusqueda(e.target.value)} 
                 />
               </div>
-              <button onClick={() => abrirModal()} className="h-[40px] px-4 bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-md hover:bg-blue-700 transition-all text-xs md:text-sm shrink-0">
-                <Plus size={16}/> <span className="hidden sm:inline">Nuevo</span>
+              <button onClick={() => abrirModal()} className="h-[42px] md:h-[44px] px-5 bg-blue-600/90 dark:bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/20 hover:bg-blue-700 active:scale-95 transition-all text-xs md:text-sm shrink-0 border border-white/10 backdrop-blur-md">
+                <Plus size={18}/> <span className="hidden sm:inline">Nuevo</span>
               </button>
             </div>
 
-            {/* Fila 2: Filtro, Importar JSON y Vistas (Totalmente responsivos) */}
+            {/* Fila 2: Filtro, Importar y Vistas */}
             <div className="flex justify-between items-center w-full gap-2">
               <CustomDropdown 
                 value={filtroEstado}
@@ -242,17 +229,17 @@ const Productos = () => {
                     {value: 'inactivos', label: 'Inactivos'},
                     {value: 'todos', label: 'Todos'}
                 ]}
-                className="h-[40px] bg-slate-50 border-gray-200 text-xs md:text-sm w-[130px] md:w-auto"
+                className="h-[40px] md:h-[42px] w-[140px] md:w-auto"
               />
 
               <div className="flex gap-2 items-center shrink-0">
-                <button onClick={() => setModalImportarOpen(true)} className="h-[40px] w-[40px] sm:w-auto sm:px-4 bg-emerald-50 text-emerald-600 rounded-xl font-bold flex items-center justify-center gap-1.5 border border-emerald-200 hover:bg-emerald-100 transition-all text-xs md:text-sm" title="Importar JSON">
+                <button onClick={() => setModalImportarOpen(true)} className="h-[40px] md:h-[42px] w-[40px] sm:w-auto sm:px-4 bg-emerald-50/80 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl font-bold flex items-center justify-center gap-1.5 border border-emerald-200/50 dark:border-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-800/50 transition-all text-xs md:text-sm backdrop-blur-md shadow-sm" title="Importar JSON">
                   <UploadCloud size={16}/> <span className="hidden sm:inline">JSON</span>
                 </button>
                 
-                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 h-[40px] items-center">
-                  <button onClick={() => setVista('tabla')} className={`p-1.5 rounded-lg transition-all ${vista === 'tabla' ? 'bg-white shadow text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><List size={16}/></button>
-                  <button onClick={() => setVista('galeria')} className={`p-1.5 rounded-lg transition-all ${vista === 'galeria' ? 'bg-white shadow text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><Grid size={16}/></button>
+                <div className="flex bg-slate-100/80 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-white/5 h-[40px] md:h-[42px] items-center backdrop-blur-md transition-colors">
+                  <button onClick={() => setVista('tabla')} className={`p-1.5 md:p-2 rounded-lg transition-all ${vista === 'tabla' ? 'bg-white dark:bg-blue-600 shadow text-blue-600 dark:text-white' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}><List size={16}/></button>
+                  <button onClick={() => setVista('galeria')} className={`p-1.5 md:p-2 rounded-lg transition-all ${vista === 'galeria' ? 'bg-white dark:bg-blue-600 shadow text-blue-600 dark:text-white' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}><Grid size={16}/></button>
                 </div>
               </div>
             </div>
@@ -261,32 +248,32 @@ const Productos = () => {
 
           {vista === 'tabla' ? (
             <>
-              {/* VISTA LISTA MÓVIL (Horizontales) */}
-              <div className="md:hidden flex flex-col gap-2.5">
-                {loading ? <p className="text-center py-10 text-xs font-medium">Cargando catálogo...</p> : 
-                 !sucursalActiva ? <p className="text-center py-10 text-xs text-red-500 bg-red-50 rounded-xl">⚠️ Sin sucursal asignada.</p> :
-                 productosFiltrados.length === 0 ? <p className="text-center py-10 text-xs italic text-gray-400">No hay productos.</p> :
+              {/* ✨ VISTA LISTA MÓVIL (LIQUID GLASS) ✨ */}
+              <div className="md:hidden flex flex-col gap-3">
+                {loading ? <p className="text-center py-10 text-xs font-medium text-gray-500 dark:text-gray-400">Cargando catálogo...</p> : 
+                 !sucursalActiva ? <p className="text-center py-10 text-xs text-red-500 bg-red-50 dark:bg-red-900/20 dark:border dark:border-red-500/20 rounded-xl">⚠️ Sin sucursal asignada.</p> :
+                 productosFiltrados.length === 0 ? <p className="text-center py-10 text-xs italic text-gray-400 dark:text-slate-500">No hay productos.</p> :
                  productosFiltrados.map((prod) => {
                   const stockVisual = parseInt(prod.stock || 0);
                   return (
-                    <div key={prod.id} className="bg-white rounded-2xl border border-gray-100 p-2.5 flex items-stretch gap-3 shadow-sm relative overflow-hidden">
-                       <div className="w-20 h-20 bg-slate-50 rounded-xl border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
-                          {prod.imagen ? <img src={renderImagen(prod.imagen)} alt="prod" className="w-full h-full object-cover"/> : <ImageIcon size={24} className="text-gray-300"/>}
+                    <div key={prod.id} className="bg-white/60 dark:bg-blue-950/20 backdrop-blur-xl rounded-[1.5rem] border border-gray-100/50 dark:border-white/5 p-3 flex items-stretch gap-3 shadow-sm relative overflow-hidden transition-colors">
+                       <div className="w-20 h-20 bg-white/50 dark:bg-slate-900/50 rounded-xl border border-gray-100 dark:border-white/5 flex items-center justify-center shrink-0 overflow-hidden backdrop-blur-md">
+                          {prod.imagen ? <img src={renderImagen(prod.imagen)} alt="prod" className="w-full h-full object-cover"/> : <ImageIcon size={24} className="text-gray-300 dark:text-slate-600"/>}
                        </div>
                        <div className="flex-1 flex flex-col justify-between py-0.5">
                           <div>
                             <div className="flex justify-between items-start gap-2">
-                               <h3 className="font-bold text-gray-800 text-xs leading-tight line-clamp-2">{prod.nombre}</h3>
+                               <h3 className="font-bold text-gray-800 dark:text-white text-xs leading-tight line-clamp-2">{prod.nombre}</h3>
                                <div className="flex gap-1 shrink-0">
-                                  <button onClick={() => abrirModal(prod)} className="text-blue-500 bg-blue-50 p-1.5 rounded-lg"><Edit size={12}/></button>
-                                  <button onClick={() => handleDeleteClick(prod.id)} className="text-red-500 bg-red-50 p-1.5 rounded-lg"><Trash2 size={12}/></button>
+                                  <button onClick={() => abrirModal(prod)} className="text-blue-500 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/30 p-1.5 rounded-lg backdrop-blur-md"><Edit size={12}/></button>
+                                  <button onClick={() => handleDeleteClick(prod.id)} className="text-red-500 dark:text-red-400 bg-red-50/80 dark:bg-red-900/30 p-1.5 rounded-lg backdrop-blur-md"><Trash2 size={12}/></button>
                                </div>
                             </div>
-                            <p className="text-[9px] font-bold text-gray-400 uppercase mt-0.5">{prod.codigo || 'SIN CÓDIGO'}</p>
+                            <p className="text-[9px] font-bold text-gray-400 dark:text-blue-300/70 uppercase mt-0.5">{prod.codigo || 'SIN CÓDIGO'}</p>
                           </div>
                           <div className="flex justify-between items-end mt-1">
-                             <span className="font-black text-emerald-600 text-sm">S/ {parseFloat(prod.precio).toFixed(2)}</span>
-                             <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded md ${stockVisual > 0 ? 'bg-slate-100 text-slate-600' : 'bg-red-100 text-red-600'}`}>
+                             <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">S/ {parseFloat(prod.precio).toFixed(2)}</span>
+                             <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md backdrop-blur-md ${stockVisual > 0 ? 'bg-slate-100/80 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 border border-transparent dark:border-white/5' : 'bg-red-100/80 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-transparent dark:border-red-500/20'}`}>
                                Stock: {stockVisual}
                              </span>
                           </div>
@@ -296,88 +283,90 @@ const Productos = () => {
                  })}
               </div>
 
-              {/* VISTA TABLA PC */}
-              <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden overflow-x-auto w-full">
-                <table className="w-full text-left text-sm whitespace-nowrap">
-                  <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold tracking-wider text-[10px]">
-                    <tr>
-                      <th className="px-6 py-4">Foto</th>
-                      <th className="px-6 py-4">Código</th>
-                      <th className="px-6 py-4">Producto</th>
-                      <th className="px-6 py-4">Categoría</th> 
-                      <th className="px-6 py-4 text-right">Precio</th>
-                      <th className="px-6 py-4 text-center">Stock</th>
-                      <th className="px-6 py-4 text-center">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {loading ? <tr><td colSpan="7" className="text-center py-10 font-medium">Cargando...</td></tr> : 
-                     !sucursalActiva ? <tr><td colSpan="7" className="text-center py-10 text-gray-400 font-medium">⚠️ Sin sucursal.</td></tr> :
-                     productosFiltrados.map((prod) => {
-                      const stockVisual = parseInt(prod.stock || 0);
-                      return (
-                      <tr key={prod.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-3">
-                          <div className="w-10 h-10 rounded-lg border bg-white overflow-hidden flex items-center justify-center">
-                             {prod.imagen ? <img src={renderImagen(prod.imagen)} alt="prod" className="w-full h-full object-cover"/> : <ImageIcon size={18} className="text-gray-300"/>}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-xs font-bold text-gray-400 tracking-wider">{prod.codigo || '---'}</td>
-                        <td className="px-6 py-4 font-bold text-slate-800"><p className="truncate max-w-[200px]" title={prod.nombre}>{prod.nombre}</p></td>
-                        <td className="px-6 py-4"><span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-100">{prod.categoria_nombre || 'General'}</span></td>
-                        <td className="px-6 py-4 text-right font-extrabold text-emerald-700">S/ {parseFloat(prod.precio).toFixed(2)}</td>
-                        <td className="px-6 py-4 text-center">
-                          <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${stockVisual > 10 ? 'bg-emerald-50 text-emerald-700' : stockVisual > 0 ? 'bg-yellow-50 text-yellow-700' : 'bg-red-50 text-red-700'}`}>
-                            {stockVisual} un.
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <button onClick={() => abrirModal(prod)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded mr-2"><Edit size={14}/></button>
-                          <button onClick={() => handleDeleteClick(prod.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded"><Trash2 size={14}/></button>
-                        </td>
+              {/* ✨ VISTA TABLA PC (LIQUID GLASS) ✨ */}
+              <div className="hidden md:block bg-white/60 dark:bg-blue-950/20 backdrop-blur-2xl rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/80 dark:border-white/5 overflow-hidden w-full transition-colors duration-300">
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-slate-50/50 dark:bg-blue-950/30 text-slate-500 dark:text-blue-300 uppercase font-extrabold tracking-widest text-[10px] border-b border-gray-200/50 dark:border-white/5 transition-colors">
+                      <tr>
+                        <th className="px-6 py-5">Foto</th>
+                        <th className="px-6 py-5">Código</th>
+                        <th className="px-6 py-5">Producto</th>
+                        <th className="px-6 py-5">Categoría</th> 
+                        <th className="px-6 py-5 text-right">Precio</th>
+                        <th className="px-6 py-5 text-center">Stock</th>
+                        <th className="px-6 py-5 text-center">Acciones</th>
                       </tr>
-                     )})}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100/50 dark:divide-white/5 relative">
+                      {loading ? <tr><td colSpan="7" className="text-center py-10 font-medium text-slate-500 dark:text-slate-400">Cargando...</td></tr> : 
+                       !sucursalActiva ? <tr><td colSpan="7" className="text-center py-10 text-gray-400 dark:text-slate-500 font-medium">⚠️ Sin sucursal.</td></tr> :
+                       productosFiltrados.map((prod) => {
+                        const stockVisual = parseInt(prod.stock || 0);
+                        return (
+                        <tr key={prod.id} className="hover:bg-white/40 dark:hover:bg-blue-900/10 transition-colors duration-200 group">
+                          <td className="px-6 py-3">
+                            <div className="w-10 h-10 rounded-xl border border-gray-100 dark:border-white/5 bg-white dark:bg-slate-900 overflow-hidden flex items-center justify-center shadow-sm">
+                               {prod.imagen ? <img src={renderImagen(prod.imagen)} alt="prod" className="w-full h-full object-cover"/> : <ImageIcon size={18} className="text-gray-300 dark:text-slate-600"/>}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-xs font-bold text-gray-400 dark:text-blue-300/70 tracking-wider transition-colors">{prod.codigo || '---'}</td>
+                          <td className="px-6 py-4 font-bold text-slate-800 dark:text-white transition-colors"><p className="truncate max-w-[200px]" title={prod.nombre}>{prod.nombre}</p></td>
+                          <td className="px-6 py-4"><span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/30 backdrop-blur-md px-2.5 py-1 rounded-md border border-blue-100/50 dark:border-blue-500/20 transition-colors">{prod.categoria_nombre || 'General'}</span></td>
+                          <td className="px-6 py-4 text-right font-extrabold text-emerald-700 dark:text-emerald-400 transition-colors">S/ {parseFloat(prod.precio).toFixed(2)}</td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`px-3 py-1.5 rounded-md text-[10px] font-bold border backdrop-blur-md transition-colors ${stockVisual > 10 ? 'bg-emerald-50/80 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200/50 dark:border-emerald-500/20' : stockVisual > 0 ? 'bg-yellow-50/80 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200/50 dark:border-yellow-500/20' : 'bg-red-50/80 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200/50 dark:border-red-500/20'}`}>
+                              {stockVisual} un.
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <button onClick={() => abrirModal(prod)} className="p-2 text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg mr-2 backdrop-blur-md transition-colors active:scale-95"><Edit size={16}/></button>
+                            <button onClick={() => handleDeleteClick(prod.id)} className="p-2 text-red-600 dark:text-red-400 bg-red-50/80 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg backdrop-blur-md transition-colors active:scale-95"><Trash2 size={16}/></button>
+                          </td>
+                        </tr>
+                        )})}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </>
           ) : (
-            /* VISTA GRID GALERÍA */
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 lg:gap-5 gap-2.5">
+            /* ✨ VISTA GRID GALERÍA (LIQUID GLASS) ✨ */
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 lg:gap-5 gap-3">
               {!sucursalActiva ? (
-                <div className="col-span-full text-center py-10 text-xs text-red-500 font-medium bg-red-50 rounded-2xl">
+                <div className="col-span-full text-center py-10 text-xs text-red-500 dark:text-red-400 font-medium bg-red-50 dark:bg-red-900/20 dark:border-red-500/20 rounded-2xl border backdrop-blur-md">
                   ⚠️ Pídele al Administrador que te asigne una sucursal.
                 </div>
               ) : productosFiltrados.map((prod) => {
                 const stockVisual = parseInt(prod.stock || 0);
                 return (
-                <div key={prod.id} className="bg-white rounded-2xl border border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all flex flex-col group overflow-hidden">
-                  <div className="h-24 md:h-36 bg-slate-50 flex items-center justify-center p-2 md:p-4 relative">
+                <div key={prod.id} className="bg-white/60 dark:bg-blue-950/20 backdrop-blur-xl rounded-[1.5rem] border border-gray-200/50 dark:border-white/5 hover:border-blue-300 dark:hover:border-blue-500/50 shadow-sm hover:shadow-lg dark:hover:shadow-[0_8px_30px_rgb(29,78,216,0.15)] transition-all flex flex-col group overflow-hidden duration-300">
+                  <div className="h-28 md:h-36 bg-white/50 dark:bg-slate-900/50 flex items-center justify-center p-3 md:p-4 relative border-b border-gray-100/50 dark:border-white/5 transition-colors">
                     {prod.imagen ? (
-                      <img src={renderImagen(prod.imagen)} alt={prod.nombre} className="max-w-full max-h-full object-contain drop-shadow-sm rounded" />
+                      <img src={renderImagen(prod.imagen)} alt={prod.nombre} className="max-w-full max-h-full object-contain drop-shadow-sm rounded-lg group-hover:scale-105 transition-transform duration-300" />
                     ) : (
-                      <div className="text-slate-300 flex flex-col items-center"><Package size={32} strokeWidth={1.5} /></div>
+                      <div className="text-slate-300 dark:text-slate-600 flex flex-col items-center group-hover:scale-105 transition-transform"><Package size={40} strokeWidth={1} /></div>
                     )}
                   </div>
-                  <div className="p-2.5 md:p-3.5 flex-1 flex flex-col bg-white z-10">
-                    <p className="text-[8px] md:text-[9px] font-extrabold text-slate-400 mb-0.5 tracking-widest uppercase truncate">{prod.codigo || 'SIN CÓDIGO'}</p>
-                    <h3 className="font-extrabold text-slate-800 text-[11px] md:text-sm leading-tight mb-1 group-hover:text-blue-600 transition-colors line-clamp-2" title={prod.nombre}>{prod.nombre}</h3>
-                    <p className="text-[9px] md:text-[11px] text-gray-400 line-clamp-1 mb-1.5 leading-tight">{prod.descripcion || 'Sin descripción'}</p>
+                  <div className="p-3 md:p-4 flex-1 flex flex-col bg-transparent z-10">
+                    <p className="text-[8px] md:text-[9px] font-extrabold text-slate-400 dark:text-blue-400 mb-1 tracking-widest uppercase truncate transition-colors">{prod.codigo || 'SIN CÓDIGO'}</p>
+                    <h3 className="font-extrabold text-slate-800 dark:text-white text-xs md:text-sm leading-tight mb-1.5 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2" title={prod.nombre}>{prod.nombre}</h3>
+                    <p className="text-[9px] md:text-[11px] text-gray-400 dark:text-slate-400 line-clamp-1 mb-2 leading-tight transition-colors">{prod.descripcion || 'Sin descripción'}</p>
                     
-                    <div className="mt-auto flex justify-between items-center pt-2 border-t border-gray-100">
-                      <span className="text-sm md:text-lg font-black text-emerald-600">S/ {parseFloat(prod.precio).toFixed(2)}</span>
-                      <span className={`text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 rounded ${stockVisual > 0 ? 'bg-slate-100 text-slate-600' : 'bg-red-100 text-red-600'}`}>
+                    <div className="mt-auto flex justify-between items-end pt-2 border-t border-gray-100/50 dark:border-white/5 transition-colors">
+                      <span className="text-sm md:text-lg font-black text-emerald-600 dark:text-emerald-400">S/ {parseFloat(prod.precio).toFixed(2)}</span>
+                      <span className={`text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 rounded-md backdrop-blur-md border ${stockVisual > 0 ? 'bg-slate-100/80 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 border-transparent dark:border-white/5' : 'bg-red-100/80 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-transparent dark:border-red-500/20'}`}>
                         {stockVisual} un.
                       </span>
                     </div>
                   </div>
-                  <div className="bg-slate-50 p-2 border-t border-slate-100 flex justify-between items-center">
-                    <span className="text-[8px] md:text-[9px] font-extrabold uppercase text-purple-700 bg-purple-100 px-1.5 py-0.5 md:py-1 rounded border border-purple-200 flex items-center gap-1 truncate max-w-[60px] md:max-w-none">
+                  <div className="bg-slate-50/50 dark:bg-blue-900/10 p-2.5 border-t border-slate-100 dark:border-white/5 flex justify-between items-center transition-colors">
+                    <span className="text-[8px] md:text-[9px] font-extrabold uppercase text-purple-700 dark:text-purple-400 bg-purple-100/80 dark:bg-purple-900/30 backdrop-blur-md px-2 py-1 rounded-md border border-purple-200/50 dark:border-purple-500/20 flex items-center gap-1 truncate transition-colors">
                       {esVistaGlobal ? 'Global' : 'Local'}
                     </span>
-                    <div className="flex gap-1 shrink-0">
-                      <button onClick={() => abrirModal(prod)} className="p-1 md:p-1.5 bg-white text-blue-600 hover:bg-blue-600 hover:text-white rounded border border-slate-200 transition-colors"><Edit size={12}/></button>
-                      <button onClick={() => handleDeleteClick(prod.id)} className="p-1 md:p-1.5 bg-white text-red-500 hover:bg-red-600 hover:text-white rounded border border-slate-200 transition-colors"><Trash2 size={12}/></button>
+                    <div className="flex gap-1.5 shrink-0">
+                      <button onClick={() => abrirModal(prod)} className="p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md text-blue-600 dark:text-blue-400 hover:bg-blue-600 dark:hover:bg-blue-500 hover:text-white dark:hover:text-white rounded-lg border border-gray-200/50 dark:border-white/10 transition-colors active:scale-95"><Edit size={14}/></button>
+                      <button onClick={() => handleDeleteClick(prod.id)} className="p-1.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md text-red-500 dark:text-red-400 hover:bg-red-600 dark:hover:bg-red-500 hover:text-white dark:hover:text-white rounded-lg border border-gray-200/50 dark:border-white/10 transition-colors active:scale-95"><Trash2 size={14}/></button>
                     </div>
                   </div>
                 </div>
@@ -387,54 +376,52 @@ const Productos = () => {
         </div>
       )}
 
-      {/* PESTAÑA MONITORES GLOBAL */}
+      {/* PESTAÑA MONITORES GLOBAL (LIQUID GLASS) */}
       {tabActiva === 'control' && esVistaGlobal && (
         <div className="animate-fade-in space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-blue-600 flex justify-between items-center">
+            <div className="bg-white/60 dark:bg-blue-950/20 backdrop-blur-2xl p-6 rounded-[2rem] shadow-sm border-l-4 border-blue-600 dark:border-blue-500 flex justify-between items-center transition-colors">
               <div>
-                <p className="text-xs font-extrabold text-gray-500 uppercase tracking-widest mb-1">Stock Global</p>
-                <p className="text-2xl md:text-3xl font-black text-slate-800">{totalStock}</p>
+                <p className="text-xs font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1">Stock Global</p>
+                <p className="text-3xl font-black text-slate-800 dark:text-white">{totalStock}</p>
               </div>
-              <div className="bg-blue-50 p-4 rounded-2xl text-blue-600"><Package size={28}/></div>
+              <div className="bg-blue-50/80 dark:bg-blue-900/30 p-4 rounded-2xl text-blue-600 dark:text-blue-400 backdrop-blur-md"><Package size={32}/></div>
             </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-yellow-500 flex justify-between items-center">
+            <div className="bg-white/60 dark:bg-blue-950/20 backdrop-blur-2xl p-6 rounded-[2rem] shadow-sm border-l-4 border-yellow-500 dark:border-yellow-400 flex justify-between items-center transition-colors">
               <div>
-                <p className="text-xs font-extrabold text-gray-500 uppercase tracking-widest mb-1">Alertas Stock</p>
-                <p className="text-2xl md:text-3xl font-black text-slate-800">{stockBajo}</p>
+                <p className="text-xs font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1">Alertas Stock</p>
+                <p className="text-3xl font-black text-slate-800 dark:text-white">{stockBajo}</p>
               </div>
-              <div className="bg-yellow-50 p-4 rounded-2xl text-yellow-600"><AlertTriangle size={28}/></div>
+              <div className="bg-yellow-50/80 dark:bg-yellow-900/30 p-4 rounded-2xl text-yellow-600 dark:text-yellow-400 backdrop-blur-md"><AlertTriangle size={32}/></div>
             </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-emerald-500 flex justify-between items-center">
+            <div className="bg-white/60 dark:bg-blue-950/20 backdrop-blur-2xl p-6 rounded-[2rem] shadow-sm border-l-4 border-emerald-500 dark:border-emerald-400 flex justify-between items-center transition-colors">
               <div>
-                <p className="text-xs font-extrabold text-gray-500 uppercase tracking-widest mb-1">Catálogo Total</p>
-                <p className="text-2xl md:text-3xl font-black text-slate-800">{productos.length}</p>
+                <p className="text-xs font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1">Catálogo Total</p>
+                <p className="text-3xl font-black text-slate-800 dark:text-white">{productos.length}</p>
               </div>
-              <div className="bg-emerald-50 p-4 rounded-2xl text-emerald-600"><TrendingUp size={28}/></div>
+              <div className="bg-emerald-50/80 dark:bg-emerald-900/30 p-4 rounded-2xl text-emerald-600 dark:text-emerald-400 backdrop-blur-md"><TrendingUp size={32}/></div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ✨ MODAL DE ELIMINACIÓN TIPO APP (Diseño Bottom Sheet en celular) ✨ */}
+      {/* ✨ MODAL DE ELIMINACIÓN TIPO APP (LIQUID GLASS) ✨ */}
       {deleteModal.open && (
-        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-t-3xl sm:rounded-[2rem] p-6 md:p-8 w-full sm:max-w-sm text-center shadow-2xl animate-fade-in-up">
-            {/* Pequeña barra superior en móvil para indicar que es un panel deslizable */}
-            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 sm:hidden"></div>
-            
-            <div className="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Trash2 size={24} />
+        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-white/90 dark:bg-blue-950/90 backdrop-blur-3xl rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 md:p-8 w-full sm:max-w-sm text-center shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up transition-colors">
+            <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
+            <div className="w-16 h-16 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100 dark:border-red-500/20">
+              <Trash2 size={28} />
             </div>
-            <h3 className="text-lg md:text-xl font-extrabold text-gray-800 mb-2">Eliminar Producto</h3>
-            <p className="text-xs md:text-sm text-gray-500 mb-6 leading-relaxed">
-              Esta acción es permanente. Se borrará de <b>todas las sucursales</b>.
+            <h3 className="text-lg md:text-xl font-black text-gray-800 dark:text-white mb-2">Eliminar Producto</h3>
+            <p className="text-xs md:text-sm text-gray-500 dark:text-blue-200/70 mb-8 leading-relaxed">
+              Esta acción es permanente. Se borrará de <b className="text-gray-700 dark:text-blue-100">todas las sucursales</b>.
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteModal({open: false, id: null})} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors text-sm">
+              <button onClick={() => setDeleteModal({open: false, id: null})} className="flex-1 py-3.5 bg-gray-100/80 dark:bg-slate-800/80 text-gray-700 dark:text-slate-300 font-extrabold rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors text-sm border border-transparent dark:border-white/5">
                 Cancelar
               </button>
-              <button onClick={confirmDelete} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-600/30 transition-colors text-sm">
+              <button onClick={confirmDelete} className="flex-1 py-3.5 bg-red-600/90 text-white font-black rounded-xl hover:bg-red-600 shadow-lg shadow-red-600/20 active:scale-95 transition-all text-sm border border-red-500/50">
                 Eliminar
               </button>
             </div>
@@ -442,32 +429,32 @@ const Productos = () => {
         </div>
       )}
 
-      {/* ✨ MODAL DE EDICIÓN MEJORADA (Diseño Bottom Sheet Compacto para celular) ✨ */}
+      {/* ✨ MODAL DE EDICIÓN MEJORADA (LIQUID GLASS) ✨ */}
       {modalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-2xl flex flex-col max-h-[90vh] animate-fade-in-up overflow-hidden">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md animate-fade-in transition-colors duration-300">
+          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl w-full sm:max-w-2xl flex flex-col max-h-[90vh] animate-fade-in-up overflow-hidden border border-white/50 dark:border-white/10 transition-colors duration-300">
             
             {/* HEADER FIJO */}
-            <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center bg-white shrink-0">
-              <h2 className="text-base md:text-lg font-extrabold text-gray-800 flex items-center gap-2">
-                <Edit className="text-blue-600" size={20}/> {formData.id ? 'Editar Producto' : 'Nuevo Producto'}
+            <div className="px-6 py-5 border-b border-gray-100/50 dark:border-white/5 flex justify-between items-center bg-transparent shrink-0">
+              <h2 className="text-lg md:text-xl font-black text-gray-800 dark:text-white flex items-center gap-2">
+                <Edit className="text-blue-600 dark:text-blue-400" size={22}/> {formData.id ? 'Editar Producto' : 'Nuevo Producto'}
               </h2>
-              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 p-1.5 md:p-2 rounded-full transition-colors"><X size={18}/></button>
+              <button onClick={() => setModalOpen(false)} className="text-gray-400 dark:text-slate-500 hover:text-gray-800 dark:hover:text-white bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700 p-2 rounded-full transition-colors border border-transparent dark:border-white/5"><X size={20}/></button>
             </div>
             
             {/* CUERPO CON SCROLL */}
-            <form id="productForm" onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4">
+            <form id="productForm" onSubmit={handleSubmit} className="p-5 sm:p-8 overflow-y-auto custom-scrollbar flex-1 space-y-6">
               
-              <div className="bg-slate-50/50 p-3 sm:p-4 rounded-2xl border border-slate-100">
-                <h3 className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2"><Package size={14}/> Datos Base</h3>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="bg-slate-50/50 dark:bg-blue-900/10 p-5 sm:p-6 rounded-3xl border border-slate-100 dark:border-white/5 transition-colors">
+                <h3 className="text-xs font-black text-gray-500 dark:text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Package size={16}/> Datos Base</h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Nombre *</label>
-                      <input type="text" required placeholder="Ej: Micrófono HyperX" className="w-full border border-gray-200 p-2 md:p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-xs md:text-sm font-bold text-gray-800 mt-1 bg-white" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} />
+                      <label className="text-[10px] md:text-xs font-extrabold text-gray-500 dark:text-blue-300/70 uppercase">Nombre *</label>
+                      <input type="text" required placeholder="Ej: Micrófono HyperX" className="w-full border border-gray-200/80 dark:border-white/10 bg-white/70 dark:bg-blue-950/30 p-3 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none text-xs md:text-sm font-bold text-gray-800 dark:text-white mt-1.5 transition-all shadow-sm" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} />
                     </div>
                     <div>
-                      <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase mb-1 block">Categoría</label>
+                      <label className="text-[10px] md:text-xs font-extrabold text-gray-500 dark:text-blue-300/70 uppercase mb-1.5 block">Categoría</label>
                        <CustomDropdown 
                          value={formData.categoria_id}
                          onChange={val => setFormData({...formData, categoria_id: val})}
@@ -476,56 +463,57 @@ const Productos = () => {
                              ...categorias.map(c => ({value: c.id, label: c.nombre}))
                          ]}
                          placeholder="Elige una categoría"
-                         className="w-full h-[38px] md:h-[42px] border-gray-200 text-xs md:text-sm bg-white"
+                         className="w-full h-[42px] md:h-[46px] border-gray-200/80 dark:border-white/10 bg-white/70 dark:bg-blue-950/30 shadow-sm"
                        />
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Descripción</label>
-                    <textarea rows="2" placeholder="Detalles del producto..." className="w-full border border-gray-200 p-2 md:p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-xs md:text-sm font-medium mt-1 bg-white resize-none text-gray-700" value={formData.descripcion} onChange={e => setFormData({...formData, descripcion: e.target.value})}></textarea>
+                    <label className="text-[10px] md:text-xs font-extrabold text-gray-500 dark:text-blue-300/70 uppercase">Descripción</label>
+                    <textarea rows="2" placeholder="Detalles del producto..." className="w-full border border-gray-200/80 dark:border-white/10 bg-white/70 dark:bg-blue-950/30 p-3 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none text-xs md:text-sm font-medium mt-1.5 resize-none text-gray-700 dark:text-white transition-all shadow-sm" value={formData.descripcion} onChange={e => setFormData({...formData, descripcion: e.target.value})}></textarea>
                   </div>
 
-                  <div className="border border-blue-100 bg-blue-50/30 p-3 sm:p-4 rounded-xl space-y-2">
-                    <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase block mb-1">Imagen del Producto</label>
-                    <div className="flex gap-4 mb-2">
-                      <label className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold text-gray-700 cursor-pointer">
-                        <input type="radio" name="tipoImagen" checked={tipoImagen === 'url'} onChange={() => setTipoImagen('url')} className="text-blue-600 focus:ring-blue-500 w-3 h-3 sm:w-4 sm:h-4" />
-                        <LinkIcon size={14} className="text-gray-400"/> Pegar URL
+                  <div className="border border-blue-100/80 dark:border-blue-500/20 bg-blue-50/50 dark:bg-blue-900/20 p-4 sm:p-5 rounded-2xl space-y-3 transition-colors relative overflow-hidden">
+                    <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-400/10 dark:bg-blue-500/10 rounded-full blur-xl pointer-events-none"></div>
+                    <label className="text-[10px] md:text-xs font-black text-blue-800 dark:text-blue-400 uppercase block mb-2 relative z-10">Imagen del Producto</label>
+                    <div className="flex gap-4 mb-3 relative z-10">
+                      <label className="flex items-center gap-1.5 text-xs font-extrabold text-gray-700 dark:text-blue-100 cursor-pointer">
+                        <input type="radio" name="tipoImagen" checked={tipoImagen === 'url'} onChange={() => setTipoImagen('url')} className="text-blue-600 focus:ring-blue-500 w-4 h-4 dark:bg-blue-950 dark:border-white/20" />
+                        <LinkIcon size={14} className="text-blue-400 dark:text-blue-500"/> Pegar URL
                       </label>
-                      <label className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold text-gray-700 cursor-pointer">
-                        <input type="radio" name="tipoImagen" checked={tipoImagen === 'archivo'} onChange={() => setTipoImagen('archivo')} className="text-blue-600 focus:ring-blue-500 w-3 h-3 sm:w-4 sm:h-4" />
-                        <UploadCloud size={14} className="text-gray-400"/> Subir de PC
+                      <label className="flex items-center gap-1.5 text-xs font-extrabold text-gray-700 dark:text-blue-100 cursor-pointer">
+                        <input type="radio" name="tipoImagen" checked={tipoImagen === 'archivo'} onChange={() => setTipoImagen('archivo')} className="text-blue-600 focus:ring-blue-500 w-4 h-4 dark:bg-blue-950 dark:border-white/20" />
+                        <UploadCloud size={14} className="text-blue-400 dark:text-blue-500"/> Subir de PC
                       </label>
                     </div>
                     {tipoImagen === 'url' ? (
-                      <input type="text" placeholder="https://ejemplo.com/foto.jpg" className="w-full border border-gray-200 p-2 sm:p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-medium bg-white text-xs sm:text-sm" value={formData.imagen_url} onChange={e => setFormData({...formData, imagen_url: e.target.value})} />
+                      <input type="text" placeholder="https://ejemplo.com/foto.jpg" className="w-full border border-blue-200/80 dark:border-blue-700/50 bg-white/80 dark:bg-blue-950/50 p-3 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none font-medium text-xs sm:text-sm text-gray-800 dark:text-white transition-all shadow-sm relative z-10" value={formData.imagen_url} onChange={e => setFormData({...formData, imagen_url: e.target.value})} />
                     ) : (
-                      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex">
-                        <input type="file" accept="image/*" onChange={e => setImagenFile(e.target.files[0])} className="w-full text-[10px] sm:text-xs text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-none file:border-0 file:text-[10px] sm:file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
+                      <div className="bg-white/80 dark:bg-blue-950/50 border border-blue-200/80 dark:border-blue-700/50 rounded-xl overflow-hidden flex relative z-10 transition-all shadow-sm">
+                        <input type="file" accept="image/*" onChange={e => setImagenFile(e.target.files[0])} className="w-full text-xs text-gray-500 dark:text-blue-300 file:mr-3 file:py-3 file:px-4 file:rounded-none file:border-0 file:text-xs file:font-black file:bg-blue-50 dark:file:bg-blue-900/40 file:text-blue-700 dark:file:text-blue-400 hover:file:bg-blue-100 dark:hover:file:bg-blue-800/50 cursor-pointer transition-colors" />
                       </div>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">SKU / Código</label>
-                      <input type="text" placeholder="PROD-001" className="w-full border border-gray-200 p-2 md:p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-bold text-gray-700 mt-1 uppercase bg-white text-xs md:text-sm" value={formData.codigo} onChange={e => setFormData({...formData, codigo: e.target.value})} />
+                      <label className="text-[10px] md:text-xs font-extrabold text-gray-500 dark:text-blue-300/70 uppercase">SKU / Código</label>
+                      <input type="text" placeholder="PROD-001" className="w-full border border-gray-200/80 dark:border-white/10 bg-white/70 dark:bg-blue-950/30 p-3 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none font-bold text-gray-800 dark:text-white mt-1.5 uppercase text-xs md:text-sm transition-all shadow-sm" value={formData.codigo} onChange={e => setFormData({...formData, codigo: e.target.value})} />
                     </div>
                     <div>
-                      <label className="text-[10px] md:text-xs font-bold text-gray-500 uppercase">Precio (S/) *</label>
-                      <input type="number" step="0.01" required placeholder="0.00" className="w-full border border-gray-200 p-2 md:p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-black text-emerald-600 mt-1 bg-white text-xs md:text-sm" value={formData.precio} onChange={e => setFormData({...formData, precio: e.target.value})} />
+                      <label className="text-[10px] md:text-xs font-extrabold text-gray-500 dark:text-blue-300/70 uppercase">Precio (S/) *</label>
+                      <input type="number" step="0.01" required placeholder="0.00" className="w-full border border-gray-200/80 dark:border-white/10 bg-white/70 dark:bg-blue-950/30 p-3 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none font-black text-emerald-600 dark:text-emerald-400 mt-1.5 text-xs md:text-sm transition-all shadow-sm" value={formData.precio} onChange={e => setFormData({...formData, precio: e.target.value})} />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-slate-50/50 p-3 sm:p-4 rounded-xl border border-slate-100">
-                <h3 className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2"><Store size={14}/> Distribución de Stock</h3>
+              <div className="bg-slate-50/50 dark:bg-blue-900/10 p-5 sm:p-6 rounded-3xl border border-slate-100 dark:border-white/5 transition-colors">
+                <h3 className="text-xs font-black text-gray-500 dark:text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Store size={16}/> Distribución de Stock</h3>
                 {sucursales.length === 0 ? (
-                  <div className="text-[10px] sm:text-xs text-blue-600 bg-blue-50 p-3 rounded-lg border border-blue-100 font-medium">Aún no has creado Sucursales.</div>
+                  <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/30 backdrop-blur-md p-4 rounded-xl border border-blue-100 dark:border-blue-500/20 font-bold transition-colors">Aún no has creado Sucursales.</div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {sucursales.map(suc => {
                       const usuarioDatos = JSON.parse(localStorage.getItem('usuario') || '{}');
                       let asignadas = [];
@@ -540,9 +528,9 @@ const Productos = () => {
                       const puedeEditar = usuarioDatos.rol === 'Administrador' || asignadas.map(id => parseInt(id)).includes(parseInt(suc.id));
                       if (!puedeEditar) return null;
                       return (
-                        <div key={suc.id} className="bg-white border border-gray-200 p-2 rounded-lg shadow-sm group">
-                          <label className="text-[9px] sm:text-[10px] font-extrabold text-gray-500 group-hover:text-blue-600 uppercase block mb-1 truncate transition-colors" title={suc.nombre}>{suc.nombre}</label>
-                          <input type="number" min="0" placeholder="0 un." className="w-full bg-slate-50 border border-slate-100 rounded p-1.5 text-xs sm:text-sm font-black text-gray-800 outline-none focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all" value={formData.stock_sucursales[suc.id] || ''} onChange={(e) => handleStockChange(suc.id, e.target.value)} />
+                        <div key={suc.id} className="bg-white/80 dark:bg-slate-900/50 border border-gray-200/80 dark:border-white/5 p-3 rounded-xl shadow-sm group transition-colors">
+                          <label className="text-[9px] sm:text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 group-hover:text-blue-600 dark:group-hover:text-blue-400 uppercase block mb-1.5 truncate transition-colors" title={suc.nombre}>{suc.nombre}</label>
+                          <input type="number" min="0" placeholder="0 un." className="w-full bg-slate-50 dark:bg-blue-950/50 border border-slate-100 dark:border-white/10 rounded-lg p-2 text-xs sm:text-sm font-black text-gray-800 dark:text-white outline-none focus:bg-white dark:focus:bg-blue-950 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-all" value={formData.stock_sucursales[suc.id] || ''} onChange={(e) => handleStockChange(suc.id, e.target.value)} />
                         </div>
                       )
                     })}
@@ -552,12 +540,12 @@ const Productos = () => {
             </form>
 
             {/* FOOTER FIJO */}
-            <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-3 shrink-0 rounded-b-3xl">
-              <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-3 font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-xl transition-colors text-sm shadow-sm">
+            <div className="p-5 border-t border-gray-100/50 dark:border-white/5 bg-gray-50/80 dark:bg-slate-900/80 backdrop-blur-md flex gap-3 shrink-0 rounded-b-[2.5rem] transition-colors">
+              <button type="button" onClick={() => setModalOpen(false)} className="flex-1 py-3.5 font-extrabold text-gray-600 dark:text-slate-300 bg-white/80 dark:bg-slate-800/80 border border-gray-200/80 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors text-sm shadow-sm backdrop-blur-md">
                 Cancelar
               </button>
-              <button type="submit" form="productForm" className="flex-1 py-3 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-600/30 transition-colors flex items-center justify-center gap-2 text-sm">
-                {formData.id ? <><CheckCircle size={16}/> Actualizar</> : <><Plus size={16}/> Guardar</>}
+              <button type="submit" form="productForm" className="flex-1 py-3.5 font-black text-white bg-blue-600/90 dark:bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl shadow-lg shadow-blue-600/20 dark:shadow-blue-900/30 transition-all flex items-center justify-center gap-2 text-sm border border-transparent dark:border-white/10 backdrop-blur-md">
+                {formData.id ? <><CheckCircle size={18}/> Actualizar</> : <><Plus size={18}/> Guardar Producto</>}
               </button>
             </div>
 
@@ -565,21 +553,21 @@ const Productos = () => {
         </div>
       )}
 
-      {/* MODAL IMPORTAR JSON */}
+      {/* ✨ MODAL IMPORTAR JSON (LIQUID GLASS + FIX INPUT) ✨ */}
       {modalImportarOpen && (
-        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-md w-full p-6 animate-fade-in-up">
-            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-4 sm:hidden"></div>
-            <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
-               <h2 className="text-base font-extrabold text-gray-800 flex items-center gap-2"><FileJson className="text-blue-600" size={18}/> Importar JSON</h2>
-               <button onClick={() => setModalImportarOpen(false)} className="text-gray-400 hover:bg-gray-100 p-1.5 rounded-full"><X size={16}/></button>
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors duration-300">
+          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl max-w-md w-full p-8 animate-fade-in-up border border-white/50 dark:border-white/10 transition-colors">
+            <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
+            <div className="flex justify-between items-center mb-6 border-b border-gray-100/50 dark:border-white/5 pb-4">
+               <h2 className="text-lg font-black text-gray-800 dark:text-white flex items-center gap-2 tracking-tight"><FileJson className="text-blue-600 dark:text-emerald-400" size={22}/> Importar JSON</h2>
+               <button onClick={() => setModalImportarOpen(false)} className="text-gray-400 dark:text-slate-500 hover:bg-gray-100 dark:hover:bg-slate-800 p-2 rounded-full transition-colors"><X size={18}/></button>
             </div>
-            <p className="text-xs text-gray-600 mb-3">Tu archivo debe ser un arreglo <code className="bg-gray-100 px-1 rounded text-blue-600 font-bold">[]</code>:</p>
-            <div className="bg-slate-900 rounded-xl p-4 overflow-x-auto shadow-inner border border-slate-700 mb-5">
-              <pre className="text-[10px] text-emerald-400 font-mono">
+            <p className="text-sm font-bold text-gray-600 dark:text-blue-200/70 mb-4 leading-relaxed">Tu archivo debe ser un arreglo <code className="bg-gray-100 dark:bg-slate-900 px-1.5 py-0.5 rounded text-blue-600 dark:text-blue-400 font-black border border-gray-200 dark:border-slate-700">[]</code>:</p>
+            <div className="bg-slate-900 dark:bg-black/50 rounded-2xl p-5 overflow-x-auto shadow-inner border border-slate-800 dark:border-white/5 mb-6">
+              <pre className="text-xs text-emerald-400 font-mono leading-relaxed">
 {`[
   {
-    "nombre": "Producto",
+    "nombre": "Producto Ejemplo",
     "precio": 90.00,
     "stock": 10,
     "categoria_id": 1
@@ -587,8 +575,12 @@ const Productos = () => {
 ]`}
               </pre>
             </div>
-            <button onClick={() => fileInputRef.current.click()} className="w-full py-3 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl flex items-center justify-center gap-2 text-sm shadow-lg shadow-blue-600/30">
-              <UploadCloud size={16}/> Seleccionar Archivo
+            
+            {/* FIX: INPUT FILE AGREGADO AQUÍ */}
+            <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleImportJSON} />
+            
+            <button onClick={() => fileInputRef.current.click()} className="w-full py-4 font-black text-white bg-blue-600/90 dark:bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl flex items-center justify-center gap-2 text-sm shadow-xl shadow-blue-600/20 dark:shadow-blue-900/40 backdrop-blur-md border border-transparent dark:border-white/10 transition-all">
+              <UploadCloud size={18}/> Seleccionar Archivo .JSON
             </button>
           </div>
         </div>
@@ -597,7 +589,7 @@ const Productos = () => {
   );
 };
 
-// DROPDOWN PERSONALIZADO
+// ✨ DROPDOWN PERSONALIZADO (ADAPTADO A LIQUID GLASS) ✨
 const CustomDropdown = ({ label, value, onChange, options, placeholder, className = "" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -620,27 +612,27 @@ const CustomDropdown = ({ label, value, onChange, options, placeholder, classNam
       <button 
         type="button" 
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-between transition-all w-full bg-white border border-gray-200 rounded-xl px-3 text-slate-700 cursor-pointer shadow-sm ${className}`}
+        className={`flex items-center justify-between transition-all w-full bg-white/80 dark:bg-blue-950/40 backdrop-blur-md border border-gray-200/80 dark:border-white/10 rounded-xl px-3 sm:px-4 text-slate-700 dark:text-slate-200 cursor-pointer shadow-sm hover:bg-gray-50 dark:hover:bg-blue-950/60 ${className}`}
       >
-        <span className="font-bold truncate">
-          {label && <span className="text-gray-400 font-medium mr-1.5">{label}:</span>}
+        <span className="font-extrabold truncate">
+          {label && <span className="text-gray-400 dark:text-blue-300/70 font-bold mr-1.5">{label}:</span>}
           {displayLabel}
         </span>
-        <ChevronDown size={14} className={`text-gray-400 ml-2 shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown size={16} className={`text-gray-400 dark:text-slate-400 ml-2 shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute mt-1 w-full min-w-[140px] rounded-xl shadow-xl border border-gray-100 bg-white top-full left-0 overflow-hidden animate-fade-in-down">
-          <div className="max-h-60 overflow-y-auto custom-scrollbar py-1">
+        <div className="absolute mt-2 w-full min-w-[150px] rounded-2xl shadow-2xl border border-white/50 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 backdrop-blur-2xl top-full left-0 overflow-hidden animate-fade-in-down z-50">
+          <div className="max-h-60 overflow-y-auto custom-scrollbar p-1.5">
             {options.map(option => (
               <button
                 key={option.value}
                 type="button"
                 onClick={() => { onChange(option.value); setIsOpen(false); }}
-                className={`w-full text-left px-3 py-2 text-xs font-bold transition-colors ${
+                className={`w-full text-left px-4 py-2.5 text-xs sm:text-sm font-bold transition-colors rounded-xl mb-0.5 last:mb-0 ${
                   value === option.value
-                    ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
-                    : 'text-gray-700 hover:bg-gray-50 border-l-4 border-transparent'
+                    ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400'
+                    : 'text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'
                 }`}
               >
                 {option.label}
