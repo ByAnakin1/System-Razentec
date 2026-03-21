@@ -26,7 +26,8 @@ const Login = () => {
 
       // Lógica de Redirección según permisos
       const cat = (usuario.categorias || []).filter(c => c !== 'Modificador');
-      const destino = usuario.rol === 'Administrador' ? '/dashboard'
+      const destino = usuario.rol === 'SuperAdmin' ? '/admin-saas'
+        : usuario.rol === 'Administrador' ? '/dashboard'
         : cat.includes('Inventario') ? '/productos'
         : cat.includes('Ventas') ? '/ventas'
         : cat.includes('Compras') ? '/compras'

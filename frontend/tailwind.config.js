@@ -1,5 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  // 🔥 ESTA ES LA LÍNEA QUE TE FALTA Y QUE HACE FUNCIONAR EL BOTÓN 🔥
+  darkMode: 'class', 
+  
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -7,8 +10,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#2563EB', // Un azul corporativo bonito
-        secondary: '#1E293B', // Un gris oscuro para menús
+        primary: '#2563EB',
+        secondary: '#1E293B',
       }
     },
   },

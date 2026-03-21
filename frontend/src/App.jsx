@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
+import AdminSaaS from './pages/AdminSaaS';
 import Login from './pages/Auth/Login'; 
 import Dashboard from './pages/Dashboard';
 import Usuarios from './pages/Usuarios';
@@ -13,6 +14,7 @@ import Proveedores from './pages/Proveedores';
 import Compras from './pages/Compras';
 import DetalleCompra from './pages/Compras/DetalleCompra';
 import Clientes from './pages/Clientes';
+import Configuracion from './pages/Configuracion';  
 
 // MÓDULO DE VENTAS Y SUCURSALES
 import Ventas from './pages/Ventas'; 
@@ -34,6 +36,9 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
+
+        {/* RUTA EXCLUSIVA PARA EL SUPERADMIN */}
+        <Route path="/admin-saas" element={<ProtectedRoute><AdminSaaS /></ProtectedRoute>} />
         
         {/* Rutas Generales */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -41,6 +46,7 @@ const App = () => {
         <Route path="/inventario" element={<ProtectedRoute><Productos /></ProtectedRoute>} />
         <Route path="/categorias" element={<ProtectedRoute><Categorias /></ProtectedRoute>} />
         <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
+        <Route path="/configuracion" element={<ProtectedRoute><Configuracion /></ProtectedRoute>} />
         
         {/* RUTAS DE VENTAS Y SUCURSALES */}
         <Route path="/ventas" element={<ProtectedRoute><Ventas /></ProtectedRoute>} />

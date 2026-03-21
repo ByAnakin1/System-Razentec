@@ -11,7 +11,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // ==========================================
 // 📌 RUTAS DE LA API (TODAS CONECTADAS)
 // ==========================================
-app.use('/api/dashboard', require('./src/routes/dashboardRoutes')); // NUEVA RUTA PARA EL DASHBOARD
+app.use('/api/dashboard', require('./src/routes/dashboardRoutes')); 
 app.use('/api/auth', require('./src/routes/authRoutes'));
 app.use('/api/usuarios', require('./src/routes/usuariosRoutes'));
 app.use('/api/empleados', require('./src/routes/empleadosRoutes'));
@@ -24,9 +24,12 @@ app.use('/api/ventas', require('./src/routes/ventasRoutes'));
 app.use('/api/clientes', require('./src/routes/clientesRoutes'));
 app.use('/api/sucursales', require('./src/routes/sucursalesRoutes')); 
 
-// ✨ RUTAS RESTAURADAS:
+// RUTAS RESTAURADAS:
 app.use('/api/proveedores', require('./src/routes/proveedoresRoutes')); 
 app.use('/api/compras', require('./src/routes/comprasRoutes')); 
+
+// ✨ NUEVA RUTA PARA EL MODO DIOS (SAAS) ✨
+app.use('/api/empresas', require('./src/routes/empresasRoutes')); 
 
 // ==========================================
 // 📌 INICIO DEL SERVIDOR
