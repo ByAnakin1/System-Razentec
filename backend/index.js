@@ -19,6 +19,9 @@ app.use('/api/productos', require('./src/routes/productosRoutes'));
 app.use('/api/categorias', require('./src/routes/categoriasRoutes'));
 app.use('/api/auditoria', require('./src/routes/auditoriaRoutes'));
 
+// ✨ FIX: Montamos las rutas SaaS directamente en /api y corregimos la ruta del archivo ✨
+app.use('/api', require('./src/routes/saas.routes'));
+
 // MÓDULOS DE NEGOCIO
 app.use('/api/ventas', require('./src/routes/ventasRoutes'));
 app.use('/api/clientes', require('./src/routes/clientesRoutes'));

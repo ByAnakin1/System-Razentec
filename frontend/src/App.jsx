@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import AdminSaaS from './pages/AdminSaaS';
+import SuscripcionesSaaS from './pages/SuscripcionesSaaS';
 import Login from './pages/Auth/Login'; 
 import Dashboard from './pages/Dashboard';
 import Usuarios from './pages/Usuarios';
@@ -39,6 +40,7 @@ const App = () => {
 
         {/* RUTA EXCLUSIVA PARA EL SUPERADMIN */}
         <Route path="/admin-saas" element={<ProtectedRoute><AdminSaaS /></ProtectedRoute>} />
+        <Route path="/suscripciones-saas" element={<ProtectedRoute><SuscripcionesSaaS /></ProtectedRoute>} />
         
         {/* Rutas Generales */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
