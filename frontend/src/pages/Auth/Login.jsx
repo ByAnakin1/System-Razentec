@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api'; 
+import api from '../../services/api';
 import { Mail, Lock, LogIn, AlertCircle, Eye, EyeOff, ShieldCheck, Zap, Server } from 'lucide-react';
 
 const Login = () => {
@@ -11,6 +11,22 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate(); 
+
+  // ✨ Configuración inicial del Modo Oscuro en Login ✨
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const currentGlobalTheme = localStorage.getItem('theme');
+    
+    // Si no hay tema, por defecto es oscuro
+    if (!currentGlobalTheme) {
+      localStorage.setItem('theme', 'dark');
+      root.classList.add('dark');
+    } else if (currentGlobalTheme === 'dark' || (currentGlobalTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,7 +40,6 @@ const Login = () => {
       localStorage.setItem('token', token);
       localStorage.setItem('usuario', JSON.stringify(usuario));
 
-      // Lógica de Redirección según permisos
       const cat = (usuario.categorias || []).filter(c => c !== 'Modificador');
       const destino = usuario.rol === 'SuperAdmin' ? '/admin-saas'
         : usuario.rol === 'Administrador' ? '/dashboard'
@@ -50,7 +65,7 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 relative overflow-hidden font-sans">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 relative overflow-hidden font-sans transition-colors duration-300">
       
       {/* 🔴 SECCIÓN IZQUIERDA: HERO / BRANDING (Oculto en móvil) 🔴 */}
       <div className="hidden lg:flex lg:w-[55%] relative items-center justify-center p-12 overflow-hidden bg-slate-900">
@@ -101,33 +116,33 @@ const Login = () => {
         </div>
       </div>
 
-      {/* 🔴 SECCIÓN DERECHA: FORMULARIO LOGIN (Ocupa 100% en móvil) 🔴 */}
-      <div className="w-full lg:w-[45%] flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-24 relative bg-slate-50 overflow-y-auto">
+      {/* 🔴 SECCIÓN DERECHA: FORMULARIO LOGIN (Liquid Glass) 🔴 */}
+      <div className="w-full lg:w-[45%] flex flex-col justify-center px-6 py-12 sm:px-12 lg:px-16 xl:px-24 relative bg-slate-50 dark:bg-slate-950 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] transition-colors duration-300">
         
         {/* Decoración Exclusiva para Móvil */}
-        <div className="absolute top-0 left-0 w-full h-72 bg-gradient-to-b from-blue-600 to-blue-800 lg:hidden z-0 rounded-b-[4rem] shadow-xl"></div>
+        <div className="absolute top-0 left-0 w-full h-72 bg-gradient-to-b from-blue-600 to-blue-900 lg:hidden z-0 rounded-b-[4rem] shadow-xl"></div>
         <div className="absolute top-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl lg:hidden z-0"></div>
 
         <div className="w-full max-w-sm mx-auto relative z-10 animate-fade-in">
           
           {/* Logo Móvil */}
           <div className="lg:hidden flex flex-col items-center mb-8 text-white">
-            <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center shadow-lg shadow-black/10 mb-4 border border-white/20">
-              <ShieldCheck size={36} className="text-blue-600"/>
+            <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center shadow-lg shadow-black/10 mb-4 border border-white/30">
+              <ShieldCheck size={36} className="text-white"/>
             </div>
             <h1 className="text-2xl font-black tracking-wide">Razentec SaaS</h1>
           </div>
 
-          {/* Caja del Formulario (Glassmorphism sutil) */}
-          <div className="bg-white/80 lg:bg-white backdrop-blur-xl rounded-[2rem] p-8 sm:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/50 lg:border-gray-100">
+          {/* Caja del Formulario (Liquid Glass) */}
+          <div className="bg-white/80 dark:bg-blue-950/40 backdrop-blur-2xl rounded-[2rem] p-8 sm:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] border border-white/50 dark:border-white/10 transition-colors duration-300">
             
             <div className="mb-8">
-              <h2 className="text-2xl font-black text-slate-800 tracking-tight">Iniciar Sesión</h2>
-              <p className="text-sm font-medium text-slate-500 mt-2">Ingresa tus credenciales para continuar.</p>
+              <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight transition-colors">Iniciar Sesión</h2>
+              <p className="text-sm font-bold text-slate-500 dark:text-blue-200/70 mt-2 transition-colors">Ingresa tus credenciales para continuar.</p>
             </div>
 
             {error && (
-              <div className="mb-6 p-4 bg-red-50/80 border border-red-100 text-red-600 rounded-2xl flex items-start gap-3 animate-fade-in-down shadow-sm">
+              <div className="mb-6 p-4 bg-red-50/80 dark:bg-red-900/30 backdrop-blur-md border border-red-100/50 dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-2xl flex items-start gap-3 animate-fade-in-down shadow-sm transition-colors">
                 <AlertCircle size={20} className="shrink-0 mt-0.5"/>
                 <p className="text-[13px] font-bold leading-snug">{error}</p>
               </div>
@@ -136,14 +151,14 @@ const Login = () => {
             <form onSubmit={handleSubmit} className="space-y-5">
               
               <div className="group">
-                <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5 ml-1 group-focus-within:text-blue-600 transition-colors">Correo Electrónico</label>
+                <label className="block text-[10px] font-extrabold text-slate-400 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 ml-1 group-focus-within:text-blue-600 dark:group-focus-within:text-blue-400 transition-colors">Correo Electrónico</label>
                 <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400 transition-colors">
                     <Mail size={18} strokeWidth={2.5} />
                   </div>
                   <input 
                     type="email" 
-                    className="w-full bg-slate-50/50 border border-slate-200 pl-12 pr-4 py-3.5 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold text-slate-800 text-[13px] placeholder:text-slate-400 placeholder:font-medium shadow-sm"
+                    className="w-full bg-slate-50/80 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200/80 dark:border-white/10 pl-12 pr-4 py-3.5 rounded-xl focus:bg-white dark:focus:bg-blue-950/60 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition-all font-bold text-slate-800 dark:text-white text-[13px] placeholder:text-slate-400 dark:placeholder:text-slate-600 placeholder:font-medium shadow-sm"
                     placeholder="usuario@empresa.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -154,15 +169,15 @@ const Login = () => {
 
               <div className="group">
                 <div className="flex justify-between items-end mb-1.5 px-1">
-                  <label className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-widest group-focus-within:text-blue-600 transition-colors">Contraseña</label>
+                  <label className="block text-[10px] font-extrabold text-slate-400 dark:text-blue-300/70 uppercase tracking-widest group-focus-within:text-blue-600 dark:group-focus-within:text-blue-400 transition-colors">Contraseña</label>
                 </div>
                 <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400 transition-colors">
                     <Lock size={18} strokeWidth={2.5} />
                   </div>
                   <input 
                     type={showPassword ? "text" : "password"} 
-                    className="w-full bg-slate-50/50 border border-slate-200 pl-12 pr-12 py-3.5 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold text-slate-800 tracking-wider text-[13px] placeholder:text-slate-400 placeholder:tracking-normal placeholder:font-medium shadow-sm"
+                    className="w-full bg-slate-50/80 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200/80 dark:border-white/10 pl-12 pr-12 py-3.5 rounded-xl focus:bg-white dark:focus:bg-blue-950/60 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition-all font-bold text-slate-800 dark:text-white tracking-wider text-[13px] placeholder:text-slate-400 dark:placeholder:text-slate-600 placeholder:tracking-normal placeholder:font-medium shadow-sm"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -171,7 +186,7 @@ const Login = () => {
                   <button 
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 focus:text-blue-600 transition-colors outline-none"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 focus:text-blue-600 transition-colors outline-none"
                   >
                     {showPassword ? <EyeOff size={18} strokeWidth={2.5}/> : <Eye size={18} strokeWidth={2.5}/>}
                   </button>
@@ -181,7 +196,7 @@ const Login = () => {
               <button 
                 type="submit" 
                 disabled={isLoading}
-                className="w-full bg-slate-900 hover:bg-blue-600 disabled:bg-slate-300 disabled:text-slate-500 text-white font-extrabold py-4 rounded-xl transition-all duration-300 shadow-xl shadow-slate-900/20 hover:shadow-blue-600/30 active:scale-[0.98] flex items-center justify-center gap-2 mt-8 text-sm"
+                className="w-full bg-slate-900 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 disabled:bg-slate-300 disabled:dark:bg-slate-800 disabled:text-slate-500 text-white font-extrabold py-4 rounded-xl transition-all duration-300 shadow-lg shadow-slate-900/20 dark:shadow-blue-900/40 hover:shadow-blue-600/30 active:scale-[0.98] flex items-center justify-center gap-2 mt-8 text-sm border border-transparent dark:border-white/10 backdrop-blur-md"
               >
                 {isLoading ? (
                   <>
@@ -198,14 +213,13 @@ const Login = () => {
           </div>
 
           <div className="mt-8 text-center lg:mt-10">
-             <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center justify-center gap-1.5">
+             <p className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors">
                <ShieldCheck size={14}/> Plataforma Segura • Razentec © 2026
              </p>
           </div>
           
         </div>
       </div>
-
     </div>
   );
 };

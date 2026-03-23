@@ -3,6 +3,8 @@ import api from '../services/api';
 import Layout from '../components/Layout';
 import { Plus, Edit, Trash2, X, AlertTriangle, Search, CheckCircle, Building2, Eye, Store, Phone, Mail, MapPin } from 'lucide-react';
 
+const hideScrollbar = "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]";
+
 const Proveedores = () => {
   const [proveedores, setProveedores] = useState([]);
   const [sucursales, setSucursales] = useState([]); 
@@ -115,35 +117,35 @@ const Proveedores = () => {
   return (
     <Layout title="Proveedores" moduleIcon={<Building2/>}>
       {toast && (
-        <div className={`fixed top-4 right-4 md:top-6 md:right-6 z-[100] flex items-center gap-3 px-5 py-3 md:px-6 md:py-4 rounded-xl md:rounded-2xl shadow-2xl text-white animate-fade-in-down ${toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`}>
-          {toast.type === 'success' ? <CheckCircle size={20} className="md:w-6 md:h-6" /> : <AlertTriangle size={20} className="md:w-6 md:h-6" />}
-          <p className="font-bold text-xs md:text-sm">{toast.message}</p>
+        <div className={`fixed top-4 right-4 md:top-auto md:bottom-10 md:right-10 z-[100] flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl text-white animate-fade-in-down md:animate-fade-in-up backdrop-blur-xl border border-white/20 transition-colors ${toast.type === 'success' ? 'bg-emerald-600/95' : 'bg-red-600/95'}`}>
+          {toast.type === 'success' ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
+          <p className="font-bold text-xs md:text-sm tracking-wide">{toast.message}</p>
         </div>
       )}
 
-      {/* ✨ CABECERA ROBUSTA EN 2 FILAS (Evita que el iPad aplaste los textos) ✨ */}
+      {/* ✨ CABECERA ✨ */}
       <div className="flex flex-col gap-3 mb-4 md:mb-6">
         
         {/* Fila 1: Título y Botón Principal */}
         <div className="flex justify-between items-center">
-          <p className="text-[11px] md:text-sm text-gray-500 font-bold px-1 uppercase tracking-wider">
+          <p className="text-[11px] md:text-sm text-gray-500 dark:text-blue-300/70 font-extrabold px-1 uppercase tracking-widest transition-colors">
              {esVistaGlobal ? 'Directorio Global' : `Directorio de: ${sucursalActiva?.nombre || 'Ninguna'}`}
           </p>
           {sucursalActiva && tienePermisoEditar && (
-            <button onClick={() => openModal()} className="bg-blue-600 text-white px-4 py-2 md:py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-md hover:bg-blue-700 transition-all active:scale-95 text-xs md:text-sm shrink-0">
+            <button onClick={() => openModal()} className="bg-blue-600/90 dark:bg-blue-600 text-white px-4 py-2 md:py-2.5 rounded-xl font-black flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/20 dark:shadow-blue-900/40 hover:bg-blue-700 transition-all active:scale-95 text-xs md:text-sm shrink-0 border border-transparent dark:border-white/10 backdrop-blur-md">
               <Plus size={16} /> <span className="hidden sm:inline">Nuevo Proveedor</span><span className="sm:hidden">Nuevo</span>
             </button>
           )}
         </div>
 
-        {/* Fila 2: Buscador y Filtro (Ocupando todo el ancho) */}
+        {/* Fila 2: Buscador y Filtro */}
         {sucursalActiva && (
           <div className="flex gap-2 w-full">
              <div className="relative flex-1">
-               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-               <input type="text" placeholder="Buscar por Razón Social o RUC..." className="w-full bg-white border border-gray-200 pl-9 pr-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 font-bold text-gray-800 text-xs md:text-sm transition-all shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-blue-400/70 transition-colors" size={16} />
+               <input type="text" placeholder="Buscar por Razón Social o RUC..." className="w-full bg-white/80 dark:bg-blue-950/50 backdrop-blur-md border border-gray-200/80 dark:border-white/10 pl-9 pr-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-blue-950 focus:border-blue-500 dark:focus:border-blue-400 font-bold text-gray-800 dark:text-white text-xs md:text-sm transition-all shadow-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
              </div>
-             <select className="bg-white border border-gray-200 px-3 py-2.5 rounded-xl outline-none font-bold text-gray-700 text-xs md:text-sm shadow-sm shrink-0" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+             <select className="bg-white/80 dark:bg-blue-950/50 backdrop-blur-md border border-gray-200/80 dark:border-white/10 px-3 py-2.5 rounded-xl outline-none focus:bg-white dark:focus:bg-blue-950 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 font-bold text-gray-700 dark:text-slate-200 text-xs md:text-sm shadow-sm shrink-0 transition-all" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
                <option value="activos">Activos</option>
                <option value="inactivos">Papelera</option>
                <option value="todos">Todos</option>
@@ -152,47 +154,47 @@ const Proveedores = () => {
         )}
       </div>
 
-      {/* ✨ VISTA TÁCTIL (Móvil y Tablet hasta breakpoint lg) ✨ */}
+      {/* ✨ VISTA TÁCTIL (Móvil y Tablet - LIQUID GLASS) ✨ */}
       <div className="lg:hidden flex flex-col gap-3">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+          <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-blue-300/70 transition-colors">
              <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
-             <p className="text-xs font-medium">Cargando proveedores...</p>
+             <p className="text-[10px] font-extrabold uppercase tracking-widest transition-colors">Cargando proveedores...</p>
           </div>
         ) : !sucursalActiva ? (
-          <div className="text-center py-10 text-xs text-red-500 bg-red-50 rounded-2xl border border-red-100">
+          <div className="text-center py-10 text-xs font-bold text-red-500 bg-red-50/80 dark:bg-red-900/20 rounded-2xl border border-red-100 dark:border-red-500/20 backdrop-blur-md transition-colors">
             ⚠️ Sin sucursal asignada.
           </div>
         ) : filtrados.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center">
-            <Building2 size={48} className="text-gray-200 mb-3" strokeWidth={1.5}/>
-            <p className="text-sm font-bold text-gray-600">No se encontraron proveedores</p>
+          <div className="text-center py-16 bg-white/60 dark:bg-blue-950/20 backdrop-blur-2xl rounded-[2rem] border border-gray-100/50 dark:border-white/5 shadow-sm flex flex-col items-center transition-colors">
+            <Building2 size={48} className="text-gray-300 dark:text-slate-600 mb-3" strokeWidth={1.5}/>
+            <p className="text-sm font-black text-gray-600 dark:text-white transition-colors">No se encontraron proveedores</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
             {filtrados.map((prov) => (
-              <div key={prov.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm relative group overflow-hidden">
-                 <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-100 pb-3">
+              <div key={prov.id} className="bg-white/60 dark:bg-blue-950/20 backdrop-blur-xl rounded-[1.5rem] border border-gray-100/50 dark:border-white/5 p-4 shadow-sm relative group overflow-hidden transition-colors">
+                 <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-200/50 dark:border-slate-700 pb-3 transition-colors">
                     <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                       <div className="w-10 h-10 rounded-full bg-blue-50/80 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100/50 dark:border-blue-500/20 backdrop-blur-md transition-colors">
                           <span className="font-black text-lg uppercase">{prov.razon_social.charAt(0)}</span>
                        </div>
                        <div>
-                         <p className="font-bold text-gray-800 text-sm leading-tight line-clamp-2">{prov.razon_social}</p>
-                         <p className="text-[10px] font-bold text-gray-400 flex items-center gap-1 mt-0.5">RUC: {prov.ruc || 'S/C'}</p>
+                         <p className="font-black text-gray-800 dark:text-white text-sm leading-tight line-clamp-2 transition-colors">{prov.razon_social}</p>
+                         <p className="text-[9px] md:text-[10px] font-extrabold text-gray-400 dark:text-blue-300/70 flex items-center gap-1 mt-0.5 uppercase tracking-widest transition-colors">RUC: {prov.ruc || 'S/C'}</p>
                        </div>
                     </div>
                  </div>
 
-                 <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3 grid grid-cols-2 gap-2">
+                 <div className="bg-white/50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-gray-100/50 dark:border-white/5 mb-3 grid grid-cols-2 gap-2 backdrop-blur-md transition-colors">
                     <div className="flex items-center gap-1.5 overflow-hidden">
                       <Phone size={12} className="text-emerald-500 shrink-0"/>
-                      <span className="text-[10px] font-bold text-gray-600 truncate">{prov.telefono || 'Sin celular'}</span>
+                      <span className="text-[10px] font-bold text-gray-600 dark:text-slate-300 truncate transition-colors">{prov.telefono || 'Sin celular'}</span>
                     </div>
                     {esAdmin && (
                       <div className="flex items-center gap-1.5 overflow-hidden">
-                        <Store size={12} className={prov.sucursal_id ? "text-purple-400 shrink-0" : "text-red-400 shrink-0"}/>
-                        <span className={`text-[9px] font-bold truncate px-1.5 py-0.5 rounded ${prov.sucursal_id ? "text-purple-700 bg-purple-100/50" : "text-red-600 bg-red-100/50"}`}>
+                        <Store size={12} className={prov.sucursal_id ? "text-purple-500 shrink-0" : "text-red-400 shrink-0"}/>
+                        <span className={`text-[9px] font-black uppercase tracking-wider truncate px-1.5 py-0.5 rounded border backdrop-blur-md transition-colors ${prov.sucursal_id ? "text-purple-700 dark:text-purple-400 bg-purple-50/80 dark:bg-purple-900/30 border-purple-200/50 dark:border-purple-500/20" : "text-red-600 dark:text-red-400 bg-red-50/80 dark:bg-red-900/30 border-red-200/50 dark:border-red-500/20"}`}>
                           {prov.sucursal_id ? prov.sucursal_nombre : 'Sin asignar'}
                         </span>
                       </div>
@@ -200,17 +202,17 @@ const Proveedores = () => {
                  </div>
 
                  <div className="flex gap-2">
-                   <button onClick={() => setModalDetalles(prov)} className="flex-1 py-2 bg-slate-50 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-100 flex items-center justify-center transition-colors">
-                     <Eye size={16}/>
+                   <button onClick={() => setModalDetalles(prov)} className="flex-1 py-2.5 bg-white/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 rounded-lg font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent dark:border-white/5 flex items-center justify-center transition-colors backdrop-blur-md active:scale-95">
+                     <Eye size={14}/>
                    </button>
                    {tienePermisoEditar && (
                      <>
-                       <button onClick={() => openModal(prov)} className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-lg font-bold text-xs hover:bg-blue-100 flex items-center justify-center transition-colors">
-                         <Edit size={16}/>
+                       <button onClick={() => openModal(prov)} className="flex-1 py-2.5 bg-blue-50/80 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-transparent dark:border-blue-500/20 rounded-lg font-bold text-xs hover:bg-blue-100 dark:hover:bg-blue-900/50 flex items-center justify-center transition-colors backdrop-blur-md active:scale-95">
+                         <Edit size={14}/>
                        </button>
                        {prov.estado && (
-                         <button onClick={() => {setProvToDelete(prov); setDeleteModalOpen(true);}} className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg flex items-center justify-center hover:bg-red-100 transition-colors">
-                           <Trash2 size={16}/>
+                         <button onClick={() => {setProvToDelete(prov); setDeleteModalOpen(true);}} className="flex-1 py-2.5 bg-red-50/80 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-transparent dark:border-red-500/20 rounded-lg flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors backdrop-blur-md active:scale-95">
+                           <Trash2 size={14}/>
                          </button>
                        )}
                      </>
@@ -222,57 +224,56 @@ const Proveedores = () => {
         )}
       </div>
 
-      {/* ✨ VISTA PC: Tabla de Proveedores (Solo visible en pantallas grandes lg) ✨ */}
-      <div className="hidden lg:block bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-220px)] custom-scrollbar">
+      {/* ✨ VISTA PC: Tabla (LIQUID GLASS) ✨ */}
+      <div className="hidden lg:block bg-white/60 dark:bg-blue-950/20 backdrop-blur-2xl rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/80 dark:border-white/5 overflow-hidden transition-colors duration-300">
+        <div className={`overflow-x-auto overflow-y-auto max-h-[calc(100vh-220px)] ${hideScrollbar}`}>
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold tracking-wider text-[10px] sticky top-0 z-10 border-b border-gray-100">
+            <thead className="bg-slate-50/50 dark:bg-blue-950/30 text-slate-500 dark:text-blue-300 uppercase font-extrabold tracking-widest text-[10px] sticky top-0 z-10 border-b border-gray-200/50 dark:border-white/5 backdrop-blur-md transition-colors">
               <tr>
-                <th className="px-6 py-4">Razón Social</th>
-                <th className="px-6 py-4">RUC</th>
-                {esAdmin && <th className="px-6 py-4">Ubicación</th>}
-                <th className="px-6 py-4">Contacto</th>
-                <th className="px-6 py-4">Email & Dirección</th>
-                <th className="px-6 py-4 text-center">Acciones</th>
+                <th className="px-6 py-5">Razón Social</th>
+                <th className="px-6 py-5">RUC</th>
+                {esAdmin && <th className="px-6 py-5">Ubicación</th>}
+                <th className="px-6 py-5">Contacto</th>
+                <th className="px-6 py-5">Email & Dirección</th>
+                <th className="px-6 py-5 text-center">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {loading ? <tr><td colSpan={esAdmin?"6":"5"} className="text-center py-12 text-gray-400 font-medium">Cargando directorio...</td></tr> : 
-               !sucursalActiva ? <tr><td colSpan={esAdmin?"6":"5"} className="text-center py-12 text-red-500 font-medium">⚠️ Sin sucursal asignada.</td></tr> :
-               filtrados.length === 0 ? <tr><td colSpan={esAdmin?"6":"5"} className="text-center py-12 italic text-gray-400">No hay proveedores registrados.</td></tr> : 
+            <tbody className="divide-y divide-gray-100/50 dark:divide-white/5 relative">
+              {loading ? <tr><td colSpan={esAdmin?"6":"5"} className="text-center py-12 text-gray-400 dark:text-slate-500 font-bold text-xs uppercase tracking-widest transition-colors">Cargando directorio...</td></tr> : 
+               !sucursalActiva ? <tr><td colSpan={esAdmin?"6":"5"} className="text-center py-12 text-red-500 font-bold transition-colors">⚠️ Sin sucursal asignada.</td></tr> :
+               filtrados.length === 0 ? <tr><td colSpan={esAdmin?"6":"5"} className="text-center py-12 font-medium text-gray-400 dark:text-slate-500 transition-colors">No hay proveedores registrados.</td></tr> : 
                filtrados.map((prov) => (
-                <tr key={prov.id} className="hover:bg-slate-50/80 transition-colors group">
-                  <td className="px-6 py-4 font-bold text-gray-800">
+                <tr key={prov.id} className="hover:bg-white/40 dark:hover:bg-blue-900/10 transition-colors duration-200 group">
+                  <td className="px-6 py-4 font-black text-gray-800 dark:text-white transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xs">
+                      <div className="w-9 h-9 rounded-xl bg-blue-50/80 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100/50 dark:border-blue-500/20 flex items-center justify-center font-black text-sm uppercase backdrop-blur-md transition-colors">
                          {prov.razon_social.charAt(0)}
                       </div>
                       <span className="truncate max-w-[200px]" title={prov.razon_social}>{prov.razon_social}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4"><span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-md text-[10px] font-bold border border-gray-200 tracking-wider">{prov.ruc || 'S/D'}</span></td>
+                  <td className="px-6 py-4"><span className="bg-white/50 dark:bg-slate-800/50 text-gray-600 dark:text-slate-300 px-2.5 py-1 rounded-md text-[10px] font-bold border border-gray-200/50 dark:border-white/5 tracking-wider backdrop-blur-md transition-colors">{prov.ruc || 'S/D'}</span></td>
                   
                   {esAdmin && (
                     <td className="px-6 py-4">
-                       <span className={`text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 w-max uppercase tracking-wider ${prov.sucursal_id ? 'text-purple-700 bg-purple-50 border border-purple-100' : 'text-red-600 bg-red-50 border border-red-100'}`}>
+                       <span className={`text-[9px] font-black px-2 py-1 rounded-md flex items-center gap-1 w-max uppercase tracking-wider backdrop-blur-md border transition-colors ${prov.sucursal_id ? 'text-purple-700 dark:text-purple-400 bg-purple-50/80 dark:bg-purple-900/30 border-purple-100/50 dark:border-purple-500/20' : 'text-red-600 dark:text-red-400 bg-red-50/80 dark:bg-red-900/30 border-red-100/50 dark:border-red-500/20'}`}>
                          <Store size={10}/> {prov.sucursal_id ? prov.sucursal_nombre : 'Sin Asignar'}
                        </span>
                     </td>
                   )}
 
-                  <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-1.5 mt-2"><Phone size={12} className="text-emerald-500"/> {prov.telefono || '---'}</td>
+                  <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mt-3 transition-colors"><Phone size={12} className="text-emerald-500"/> {prov.telefono || '---'}</td>
                   <td className="px-6 py-4">
-                    <p className="truncate text-blue-600 text-xs font-bold mb-0.5 max-w-[150px]">{prov.email || 'Sin correo'}</p>
-                    <p className="truncate text-gray-400 text-[10px] font-medium max-w-[150px]" title={prov.direccion}>{prov.direccion || 'Sin dirección'}</p>
+                    <p className="truncate text-blue-600 dark:text-blue-400 text-[11px] font-extrabold mb-0.5 max-w-[150px] uppercase tracking-wider transition-colors">{prov.email || 'Sin correo'}</p>
+                    <p className="truncate text-gray-400 dark:text-slate-400 text-[10px] font-bold max-w-[150px] transition-colors" title={prov.direccion}>{prov.direccion || 'Sin dirección'}</p>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    {/* ✨ FIX: Botones SIEMPRE visibles en PC, sin efecto opacity-0 ✨ */}
                     <div className="flex justify-center gap-1.5 transition-opacity">
-                      <button onClick={() => setModalDetalles(prov)} className="p-1.5 text-slate-500 bg-slate-50 hover:bg-slate-200 rounded-lg transition-colors" title="Ver Detalles"><Eye size={14} /></button>
+                      <button onClick={() => setModalDetalles(prov)} className="p-2 text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors border border-transparent dark:border-white/5 backdrop-blur-md active:scale-95" title="Ver Detalles"><Eye size={14} /></button>
                       {tienePermisoEditar && (
                         <>
-                          <button onClick={() => openModal(prov)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors" title="Editar"><Edit size={14} /></button>
-                          {prov.estado && <button onClick={() => {setProvToDelete(prov); setDeleteModalOpen(true);}} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" title="Eliminar"><Trash2 size={14} /></button>}
+                          <button onClick={() => openModal(prov)} className="p-2 text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors border border-transparent dark:border-blue-500/20 backdrop-blur-md active:scale-95" title="Editar"><Edit size={14} /></button>
+                          {prov.estado && <button onClick={() => {setProvToDelete(prov); setDeleteModalOpen(true);}} className="p-2 text-red-600 dark:text-red-400 bg-red-50/80 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors border border-transparent dark:border-red-500/20 backdrop-blur-md active:scale-95" title="Eliminar"><Trash2 size={14} /></button>}
                         </>
                       )}
                     </div>
@@ -284,127 +285,137 @@ const Proveedores = () => {
         </div>
       </div>
 
-      {/* MODAL DETALLES (Bottom Sheet Móvil) */}
+      {/* ✨ MODAL DETALLES (Bottom Sheet - Liquid Glass) ✨ */}
       {modalDetalles && (
-        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-all animate-fade-in">
-          <div className="bg-white p-6 sm:p-8 rounded-t-3xl sm:rounded-[2rem] w-full sm:max-w-sm shadow-2xl border border-white/50 animate-fade-in-up pb-8">
-            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-4 sm:hidden shrink-0"></div>
-            <div className="flex justify-between items-center mb-5 border-b border-gray-100 pb-3">
-              <h2 className="text-lg md:text-xl font-extrabold text-gray-800 flex items-center gap-2"><Building2 className="text-blue-600"/> Ficha Proveedor</h2>
-              <button onClick={() => setModalDetalles(null)} className="text-gray-400 hover:text-gray-800 bg-gray-50 p-1.5 rounded-full"><X size={18}/></button>
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors animate-fade-in">
+          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl p-6 sm:p-8 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-sm shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up pb-8 transition-colors">
+            <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-4 sm:hidden shrink-0"></div>
+            <div className="flex justify-between items-center mb-5 border-b border-gray-100/50 dark:border-white/5 pb-4 transition-colors">
+              <h2 className="text-lg md:text-xl font-black text-gray-800 dark:text-white flex items-center gap-2"><Building2 className="text-blue-600 dark:text-blue-400"/> Ficha Proveedor</h2>
+              <button onClick={() => setModalDetalles(null)} className="text-gray-400 dark:text-slate-500 hover:text-gray-800 dark:hover:text-white bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700 p-2 rounded-full transition-colors border border-transparent dark:border-white/5"><X size={18}/></button>
             </div>
+            
             <div className="space-y-4">
-               <div>
-                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Razón Social</label>
-                 <p className="text-base md:text-lg font-black text-gray-800 leading-tight">{modalDetalles.razon_social}</p>
+               <div className="bg-white/50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-100/50 dark:border-white/5 backdrop-blur-md transition-colors">
+                 <label className="text-[9px] md:text-[10px] font-extrabold text-gray-400 dark:text-blue-300/70 uppercase tracking-widest block mb-1 transition-colors">Razón Social</label>
+                 <p className="text-base md:text-lg font-black text-gray-800 dark:text-white leading-tight transition-colors">{modalDetalles.razon_social}</p>
                </div>
+               
                <div className="grid grid-cols-2 gap-4">
-                 <div>
-                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">RUC</label>
-                   <p className="text-sm font-bold text-gray-700">{modalDetalles.ruc || 'N/A'}</p>
+                 <div className="bg-white/50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-100/50 dark:border-white/5 backdrop-blur-md transition-colors">
+                   <label className="text-[9px] md:text-[10px] font-extrabold text-gray-400 dark:text-blue-300/70 uppercase tracking-widest block mb-1 transition-colors">RUC</label>
+                   <p className="text-[11px] md:text-xs font-black text-gray-700 dark:text-slate-200 transition-colors">{modalDetalles.ruc || 'N/A'}</p>
                  </div>
-                 <div>
-                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Teléfono</label>
-                   <p className="text-sm font-bold text-gray-700 flex items-center gap-1"><Phone size={12} className="text-emerald-500"/> {modalDetalles.telefono || 'N/A'}</p>
+                 <div className="bg-white/50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-100/50 dark:border-white/5 backdrop-blur-md transition-colors">
+                   <label className="text-[9px] md:text-[10px] font-extrabold text-gray-400 dark:text-blue-300/70 uppercase tracking-widest block mb-1 transition-colors">Teléfono</label>
+                   <p className="text-[11px] md:text-xs font-black text-gray-700 dark:text-slate-200 flex items-center gap-1 transition-colors"><Phone size={12} className="text-emerald-500"/> {modalDetalles.telefono || 'N/A'}</p>
                  </div>
                </div>
-               <div>
-                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Correo Electrónico</label>
-                 <p className="text-sm font-bold text-blue-600 flex items-center gap-1"><Mail size={12}/> {modalDetalles.email || 'N/A'}</p>
+
+               <div className="bg-white/50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-100/50 dark:border-white/5 backdrop-blur-md transition-colors">
+                 <label className="text-[9px] md:text-[10px] font-extrabold text-gray-400 dark:text-blue-300/70 uppercase tracking-widest block mb-1 transition-colors">Correo Electrónico</label>
+                 <p className="text-[11px] md:text-xs font-black text-blue-600 dark:text-blue-400 flex items-center gap-1 transition-colors"><Mail size={12}/> {modalDetalles.email || 'N/A'}</p>
                </div>
-               <div>
-                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-0.5">Dirección Físicia</label>
-                 <p className="text-sm font-bold text-gray-700 flex items-start gap-1"><MapPin size={12} className="mt-1 shrink-0 text-red-500"/> {modalDetalles.direccion || 'N/A'}</p>
+
+               <div className="bg-white/50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-100/50 dark:border-white/5 backdrop-blur-md transition-colors">
+                 <label className="text-[9px] md:text-[10px] font-extrabold text-gray-400 dark:text-blue-300/70 uppercase tracking-widest block mb-1 transition-colors">Dirección Físicia</label>
+                 <p className="text-[11px] md:text-xs font-black text-gray-700 dark:text-slate-200 flex items-start gap-1 transition-colors"><MapPin size={12} className="mt-0.5 shrink-0 text-red-500 dark:text-red-400"/> {modalDetalles.direccion || 'N/A'}</p>
                </div>
-               <div>
-                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">Afiliación a Sede</label>
-                 <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-bold text-xs ${modalDetalles.sucursal_id ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+
+               <div className="bg-white/50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-100/50 dark:border-white/5 backdrop-blur-md transition-colors">
+                 <label className="text-[9px] md:text-[10px] font-extrabold text-gray-400 dark:text-blue-300/70 uppercase tracking-widest block mb-2 transition-colors">Afiliación a Sede</label>
+                 <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-black text-[10px] md:text-xs uppercase tracking-wider backdrop-blur-md transition-colors ${modalDetalles.sucursal_id ? 'bg-blue-50/80 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-100/50 dark:border-blue-500/20' : 'bg-red-50/80 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100/50 dark:border-red-500/20'}`}>
                    <Store size={14}/> {modalDetalles.sucursal_id ? modalDetalles.sucursal_nombre : '⚠️ Requiere Asignación'}
                  </div>
                </div>
             </div>
-            <button onClick={() => setModalDetalles(null)} className="w-full mt-6 bg-gray-100 hover:bg-gray-200 text-gray-800 py-3.5 rounded-xl font-bold transition-colors text-sm">Cerrar Ficha</button>
+            
+            <button onClick={() => setModalDetalles(null)} className="w-full mt-6 bg-gray-100/80 dark:bg-slate-800/80 border border-transparent dark:border-white/5 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-800 dark:text-slate-300 py-3.5 rounded-xl font-extrabold transition-colors text-sm backdrop-blur-md active:scale-95">Cerrar Ficha</button>
           </div>
         </div>
       )}
 
-      {/* MODAL CREAR / EDITAR PROVEEDOR */}
+      {/* ✨ MODAL CREAR / EDITAR PROVEEDOR (LIQUID GLASS) ✨ */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-all animate-fade-in">
-          <div className="bg-white p-5 sm:p-8 rounded-t-3xl sm:rounded-[2rem] w-full sm:max-w-lg shadow-2xl animate-fade-in-up flex flex-col max-h-[90vh]">
-            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-4 sm:hidden shrink-0"></div>
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors animate-fade-in">
+          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl p-6 sm:p-8 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-md shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up flex flex-col max-h-[90vh] transition-colors">
             
-            <div className="flex justify-between items-center mb-5 border-b border-gray-100 pb-3 shrink-0">
-               <h2 className="text-lg md:text-xl font-extrabold text-gray-800 flex items-center gap-2">{isEditing ? <Edit className="text-blue-600" size={20}/> : <Building2 className="text-blue-600" size={20}/>} {isEditing ? 'Editar Proveedor' : 'Nuevo Proveedor'}</h2>
-               <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-800 bg-gray-50 p-1.5 rounded-full"><X size={18}/></button>
+            <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-4 sm:hidden shrink-0"></div>
+            
+            <div className="flex justify-between items-center mb-6 border-b border-gray-100/50 dark:border-white/5 pb-4 shrink-0 transition-colors">
+               <h2 className="text-lg md:text-xl font-black text-gray-800 dark:text-white flex items-center gap-2">
+                 {isEditing ? <Edit className="text-blue-600 dark:text-blue-400" size={20}/> : <Building2 className="text-blue-600 dark:text-blue-400" size={20}/>} 
+                 {isEditing ? 'Editar Proveedor' : 'Nuevo Proveedor'}
+               </h2>
+               <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-400 dark:text-slate-500 hover:text-gray-800 dark:hover:text-white bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700 p-2 rounded-full transition-colors border border-transparent dark:border-white/5"><X size={18}/></button>
             </div>
             
-            <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto custom-scrollbar pb-4 px-1">
+            <form onSubmit={handleSubmit} className={`space-y-4 overflow-y-auto ${hideScrollbar} pb-4 px-1`}>
               <div>
-                <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">Razón Social / Nombre *</label>
-                <input className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-800 text-sm transition-colors ${formErrors.razon_social ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.razon_social ?? ''} onChange={(e) => {setFormData({...formData, razon_social: e.target.value}); if (formErrors.razon_social) setFormErrors({...formErrors, razon_social: null}); }} autoFocus/>
-                {formErrors.razon_social && <p className="text-[10px] text-red-500 mt-1 font-bold">{formErrors.razon_social}</p>}
+                <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest block mb-1.5 transition-colors">Razón Social / Nombre *</label>
+                <input className={`w-full bg-white/70 dark:bg-blue-950/30 backdrop-blur-md border p-3.5 rounded-xl focus:bg-white dark:focus:bg-blue-950 focus:ring-2 outline-none font-bold text-gray-800 dark:text-white text-xs md:text-sm transition-all shadow-sm ${formErrors.razon_social ? 'border-red-400 dark:border-red-500/50 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'}`} value={formData.razon_social ?? ''} onChange={(e) => {setFormData({...formData, razon_social: e.target.value}); if (formErrors.razon_social) setFormErrors({...formErrors, razon_social: null}); }} autoFocus/>
+                {formErrors.razon_social && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1.5 font-bold uppercase tracking-wider">{formErrors.razon_social}</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">RUC</label>
-                  <input type="text" inputMode="numeric" className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-800 tracking-wider text-sm transition-colors ${formErrors.ruc ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.ruc ?? ''} onChange={(e) => { setFormData({...formData, ruc: e.target.value.replace(/\D/g, '').slice(0, 11)}); if (formErrors.ruc) setFormErrors({...formErrors, ruc: null}); }} placeholder="11 dígitos"/>
-                  {formErrors.ruc && <p className="text-[9px] text-red-500 mt-1 font-bold leading-tight">{formErrors.ruc}</p>}
+                  <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest block mb-1.5 transition-colors">RUC</label>
+                  <input type="text" inputMode="numeric" className={`w-full bg-white/70 dark:bg-blue-950/30 backdrop-blur-md border p-3.5 rounded-xl focus:bg-white dark:focus:bg-blue-950 focus:ring-2 outline-none font-bold text-gray-800 dark:text-white tracking-wider text-xs md:text-sm transition-all shadow-sm ${formErrors.ruc ? 'border-red-400 dark:border-red-500/50 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'}`} value={formData.ruc ?? ''} onChange={(e) => { setFormData({...formData, ruc: e.target.value.replace(/\D/g, '').slice(0, 11)}); if (formErrors.ruc) setFormErrors({...formErrors, ruc: null}); }} placeholder="11 dígitos"/>
+                  {formErrors.ruc && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1.5 font-bold uppercase tracking-wider leading-tight">{formErrors.ruc}</p>}
                 </div>
                 <div>
-                  <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">Teléfono</label>
-                  <input type="text" inputMode="numeric" className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-800 tracking-wider text-sm transition-colors ${formErrors.telefono ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.telefono ?? ''} onChange={(e) => { setFormData({...formData, telefono: e.target.value.replace(/\D/g, '').slice(0, 9)}); if (formErrors.telefono) setFormErrors({...formErrors, telefono: null}); }} placeholder="9 dígitos"/>
-                  {formErrors.telefono && <p className="text-[9px] text-red-500 mt-1 font-bold leading-tight">{formErrors.telefono}</p>}
+                  <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest block mb-1.5 transition-colors">Teléfono</label>
+                  <input type="text" inputMode="numeric" className={`w-full bg-white/70 dark:bg-blue-950/30 backdrop-blur-md border p-3.5 rounded-xl focus:bg-white dark:focus:bg-blue-950 focus:ring-2 outline-none font-bold text-gray-800 dark:text-white tracking-wider text-xs md:text-sm transition-all shadow-sm ${formErrors.telefono ? 'border-red-400 dark:border-red-500/50 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'}`} value={formData.telefono ?? ''} onChange={(e) => { setFormData({...formData, telefono: e.target.value.replace(/\D/g, '').slice(0, 9)}); if (formErrors.telefono) setFormErrors({...formErrors, telefono: null}); }} placeholder="9 dígitos"/>
+                  {formErrors.telefono && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1.5 font-bold uppercase tracking-wider leading-tight">{formErrors.telefono}</p>}
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">Correo Electrónico</label>
-                <input type="email" className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-700 text-sm transition-colors ${formErrors.email ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.email ?? ''} onChange={(e) => {setFormData({...formData, email: e.target.value}); if (formErrors.email) setFormErrors({...formErrors, email: null}); }} placeholder="ejemplo@empresa.com"/>
-                {formErrors.email && <p className="text-[9px] text-red-500 mt-1 font-bold leading-tight">{formErrors.email}</p>}
+                <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest block mb-1.5 transition-colors">Correo Electrónico</label>
+                <input type="email" className={`w-full bg-white/70 dark:bg-blue-950/30 backdrop-blur-md border p-3.5 rounded-xl focus:bg-white dark:focus:bg-blue-950 focus:ring-2 outline-none font-bold text-gray-800 dark:text-white text-xs md:text-sm transition-all shadow-sm ${formErrors.email ? 'border-red-400 dark:border-red-500/50 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'}`} value={formData.email ?? ''} onChange={(e) => {setFormData({...formData, email: e.target.value}); if (formErrors.email) setFormErrors({...formErrors, email: null}); }} placeholder="ejemplo@empresa.com"/>
+                {formErrors.email && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1.5 font-bold uppercase tracking-wider leading-tight">{formErrors.email}</p>}
               </div>
               
               <div>
-                <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1">Dirección Física</label>
-                <input className="w-full bg-slate-50 border border-gray-200 p-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none font-bold text-gray-700 text-sm transition-colors" value={formData.direccion ?? ''} onChange={(e) => setFormData({...formData, direccion: e.target.value})} placeholder="Av. Central 123"/>
+                <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest block mb-1.5 transition-colors">Dirección Física</label>
+                <input className="w-full bg-white/70 dark:bg-blue-950/30 backdrop-blur-md border border-gray-200/80 dark:border-white/10 p-3.5 rounded-xl focus:bg-white dark:focus:bg-blue-950 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 outline-none font-bold text-gray-700 dark:text-white text-xs md:text-sm transition-all shadow-sm" value={formData.direccion ?? ''} onChange={(e) => setFormData({...formData, direccion: e.target.value})} placeholder="Av. Central 123"/>
               </div>
 
               {esAdmin && (
                 <div>
-                  <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest block mb-1 mt-2">Afiliar a Sede *</label>
-                  <select className={`w-full bg-slate-50 border p-3 rounded-xl focus:bg-white outline-none font-bold text-gray-700 text-sm transition-colors ${formErrors.sucursal_id ? 'border-red-400 focus:ring-2 focus:ring-red-100' : 'border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-400'}`} value={formData.sucursal_id} onChange={e => {setFormData({...formData, sucursal_id: e.target.value}); if(formErrors.sucursal_id) setFormErrors({...formErrors, sucursal_id: null})}}>
+                  <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest block mb-1.5 mt-4 transition-colors">Afiliar a Sede *</label>
+                  <select className={`w-full bg-white/70 dark:bg-blue-950/30 backdrop-blur-md border p-3.5 rounded-xl focus:bg-white dark:focus:bg-blue-950 outline-none font-bold text-gray-700 dark:text-slate-200 text-xs md:text-sm transition-all shadow-sm ${formErrors.sucursal_id ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'}`} value={formData.sucursal_id} onChange={e => {setFormData({...formData, sucursal_id: e.target.value}); if(formErrors.sucursal_id) setFormErrors({...formErrors, sucursal_id: null})}}>
                     <option value="">-- Selecciona una Sede --</option>
                     {sucursales.map(suc => <option key={suc.id} value={suc.id}>{suc.nombre}</option>)}
                   </select>
-                  {formErrors.sucursal_id && <p className="text-[9px] text-red-500 mt-1 font-bold leading-tight">{formErrors.sucursal_id}</p>}
+                  {formErrors.sucursal_id && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1.5 font-bold uppercase tracking-wider leading-tight">{formErrors.sucursal_id}</p>}
                 </div>
               )}
 
-              <div className="flex gap-3 pt-4 border-t border-gray-100 mt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3.5 border border-gray-200 bg-gray-50 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors text-sm">Cancelar</button>
-                <button type="submit" className="flex-1 bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-600/30 hover:bg-blue-700 active:scale-95 transition-all text-sm flex items-center justify-center gap-1.5"><CheckCircle size={16}/> Guardar</button>
+              <div className="flex gap-3 pt-6 border-t border-gray-100/50 dark:border-white/5 mt-6 transition-colors">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3.5 border border-gray-200/80 dark:border-white/5 bg-white/50 dark:bg-slate-800/50 text-gray-600 dark:text-slate-300 rounded-xl font-extrabold hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-sm backdrop-blur-md shadow-sm active:scale-95">Cancelar</button>
+                <button type="submit" className="flex-1 bg-blue-600/90 dark:bg-blue-600 text-white rounded-xl font-black hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-600/20 dark:shadow-blue-900/40 text-sm flex items-center justify-center gap-1.5 border border-transparent dark:border-white/10 backdrop-blur-md"><CheckCircle size={16}/> Guardar</button>
               </div>
             </form>
           </div>
         </div>
       )}
       
-      {/* MODAL ELIMINAR */}
+      {/* ✨ MODAL ELIMINAR (LIQUID GLASS) ✨ */}
       {deleteModalOpen && provToDelete && (
-        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-fade-in">
-          <div className="bg-white rounded-t-3xl sm:rounded-[2rem] p-6 md:p-8 w-full sm:max-w-sm text-center shadow-2xl animate-fade-in-up pb-8">
-            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6 sm:hidden"></div>
-            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-50 border-4 border-red-100 mb-4 text-red-500 shadow-inner">
-              <AlertTriangle size={32}/>
+        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors animate-fade-in">
+          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl p-6 sm:p-8 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-sm text-center shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up pb-8 transition-colors">
+            <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
+            <div className="mx-auto flex items-center justify-center h-16 w-16 bg-red-50/80 dark:bg-red-900/30 border border-red-100/50 dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-full mb-4 backdrop-blur-md shadow-sm transition-colors">
+              <AlertTriangle size={28}/>
             </div>
-            <h3 className="text-xl font-extrabold text-gray-800 mb-2">¿Eliminar Proveedor?</h3>
-            <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">
-              Desactivarás a <strong className="text-gray-800">"{provToDelete.razon_social}"</strong> de la base de datos.
+            <h3 className="text-xl font-black text-gray-800 dark:text-white mb-2 transition-colors">¿Eliminar Proveedor?</h3>
+            <p className="text-xs md:text-sm text-gray-500 dark:text-blue-200/70 mb-8 font-medium leading-relaxed transition-colors">
+              Desactivarás a <strong className="text-gray-800 dark:text-blue-100 font-black">"{provToDelete.razon_social}"</strong> de la base de datos.
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteModalOpen(false)} className="flex-1 py-3.5 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors text-sm">Cancelar</button>
-              <button onClick={handleDelete} className="flex-1 py-3.5 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/30 text-sm">Sí, Eliminar</button>
+              <button onClick={() => setDeleteModalOpen(false)} className="flex-1 py-3.5 bg-gray-100/80 dark:bg-slate-800/80 border border-transparent dark:border-white/5 text-gray-700 dark:text-slate-300 rounded-xl font-extrabold hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors text-sm backdrop-blur-md shadow-sm active:scale-95">Cancelar</button>
+              <button onClick={handleDelete} className="flex-1 py-3.5 bg-red-600/90 text-white rounded-xl font-black hover:bg-red-600 active:scale-95 transition-all shadow-lg shadow-red-600/20 border border-red-500/50 text-sm">Sí, Eliminar</button>
             </div>
           </div>
         </div>

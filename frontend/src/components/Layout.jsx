@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, LogOut, Menu, Activity, User, Contact, MapPin, Building2, ChevronDown, Store, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, LogOut, Menu, Activity, User, Contact, MapPin, Building2, ChevronDown, Store, Moon, Sun, CreditCard } from 'lucide-react';
 import api from '../services/api';
 import { CATEGORIA_A_RUTA } from '../config/menuConfig';
 
 // ✨ FIX ABSOLUTO: Código inyectado FUERA de React para evitar el parpadeo blanco ✨
 if (!localStorage.getItem('theme')) {
-  localStorage.setItem('theme', 'dark'); // Por defecto, si entra por primera vez, será oscuro
+  localStorage.setItem('theme', 'dark'); 
 }
 if (localStorage.getItem('theme') === 'dark' || (localStorage.getItem('theme') === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
   document.documentElement.classList.add('dark');
@@ -26,10 +26,8 @@ const Layout = ({ children, title, moduleIcon }) => {
   const [sucursalesPermitidas, setSucursalesPermitidas] = useState([]);
   const [sucursalActiva, setSucursalActiva] = useState(JSON.parse(localStorage.getItem('sucursalActiva')) || null);
 
-  // El estado interno se sincroniza de forma estricta
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
-  // Efecto para escuchar cambios manuales y aplicarlos
   useEffect(() => {
     const root = window.document.documentElement;
     if (isDarkMode) {
@@ -43,7 +41,6 @@ const Layout = ({ children, title, moduleIcon }) => {
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
-  // Efecto para escuchar si desde otra pantalla (Configuración) nos avisan del cambio
   useEffect(() => {
     const syncTheme = () => {
       setIsDarkMode(localStorage.getItem('theme') === 'dark');
@@ -68,13 +65,22 @@ const Layout = ({ children, title, moduleIcon }) => {
       try {
         const res = await api.get('/auth/me');
         const u = res.data;
+        
+        // Actualizamos local storage para evitar desincronizaciones si recarga F5
+        localStorage.setItem('usuario', JSON.stringify(u));
         setUsuario(u);
 
+        // ✨ LÓGICA DE MENÚ SUPERADMIN ✨
         if (u.rol === 'SuperAdmin') {
-          setMenuItems([{ path: '/admin-saas', label: 'Gestión SaaS', Icon: Building2 }]);
-          return; 
+          setMenuItems([
+            { path: '/admin-saas', label: 'Gestión SaaS', Icon: Building2 },
+            { path: '/suscripciones-saas', label: 'Planes y Pagos', Icon: CreditCard },
+            { path: '/configuracion', label: 'Ajustes', Icon: User } 
+          ]);
+          return; // Detiene la ejecución aquí. El SuperAdmin no necesita sucursales.
         }
 
+        // ✨ LÓGICA DE MENÚ ADMINISTRADOR / EMPLEADO ✨
         try {
           const sucRes = await api.get('/sucursales');
           const todasSucs = sucRes.data;
@@ -135,6 +141,7 @@ const Layout = ({ children, title, moduleIcon }) => {
         } catch(e) {}
 
       } catch (err) {
+        // Si falla /auth/me (token expirado o inválido), expulsa al login
         handleLogout();
       }
     };
@@ -177,6 +184,7 @@ const Layout = ({ children, title, moduleIcon }) => {
           <span className="font-bold text-xl text-blue-500 hidden lg:block lg:group-hover:hidden">R</span>
         </div>
 
+        {/* Solo muestra Dropdown si no es SuperAdmin */}
         {!isSucursalesRoute && usuario?.rol !== 'SuperAdmin' && (
           <div className="lg:hidden px-4 py-4 border-b border-slate-800 bg-slate-800/30 dark:bg-slate-900/50">
             <p className="text-[10px] text-slate-400 font-bold uppercase mb-2 px-1">Sucursal Actual</p>
@@ -214,6 +222,7 @@ const Layout = ({ children, title, moduleIcon }) => {
             )}
           </div>
           
+          {/* Dropdown oculto para SuperAdmin */}
           <div className="hidden lg:flex items-center justify-center shrink-0 px-2">
             {!isSucursalesRoute && usuario?.rol !== 'SuperAdmin' && (
                <CustomDropdown 
@@ -237,13 +246,13 @@ const Layout = ({ children, title, moduleIcon }) => {
             </button>
 
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-extrabold text-slate-800 dark:text-white leading-none transition-colors">{usuario.nombre || 'Usuario'}</p>
-              <p className="text-[10px] uppercase tracking-widest font-bold text-blue-600 dark:text-blue-400 mt-1">{usuario.rol || 'Empleado'}</p>
+              <p className="text-sm font-extrabold text-slate-800 dark:text-white leading-none transition-colors">{usuario?.nombre || 'Usuario'}</p>
+              <p className="text-[10px] uppercase tracking-widest font-bold text-blue-600 dark:text-blue-400 mt-1">{usuario?.rol || 'Empleado'}</p>
             </div>
             
             <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="focus:outline-none transition-transform hover:scale-105 active:scale-95">
               <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow-md border-2 border-white dark:border-slate-800 overflow-hidden shrink-0 transition-colors">
-                {usuario.avatar ? <img src={usuario.avatar} alt="Avatar" className="w-full h-full object-cover" /> : usuario.nombre?.charAt(0)?.toUpperCase() || 'U'}
+                {usuario?.avatar ? <img src={usuario.avatar} alt="Avatar" className="w-full h-full object-cover" /> : (usuario?.nombre?.charAt(0)?.toUpperCase() || 'U')}
               </div>
             </button>
 
@@ -253,16 +262,14 @@ const Layout = ({ children, title, moduleIcon }) => {
                 <div className="absolute right-0 top-14 mt-2 w-56 bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-700 z-50 overflow-hidden animate-fade-in-down p-1.5 transition-colors">
                   <div className="p-4 border-b border-gray-50 dark:border-slate-700 sm:hidden flex items-center gap-3">
                      <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-lg shrink-0">
-                       {usuario.avatar ? <img src={usuario.avatar} className="w-full h-full object-cover rounded-full" /> : usuario.nombre?.charAt(0)?.toUpperCase() || 'U'}
+                       {usuario?.avatar ? <img src={usuario.avatar} className="w-full h-full object-cover rounded-full" /> : (usuario?.nombre?.charAt(0)?.toUpperCase() || 'U')}
                      </div>
                      <div className="min-w-0">
-                       <p className="text-sm font-bold text-gray-800 dark:text-white truncate">{usuario.nombre}</p>
-                       <p className="text-[9px] uppercase font-bold text-blue-600 dark:text-blue-400 tracking-wider mt-0.5 truncate">{usuario.rol}</p>
+                       <p className="text-sm font-bold text-gray-800 dark:text-white truncate">{usuario?.nombre}</p>
+                       <p className="text-[9px] uppercase font-bold text-blue-600 dark:text-blue-400 tracking-wider mt-0.5 truncate">{usuario?.rol}</p>
                      </div>
                   </div>
-                  {usuario.rol !== 'SuperAdmin' && (
-                    <Link to="/configuracion" onClick={() => setProfileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-gray-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors mt-1"><User size={16} /> Ajustes / Perfil</Link>
-                  )}
+                  <Link to="/configuracion" onClick={() => setProfileMenuOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-gray-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors mt-1"><User size={16} /> Ajustes / Perfil</Link>
                   <button onClick={handleLogout} className="flex items-center gap-3 w-full text-left px-4 py-3 text-sm font-bold text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-300 rounded-xl transition-colors mt-1"><LogOut size={16} /> Cerrar Sesión</button>
                 </div>
               </>
@@ -283,7 +290,7 @@ const Layout = ({ children, title, moduleIcon }) => {
 const CustomDropdown = ({ sucursalActiva, sucursalesPermitidas, usuario, onSelect, isMobile }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const hasOptions = sucursalesPermitidas.length > 1 || usuario.rol === 'Administrador';
+  const hasOptions = sucursalesPermitidas.length > 1 || usuario?.rol === 'Administrador';
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -296,7 +303,7 @@ const CustomDropdown = ({ sucursalActiva, sucursalesPermitidas, usuario, onSelec
   }, []);
 
   let currentLabel = 'Cargando...';
-  if (sucursalesPermitidas.length === 0 && usuario.rol !== 'Administrador') currentLabel = 'Sin locales asignados';
+  if (sucursalesPermitidas.length === 0 && usuario?.rol !== 'Administrador') currentLabel = 'Sin locales asignados';
   else if (sucursalActiva?.id === 'ALL') currentLabel = 'Todas las Sucursales';
   else if (sucursalActiva) currentLabel = sucursalActiva.nombre;
 
@@ -334,7 +341,7 @@ const CustomDropdown = ({ sucursalActiva, sucursalesPermitidas, usuario, onSelec
         }`}>
           <div className="max-h-64 overflow-y-auto custom-scrollbar p-1.5">
             
-            {usuario.rol === 'Administrador' && (
+            {usuario?.rol === 'Administrador' && (
               <button
                 onClick={() => { onSelect({ id: 'ALL', nombre: 'Todas las Sucursales' }); setIsOpen(false); }}
                 className={`w-full text-left px-4 py-3 text-xs md:text-sm font-extrabold rounded-xl flex items-center gap-3 transition-colors mb-1 ${
