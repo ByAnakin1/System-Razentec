@@ -56,6 +56,39 @@ const usuariosController = {
     } catch (error) { res.status(500).json({ error: 'Error al cargar perfil' }); }
   },
 
+  actualizarMiPropioPerfil: async (req, res) => {
+    try {
+      const { nombre_completo, nueva_password, avatar } = req.body;
+      const myUserId = req.user.id;
+
+      // Buscamos cuál es el empleado_id de este usuario
+      const userRes = await pool.query('SELECT empleado_id FROM usuarios WHERE id = $1', [myUserId]);
+      const empleadoId = userRes.rows[0].empleado_id;
+
+      // 1. Actualizar el nombre si lo enviaron
+      if (nombre_completo) {
+        await pool.query('UPDATE empleados SET nombre_completo = $1 WHERE id = $2', [nombre_completo, empleadoId]);
+      }
+
+      // ✨ 2. Actualizar la foto de perfil si la enviaron
+      if (avatar) {
+        await pool.query('UPDATE empleados SET avatar = $1 WHERE id = $2', [avatar, empleadoId]);
+      }
+
+      // 3. Actualizar la contraseña en la tabla usuarios (si la mandó)
+      if (nueva_password && nueva_password.trim() !== '') {
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(nueva_password, salt);
+        await pool.query('UPDATE usuarios SET password_hash = $1 WHERE id = $2', [hash, myUserId]);
+      }
+
+      res.json({ message: 'Perfil actualizado con éxito.' });
+    } catch (error) {
+      console.error("Error al actualizar mi propio perfil:", error);
+      res.status(500).json({ error: 'Error interno al actualizar el perfil.' });
+    }
+  },
+
   actualizarMiAvatar: async (req, res) => {
     try {
       const { avatar } = req.body;
@@ -115,5 +148,7 @@ const usuariosController = {
     } catch (error) { res.status(500).json({ error: 'Error' }); }
   }
 };
+
+
 
 module.exports = usuariosController;

@@ -9,10 +9,10 @@ const dashboardController = {
       
       let queryParams = [empresaId];
       // Definir filtros base
-      let ventasQueryFilter = "WHERE (v.empresa_id = $1 OR v.empresa_id IS NULL)";
+      let ventasQueryFilter = "WHERE v.empresa_id = $1";
       let comprasQueryFilter = "WHERE c.empresa_id = $1 AND c.estado = 'COMPLETADO'";
-      let productosStatsQueryFilter = "WHERE (p.empresa_id = $1 OR p.empresa_id IS NULL) AND p.estado = true";
-      let tp_queryFilter = "WHERE (v.empresa_id = $1 OR v.empresa_id IS NULL)";
+      let productosStatsQueryFilter = "WHERE p.empresa_id = $1 AND p.estado = true";
+      let tp_queryFilter = "WHERE v.empresa_id = $1";
 
       // Si se proporciona una sucursal específica, filtrar por ella
       if (sucursal_id && sucursal_id !== 'general') {
@@ -62,7 +62,7 @@ const dashboardController = {
 
       // 5. Total de Clientes (Los clientes suelen ser globales por empresa)
       const clientesTotales = await pool.query(`
-        SELECT COUNT(id) as total FROM clientes WHERE empresa_id = $1 OR empresa_id IS NULL
+        SELECT COUNT(id) as total FROM clientes WHERE empresa_id = $1
       `, [empresaId]);
 
       // 6. Últimas 5 Ventas Recientes

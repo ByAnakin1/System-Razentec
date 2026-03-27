@@ -16,6 +16,7 @@ router.post('/verificar-admin', usuariosController.verificarAdminPassword);
 // 🟢 RUTAS DE PERFIL PROPIO (Cualquier empleado logueado puede editar su propia foto/perfil)
 router.get('/me', usuariosController.obtenerMiPerfil);
 router.put('/me', usuariosController.actualizarMiAvatar);
+router.put('/perfil', verifyToken, usuariosController.actualizarMiPropioPerfil);
 
 // 🔴 RUTAS DE ADMINISTRACIÓN (Editar a otras personas)
 router.put('/:id/personales', requireModificador('Usuarios'), usuariosController.actualizarDatosPersonales);

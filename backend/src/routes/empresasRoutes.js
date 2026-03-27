@@ -29,5 +29,6 @@ const verifySuperAdmin = (req, res, next) => {
 router.get('/', verifyToken, verifySuperAdmin, tenantController.getEmpresas);
 router.post('/', verifyToken, verifySuperAdmin, tenantController.crearEmpresa);
 router.put('/:id/estado', verifyToken, verifySuperAdmin, tenantController.toggleEstadoEmpresa);
+router.put('/:id', verifyToken, verifySuperAdmin, tenantController.actualizarEmpresa);
 
 module.exports = router;
