@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
+import api from '../services/api';
 import { User, Palette, Building2, Receipt, Save, UploadCloud, Moon, Sun, Monitor, CheckCircle, AlertTriangle, ShieldCheck, Printer, CreditCard } from 'lucide-react';
 
-// Utilidad CSS para esconder scrollbars en todos los navegadores manteniendo la funcionalidad
 const hideScrollbar = "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]";
 
 const Configuracion = () => {
@@ -15,9 +15,16 @@ const Configuracion = () => {
   const [papelImpresion, setPapelImpresion] = useState('80mm');
   
   const [avatarPreview, setAvatarPreview] = useState(usuario?.avatar || null);
+  const [avatarBase64, setAvatarBase64] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
 
   const esAdmin = usuario?.rol === 'Administrador' || usuario?.rol === 'SuperAdmin';
+
+  const [perfilForm, setPerfilForm] = useState({
+    nombre: usuario?.nombre || '',
+    nuevaPassword: '',
+    confirmarPassword: ''
+  });
 
   const showToast = (type, message) => { 
     setToast({ type, message }); 
@@ -51,15 +58,29 @@ const Configuracion = () => {
   const handleAccentChange = (color) => {
     setAccentColor(color);
     localStorage.setItem('accent', color);
-    showToast('success', `Color de acento guardado`);
+    
+    // Actualizamos las variables CSS en la raíz del documento
+    document.documentElement.setAttribute('data-theme-color', color);
+    showToast('success', `Color de acento cambiado a ${color}`);
   };
+
+  useEffect(() => {
+    // Al cargar el componente, aplicamos el color guardado
+    const savedAccent = localStorage.getItem('accent') || 'blue';
+    document.documentElement.setAttribute('data-theme-color', savedAccent);
+  }, []);
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setAvatarPreview(url);
-      showToast('success', 'Nueva foto lista');
+      if (file.size > 2 * 1024 * 1024) return showToast('error', 'La imagen es muy grande (Máx 2MB)');
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result);
+        setAvatarBase64(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -68,13 +89,51 @@ const Configuracion = () => {
     if (file) {
       const url = URL.createObjectURL(file);
       setLogoPreview(url);
-      showToast('success', 'Logo cargado');
+      showToast('success', 'Logo cargado localmente');
     }
   };
 
-  const handleSave = (e) => {
+  const handleSavePerfil = async (e) => {
     e.preventDefault();
-    showToast('success', '¡Configuración guardada en la nube!');
+    if (perfilForm.nuevaPassword && perfilForm.nuevaPassword !== perfilForm.confirmarPassword) {
+      return showToast('error', 'Las contraseñas no coinciden');
+    }
+    try {
+      const payload = {
+        nombre_completo: perfilForm.nombre,
+        nueva_password: perfilForm.nuevaPassword
+      };
+      if (avatarBase64) payload.avatar = avatarBase64;
+
+      await api.put('/usuarios/perfil', payload);
+      
+      const userUpdate = { 
+        ...usuario, 
+        nombre: perfilForm.nombre,
+        ...(avatarBase64 && { avatar: avatarBase64 }) 
+      };
+      
+      localStorage.setItem('usuario', JSON.stringify(userUpdate));
+      setUsuario(userUpdate);
+      setPerfilForm({...perfilForm, nuevaPassword: '', confirmarPassword: ''});
+      setAvatarBase64(null);
+      window.dispatchEvent(new Event('storage'));
+
+      showToast('success', '¡Perfil actualizado en la base de datos!');
+    } catch (error) {
+      console.error(error);
+      showToast('error', 'Error al actualizar el perfil');
+    }
+  };
+
+  const handleSaveNegocio = (e) => {
+    e.preventDefault();
+    showToast('success', '¡Datos del negocio guardados (Simulado)!');
+  };
+
+  const handleSaveTickets = (e) => {
+    e.preventDefault();
+    showToast('success', '¡Configuración de tickets guardada (Simulado)!');
   };
 
   const TABS = [
@@ -86,10 +145,31 @@ const Configuracion = () => {
 
   const tabsToRender = TABS.filter(tab => !tab.adminOnly || esAdmin);
 
+  // Mapeo de colores para el CSS dinámico
+  const colorMap = {
+    blue: { main: '#2563eb', hover: '#1d4ed8', light: '#eff6ff', dark: '#1e3a8a' },
+    emerald: { main: '#10b981', hover: '#047857', light: '#ecfdf5', dark: '#064e3b' },
+    purple: { main: '#9333ea', hover: '#7e22ce', light: '#faf5ff', dark: '#581c87' },
+    rose: { main: '#f43f5e', hover: '#be123c', light: '#fff1f2', dark: '#881337' },
+    amber: { main: '#f59e0b', hover: '#b45309', light: '#fffbeb', dark: '#78350f' }
+  };
+
+  const currentColors = colorMap[accentColor] || colorMap.blue;
+
   return (
     <Layout title="Ajustes" moduleIcon={<Palette />}>
       
-      {/* Toast movido arriba en móvil para no tapar los colores ni los botones de guardar */}
+      {/* ESTILO DINÁMICO PARA EL COLOR DE ACENTO */}
+      <style>{`
+        :root[data-theme-color="${accentColor}"] .btn-primary { background-color: ${currentColors.main}; }
+        :root[data-theme-color="${accentColor}"] .btn-primary:hover { background-color: ${currentColors.hover}; }
+        :root[data-theme-color="${accentColor}"] .text-primary { color: ${currentColors.main}; }
+        :root[data-theme-color="${accentColor}"] .border-primary { border-color: ${currentColors.main}; }
+        :root[data-theme-color="${accentColor}"] .ring-primary { --tw-ring-color: ${currentColors.main}40; }
+        :root[data-theme-color="${accentColor}"] .bg-primary-light { background-color: ${currentColors.light}; }
+        :root[data-theme-color="${accentColor}"] .dark .bg-primary-light { background-color: ${currentColors.dark}; }
+      `}</style>
+
       {toast && (
         <div className={`fixed top-4 right-4 md:top-auto md:bottom-10 md:right-10 z-[9999] flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl text-white animate-fade-in-down md:animate-fade-in-up backdrop-blur-xl border border-white/20 ${toast.type === 'success' ? 'bg-emerald-600/95' : 'bg-red-600/95'}`}>
           {toast.type === 'success' ? <CheckCircle size={16}/> : <AlertTriangle size={16}/>}
@@ -97,12 +177,13 @@ const Configuracion = () => {
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-4 h-full lg:h-[calc(100vh-140px)] pb-20 md:pb-0">
+      {/* CONTENEDOR PRINCIPAL CENTRADO */}
+      <div className="flex flex-col lg:flex-row gap-6 pb-20 md:pb-0 items-start justify-center max-w-5xl mx-auto w-full">
         
-        {/* ✨ MENÚ LATERAL TIPO APP NATIVA (Iconos en móvil, lista compacta en PC) ✨ */}
-        <div className="w-full lg:w-56 shrink-0 flex flex-col gap-3 z-10 sticky top-0 md:relative pt-1 md:pt-0">
-          <div className="bg-white/80 dark:bg-blue-950/40 backdrop-blur-2xl rounded-[1.25rem] md:rounded-[1.5rem] p-1.5 md:p-2 shadow-sm border border-gray-200/50 dark:border-white/5 transition-colors duration-300">
-            <nav className={`flex flex-row lg:flex-col gap-1 overflow-x-auto ${hideScrollbar}`}>
+        {/* MENÚ LATERAL */}
+        <div className="w-full lg:w-64 shrink-0 flex flex-col gap-3 z-10 sticky top-0 md:relative pt-1 md:pt-0">
+          <div className="bg-white/60 dark:bg-blue-950/20 backdrop-blur-2xl rounded-[1.5rem] p-2 shadow-sm border border-gray-200/50 dark:border-white/5">
+            <nav className={`flex flex-row lg:flex-col gap-1.5 overflow-x-auto ${hideScrollbar}`}>
               {tabsToRender.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -110,16 +191,16 @@ const Configuracion = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex flex-col lg:flex-row items-center lg:items-start gap-1 lg:gap-3 px-3 py-2 md:py-3 rounded-xl transition-all duration-300 flex-1 lg:flex-none justify-center lg:justify-start group ${
+                    className={`flex flex-col lg:flex-row items-center lg:items-start gap-2 lg:gap-3 px-4 py-3 rounded-xl transition-all duration-300 flex-1 lg:flex-none justify-center lg:justify-start group ${
                       isActive 
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20 lg:translate-x-1' 
-                        : 'text-slate-500 dark:text-slate-400 hover:bg-white/80 dark:hover:bg-slate-800/50 hover:text-blue-600 dark:hover:text-blue-400'
+                        ? 'btn-primary text-white shadow-lg' 
+                        : 'text-slate-500 dark:text-slate-400 hover:bg-white/80 dark:hover:bg-slate-800/50 hover:text-slate-700 dark:hover:text-white'
                     }`}
                   >
                     <Icon size={18} className={`shrink-0 ${isActive ? 'animate-pulse' : 'group-hover:scale-110 transition-transform'}`} />
                     <div className="text-center lg:text-left">
-                      <p className={`text-[10px] md:text-xs font-black leading-tight ${isActive ? 'text-white' : ''}`}>{tab.label}</p>
-                      <p className={`text-[9px] font-bold tracking-widest uppercase hidden lg:block mt-0.5 ${isActive ? 'text-blue-200' : 'text-slate-400'}`}>{tab.desc}</p>
+                      <p className={`text-[11px] md:text-xs font-black leading-tight ${isActive ? 'text-white' : ''}`}>{tab.label}</p>
+                      <p className={`text-[9px] font-bold tracking-widest uppercase hidden lg:block mt-0.5 ${isActive ? 'text-white/70' : 'text-slate-400'}`}>{tab.desc}</p>
                     </div>
                   </button>
                 );
@@ -128,50 +209,56 @@ const Configuracion = () => {
           </div>
         </div>
 
-        {/* ✨ ÁREA DE CONTENIDO COMPACTADA ✨ */}
-        <div className={`flex-1 bg-white/60 dark:bg-blue-950/20 backdrop-blur-2xl rounded-[1.5rem] md:rounded-[2rem] shadow-sm border border-white/80 dark:border-white/5 p-4 md:p-8 transition-colors duration-300 overflow-y-auto ${hideScrollbar}`}>
+        {/* CONTENIDO (Formularios) - MÁS ESTILIZADO Y CENTRADO */}
+        <div className={`flex-1 w-full bg-white/60 dark:bg-blue-950/20 backdrop-blur-2xl rounded-[1.5rem] md:rounded-[2rem] shadow-sm border border-white/80 dark:border-white/5 p-6 md:p-10 transition-colors duration-300`}>
           
           {/* --- TAB: MI PERFIL --- */}
           {activeTab === 'perfil' && (
-            <div className="animate-fade-in w-full max-w-2xl">
-              <h2 className="text-lg md:text-2xl font-black text-slate-800 dark:text-white mb-1 tracking-tight">Mi Perfil</h2>
-              <p className="text-[11px] md:text-xs font-bold text-slate-500 dark:text-slate-400 mb-5">Administra tu identidad y seguridad.</p>
+            <div className="animate-fade-in w-full">
+              <h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white mb-1 tracking-tight">Mi Perfil</h2>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-8">Administra tu identidad y seguridad.</p>
               
-              <div className="flex items-center gap-4 mb-6 p-4 bg-white/50 dark:bg-slate-900/50 rounded-2xl border border-gray-200/50 dark:border-white/5 shadow-sm">
+              <div className="flex items-center gap-5 mb-8 p-5 bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-gray-200/50 dark:border-white/5 shadow-sm">
                 <input type="file" id="avatarUpload" className="hidden" accept="image/*" onChange={handleAvatarChange} />
-                <label htmlFor="avatarUpload" className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-2xl shadow-xl shadow-blue-600/20 border-2 border-white dark:border-slate-800 shrink-0 relative group cursor-pointer overflow-hidden">
-                  {avatarPreview ? <img src={avatarPreview} className="w-full h-full rounded-full object-cover"/> : (usuario?.nombre || 'U').charAt(0).toUpperCase()}
-                  <div className="absolute inset-0 bg-black/60 hidden group-hover:flex items-center justify-center transition-all">
-                    <UploadCloud size={16} className="text-white"/>
+                <label htmlFor="avatarUpload" className="w-20 h-20 md:w-24 md:h-24 rounded-[1.25rem] btn-primary text-white flex items-center justify-center font-black text-3xl shadow-xl border-4 border-white dark:border-slate-800 shrink-0 relative group cursor-pointer overflow-hidden transition-all hover:scale-105">
+                  {avatarPreview ? <img src={avatarPreview} className="w-full h-full object-cover"/> : (usuario?.nombre || 'U').charAt(0).toUpperCase()}
+                  <div className="absolute inset-0 bg-black/60 hidden group-hover:flex flex-col items-center justify-center transition-all">
+                    <UploadCloud size={20} className="text-white mb-1"/>
                   </div>
                 </label>
                 <div className="flex-1">
-                  <h3 className="text-base md:text-lg font-black text-slate-800 dark:text-white leading-tight">{usuario?.nombre}</h3>
-                  <p className="text-blue-600 dark:text-blue-400 font-bold text-[9px] md:text-[10px] mt-1 uppercase tracking-widest bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded inline-block">{usuario?.rol}</p>
+                  <h3 className="text-lg md:text-xl font-black text-slate-800 dark:text-white leading-tight mb-1">{usuario?.nombre}</h3>
+                  <p className="text-primary font-bold text-[10px] uppercase tracking-widest bg-primary-light px-2.5 py-1 rounded-md inline-block">{usuario?.rol}</p>
                 </div>
               </div>
 
-              <form id="perfilForm" onSubmit={handleSave} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form id="perfilForm" onSubmit={handleSavePerfil} className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="text-[9px] md:text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block">Nombre Completo</label>
-                    <input type="text" defaultValue={usuario?.nombre} className="w-full border border-gray-200/80 dark:border-white/10 bg-white/50 dark:bg-blue-950/30 p-2.5 md:p-3 rounded-xl font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500/20 outline-none text-xs" />
-                  </div>
-                  <div>
-                    <label className="text-[9px] md:text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block">Correo (Login)</label>
-                    <input type="email" defaultValue={usuario?.email} disabled className="w-full border border-gray-200/50 dark:border-white/5 bg-gray-50/50 dark:bg-slate-900/30 p-2.5 md:p-3 rounded-xl font-bold text-slate-400 outline-none cursor-not-allowed text-xs" />
-                  </div>
-                  <div className="md:col-span-2 pt-2">
-                    <h4 className="text-xs font-black text-slate-800 dark:text-white mb-3 border-b border-dashed border-gray-200 dark:border-slate-700 pb-2 flex items-center gap-2"><ShieldCheck size={14} className="text-emerald-500"/> Seguridad</h4>
+                    <label className="text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-2 block">Nombre Completo</label>
+                    <input type="text" value={perfilForm.nombre} onChange={(e) => setPerfilForm({...perfilForm, nombre: e.target.value})} required className="w-full border border-gray-200/80 dark:border-white/10 bg-white/50 dark:bg-blue-950/30 p-3.5 rounded-xl font-bold text-slate-800 dark:text-white focus:ring-2 ring-primary outline-none text-sm transition-all" />
                   </div>
                   <div>
-                    <label className="text-[9px] md:text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block">Nueva Contraseña</label>
-                    <input type="password" placeholder="Mínimo 6 caracteres" className="w-full border border-gray-200/80 dark:border-white/10 bg-white/50 dark:bg-blue-950/30 p-2.5 md:p-3 rounded-xl font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500/20 outline-none text-xs" />
+                    <label className="text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-2 block">Correo (Login)</label>
+                    <input type="email" defaultValue={usuario?.email} disabled className="w-full border border-gray-200/50 dark:border-white/5 bg-gray-50/50 dark:bg-slate-900/30 p-3.5 rounded-xl font-bold text-slate-400 outline-none cursor-not-allowed text-sm" />
+                  </div>
+                  <div className="md:col-span-2 pt-4">
+                    <h4 className="text-sm font-black text-slate-800 dark:text-white mb-4 border-b border-dashed border-gray-200 dark:border-slate-700 pb-2.5 flex items-center gap-2"><ShieldCheck size={16} className="text-emerald-500"/> Seguridad</h4>
                   </div>
                   <div>
-                    <label className="text-[9px] md:text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block">Confirmar Contraseña</label>
-                    <input type="password" placeholder="Repite la contraseña" className="w-full border border-gray-200/80 dark:border-white/10 bg-white/50 dark:bg-blue-950/30 p-2.5 md:p-3 rounded-xl font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500/20 outline-none text-xs" />
+                    <label className="text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-2 block">Nueva Contraseña</label>
+                    <input type="password" value={perfilForm.nuevaPassword} onChange={(e) => setPerfilForm({...perfilForm, nuevaPassword: e.target.value})} placeholder="Mínimo 6 caracteres" className="w-full border border-gray-200/80 dark:border-white/10 bg-white/50 dark:bg-blue-950/30 p-3.5 rounded-xl font-bold text-slate-800 dark:text-white focus:ring-2 ring-primary outline-none text-sm transition-all" />
                   </div>
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-2 block">Confirmar Contraseña</label>
+                    <input type="password" value={perfilForm.confirmarPassword} onChange={(e) => setPerfilForm({...perfilForm, confirmarPassword: e.target.value})} placeholder="Repite la contraseña" className="w-full border border-gray-200/80 dark:border-white/10 bg-white/50 dark:bg-blue-950/30 p-3.5 rounded-xl font-bold text-slate-800 dark:text-white focus:ring-2 ring-primary outline-none text-sm transition-all" />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-8 mt-8 border-t border-gray-100/50 dark:border-white/5">
+                  <button type="submit" className="w-full md:w-auto btn-primary text-white font-black px-10 py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 text-sm hover:-translate-y-0.5">
+                    <Save size={18}/> Actualizar Perfil
+                  </button>
                 </div>
               </form>
             </div>
@@ -179,45 +266,45 @@ const Configuracion = () => {
 
           {/* --- TAB: APARIENCIA --- */}
           {activeTab === 'apariencia' && (
-            <div className="animate-fade-in max-w-3xl">
-              <h2 className="text-lg md:text-2xl font-black text-slate-800 dark:text-white mb-1 tracking-tight">Apariencia</h2>
-              <p className="text-[11px] md:text-xs font-bold text-slate-500 dark:text-slate-400 mb-5">Personaliza la iluminación del sistema.</p>
+            <div className="animate-fade-in w-full">
+              <h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white mb-1 tracking-tight">Apariencia</h2>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-8">Personaliza la iluminación del sistema.</p>
               
-              <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Modo de Iluminación</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-                <button onClick={() => handleThemeChange('light')} className={`relative flex flex-row sm:flex-col items-center justify-start sm:justify-center p-3 sm:p-5 rounded-2xl border-2 transition-all bg-white/80 dark:bg-slate-900/50 backdrop-blur-md ${themePref === 'light' ? 'border-blue-500 shadow-lg shadow-blue-500/10' : 'border-transparent shadow-sm hover:border-blue-200 dark:hover:border-slate-700'}`}>
-                  {themePref === 'light' && <div className="absolute top-2 right-2 sm:top-3 sm:right-3 text-blue-500"><CheckCircle size={14} className="bg-white rounded-full"/></div>}
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-full flex items-center justify-center mr-3 sm:mr-0 sm:mb-2 shrink-0"><Sun size={18} className="text-amber-500 sm:w-[22px] sm:h-[22px]"/></div>
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Modo de Iluminación</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10">
+                <button onClick={() => handleThemeChange('light')} className={`relative flex flex-row sm:flex-col items-center justify-start sm:justify-center p-5 sm:p-8 rounded-3xl border-2 transition-all bg-white/80 dark:bg-slate-900/50 backdrop-blur-md ${themePref === 'light' ? 'border-primary shadow-xl scale-[1.02]' : 'border-transparent shadow-sm hover:border-gray-200 dark:hover:border-slate-700'}`}>
+                  {themePref === 'light' && <div className="absolute top-4 right-4 text-primary"><CheckCircle size={18} className="bg-white rounded-full"/></div>}
+                  <div className="w-14 h-14 bg-blue-50/50 rounded-full flex items-center justify-center mr-4 sm:mr-0 sm:mb-4 shrink-0"><Sun size={24} className="text-amber-500"/></div>
                   <div className="text-left sm:text-center">
-                    <h3 className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-white leading-tight">Claro</h3>
-                    <p className="text-[8px] sm:text-[9px] text-slate-400 mt-0.5 uppercase tracking-widest font-bold">Día</p>
+                    <h3 className="text-base font-extrabold text-slate-800 dark:text-white leading-tight">Claro</h3>
+                    <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest font-bold">Día</p>
                   </div>
                 </button>
 
-                <button onClick={() => handleThemeChange('dark')} className={`relative flex flex-row sm:flex-col items-center justify-start sm:justify-center p-3 sm:p-5 rounded-2xl border-2 transition-all bg-slate-900 dark:bg-slate-950 backdrop-blur-md ${themePref === 'dark' ? 'border-blue-500 shadow-lg shadow-blue-500/20' : 'border-transparent shadow-sm hover:border-slate-700'}`}>
-                  {themePref === 'dark' && <div className="absolute top-2 right-2 sm:top-3 sm:right-3 text-blue-500"><CheckCircle size={14} className="bg-slate-900 rounded-full"/></div>}
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-800 rounded-full flex items-center justify-center shadow-inner mr-3 sm:mr-0 sm:mb-2 border border-white/5 shrink-0"><Moon size={18} className="text-blue-400 sm:w-[22px] sm:h-[22px]"/></div>
+                <button onClick={() => handleThemeChange('dark')} className={`relative flex flex-row sm:flex-col items-center justify-start sm:justify-center p-5 sm:p-8 rounded-3xl border-2 transition-all bg-slate-900 dark:bg-slate-950 backdrop-blur-md ${themePref === 'dark' ? 'border-primary shadow-xl scale-[1.02]' : 'border-transparent shadow-sm hover:border-slate-700'}`}>
+                  {themePref === 'dark' && <div className="absolute top-4 right-4 text-primary"><CheckCircle size={18} className="bg-slate-900 rounded-full"/></div>}
+                  <div className="w-14 h-14 bg-slate-800 rounded-full flex items-center justify-center shadow-inner mr-4 sm:mr-0 sm:mb-4 border border-white/5 shrink-0"><Moon size={24} className="text-blue-400"/></div>
                   <div className="text-left sm:text-center">
-                    <h3 className="text-xs sm:text-sm font-extrabold text-white leading-tight">Oscuro</h3>
-                    <p className="text-[8px] sm:text-[9px] text-slate-400 mt-0.5 uppercase tracking-widest font-bold">Noche</p>
+                    <h3 className="text-base font-extrabold text-white leading-tight">Oscuro</h3>
+                    <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest font-bold">Noche</p>
                   </div>
                 </button>
 
-                <button onClick={() => handleThemeChange('system')} className={`relative flex flex-row sm:flex-col items-center justify-start sm:justify-center p-3 sm:p-5 rounded-2xl border-2 transition-all bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 backdrop-blur-md ${themePref === 'system' ? 'border-blue-500 shadow-lg shadow-blue-500/10' : 'border-transparent shadow-sm hover:border-slate-300 dark:hover:border-slate-700'}`}>
-                  {themePref === 'system' && <div className="absolute top-2 right-2 sm:top-3 sm:right-3 text-blue-500"><CheckCircle size={14} className="bg-white dark:bg-slate-900 rounded-full"/></div>}
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/50 dark:bg-slate-800/50 rounded-full flex items-center justify-center shadow-sm mr-3 sm:mr-0 sm:mb-2 border border-white/20 shrink-0"><Monitor size={18} className="text-slate-600 dark:text-slate-300 sm:w-[22px] sm:h-[22px]"/></div>
+                <button onClick={() => handleThemeChange('system')} className={`relative flex flex-row sm:flex-col items-center justify-start sm:justify-center p-5 sm:p-8 rounded-3xl border-2 transition-all bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 backdrop-blur-md ${themePref === 'system' ? 'border-primary shadow-xl scale-[1.02]' : 'border-transparent shadow-sm hover:border-slate-300 dark:hover:border-slate-700'}`}>
+                  {themePref === 'system' && <div className="absolute top-4 right-4 text-primary"><CheckCircle size={18} className="bg-white dark:bg-slate-900 rounded-full"/></div>}
+                  <div className="w-14 h-14 bg-white/50 dark:bg-slate-800/50 rounded-full flex items-center justify-center shadow-sm mr-4 sm:mr-0 sm:mb-4 border border-white/20 shrink-0"><Monitor size={24} className="text-slate-600 dark:text-slate-300"/></div>
                   <div className="text-left sm:text-center">
-                    <h3 className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-white leading-tight">Auto</h3>
-                    <p className="text-[8px] sm:text-[9px] text-slate-500 mt-0.5 uppercase tracking-widest font-bold">Sistema</p>
+                    <h3 className="text-base font-extrabold text-slate-800 dark:text-white leading-tight">Auto</h3>
+                    <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-widest font-bold">Sistema</p>
                   </div>
                 </button>
               </div>
 
-              <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Color de Acento</h3>
-              <div className="flex flex-wrap gap-3 p-4 bg-white/50 dark:bg-slate-900/50 rounded-2xl border border-gray-200/50 dark:border-white/5">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Color de Acento</h3>
+              <div className="flex flex-wrap justify-center sm:justify-start gap-5 p-6 bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-gray-200/50 dark:border-white/5">
                 {[ { id: 'blue', color: 'bg-blue-600', shadow: 'shadow-blue-500/50' }, { id: 'emerald', color: 'bg-emerald-500', shadow: 'shadow-emerald-500/50' }, { id: 'purple', color: 'bg-purple-600', shadow: 'shadow-purple-500/50' }, { id: 'rose', color: 'bg-rose-500', shadow: 'shadow-rose-500/50' }, { id: 'amber', color: 'bg-amber-500', shadow: 'shadow-amber-500/50' }].map(c => (
-                  <button key={c.id} onClick={() => handleAccentChange(c.id)} className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full ${c.color} flex items-center justify-center transition-all ${accentColor === c.id ? `ring-2 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-950 ${c.shadow} scale-110` : 'hover:scale-110 hover:opacity-80'}`}>
-                    {accentColor === c.id && <CheckCircle size={14} className="text-white"/>}
+                  <button key={c.id} onClick={() => handleAccentChange(c.id)} className={`w-12 h-12 md:w-14 md:h-14 rounded-full ${c.color} flex items-center justify-center transition-all duration-300 ${accentColor === c.id ? `ring-4 ring-offset-4 ring-offset-slate-50 dark:ring-offset-slate-900 ${c.shadow} scale-110` : 'hover:scale-110 hover:opacity-80'}`}>
+                    {accentColor === c.id && <CheckCircle size={20} className="text-white"/>}
                   </button>
                 ))}
               </div>
@@ -226,30 +313,37 @@ const Configuracion = () => {
 
           {/* --- TAB: NEGOCIO --- */}
           {activeTab === 'negocio' && (
-            <div className="animate-fade-in max-w-3xl">
-              <h2 className="text-lg md:text-2xl font-black text-slate-800 dark:text-white mb-1 tracking-tight">Datos Fiscales</h2>
-              <p className="text-[11px] md:text-xs font-bold text-slate-500 dark:text-slate-400 mb-5">Para comprobantes oficiales.</p>
-              <form id="negocioForm" onSubmit={handleSave} className="space-y-4 bg-white/50 dark:bg-blue-900/10 p-4 md:p-6 rounded-2xl border border-gray-200/50 dark:border-white/5 shadow-sm">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="animate-fade-in w-full">
+              <h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white mb-1 tracking-tight">Datos Fiscales</h2>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-8">Para comprobantes oficiales.</p>
+              
+              <form id="negocioForm" onSubmit={handleSaveNegocio} className="space-y-5 bg-white/50 dark:bg-blue-900/10 p-6 md:p-8 rounded-3xl border border-gray-200/50 dark:border-white/5 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="md:col-span-2">
-                    <label className="text-[9px] md:text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block">Razón Social *</label>
-                    <input type="text" placeholder="Ej: Inversiones El Remanso" className="w-full border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-blue-950/30 p-2.5 md:p-3 rounded-xl font-black text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500/20 outline-none" />
+                    <label className="text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-2 block">Razón Social *</label>
+                    <input type="text" placeholder="Ej: Inversiones El Remanso" className="w-full border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-blue-950/30 p-3.5 rounded-xl font-black text-sm text-slate-800 dark:text-white focus:ring-2 ring-primary outline-none transition-all" />
                   </div>
                   <div>
-                    <label className="text-[9px] md:text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block">RUC / NIT *</label>
-                    <input type="text" placeholder="11 dígitos" className="w-full border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-blue-950/30 p-2.5 md:p-3 rounded-xl font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500/20 outline-none text-xs" />
+                    <label className="text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-2 block">RUC / NIT *</label>
+                    <input type="text" placeholder="11 dígitos" className="w-full border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-blue-950/30 p-3.5 rounded-xl font-bold text-slate-800 dark:text-white focus:ring-2 ring-primary outline-none text-sm transition-all" />
                   </div>
                   <div>
-                    <label className="text-[9px] md:text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block">Moneda Principal</label>
-                    <select className="w-full border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-blue-950/30 p-2.5 md:p-3 rounded-xl font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500/20 outline-none text-xs">
+                    <label className="text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-2 block">Moneda Principal</label>
+                    <select className="w-full border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-blue-950/30 p-3.5 rounded-xl font-bold text-slate-800 dark:text-white focus:ring-2 ring-primary outline-none text-sm transition-all">
                       <option value="PEN">Soles (PEN - S/)</option>
                       <option value="USD">Dólares (USD - $)</option>
                     </select>
                   </div>
                   <div className="md:col-span-2">
-                    <label className="text-[9px] md:text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block">Dirección Matriz</label>
-                    <input type="text" placeholder="Ej: Av. Principal 123" className="w-full border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-blue-950/30 p-2.5 md:p-3 rounded-xl font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500/20 outline-none text-xs" />
+                    <label className="text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-2 block">Dirección Matriz</label>
+                    <input type="text" placeholder="Ej: Av. Principal 123" className="w-full border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-blue-950/30 p-3.5 rounded-xl font-bold text-slate-800 dark:text-white focus:ring-2 ring-primary outline-none text-sm transition-all" />
                   </div>
+                </div>
+
+                <div className="flex justify-end pt-8 mt-8 border-t border-gray-200/50 dark:border-white/10">
+                  <button type="submit" className="w-full md:w-auto btn-primary text-white font-black px-10 py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 text-sm hover:-translate-y-0.5">
+                    <Save size={18}/> Guardar Datos Fiscales
+                  </button>
                 </div>
               </form>
             </div>
@@ -257,81 +351,61 @@ const Configuracion = () => {
 
           {/* --- TAB: TICKETS E IMPRESIÓN --- */}
           {activeTab === 'tickets' && (
-            <div className="animate-fade-in max-w-3xl">
-              <h2 className="text-lg md:text-2xl font-black text-slate-800 dark:text-white mb-1 tracking-tight">Impresión</h2>
-              <p className="text-[11px] md:text-xs font-bold text-slate-500 dark:text-slate-400 mb-5">Hardware y boletas.</p>
-              <form id="ticketsForm" onSubmit={handleSave} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-                  <div className="bg-white/50 dark:bg-slate-900/50 p-4 rounded-2xl border border-gray-200/50 dark:border-white/5 shadow-sm">
-                    <Printer className="text-blue-500 mb-2 w-5 h-5"/>
-                    <label className="text-[9px] md:text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-2 block">Ancho Impresora</label>
+            <div className="animate-fade-in w-full">
+              <h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white mb-1 tracking-tight">Impresión</h2>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-8">Configura el hardware y los formatos de boletas.</p>
+              
+              <form id="ticketsForm" onSubmit={handleSaveTickets} className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="bg-white/50 dark:bg-slate-900/50 p-6 rounded-3xl border border-gray-200/50 dark:border-white/5 shadow-sm">
+                    <Printer className="text-primary mb-3 w-7 h-7"/>
+                    <label className="text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-3 block">Ancho Impresora</label>
                     <div className="flex gap-2">
-                      <button type="button" onClick={() => setPapelImpresion('80mm')} className={`flex-1 py-1.5 rounded-lg font-bold text-[10px] border ${papelImpresion === '80mm' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-slate-800 text-slate-600 border-gray-200 dark:border-slate-700'}`}>80 mm</button>
-                      <button type="button" onClick={() => setPapelImpresion('58mm')} className={`flex-1 py-1.5 rounded-lg font-bold text-[10px] border ${papelImpresion === '58mm' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-slate-800 text-slate-600 border-gray-200 dark:border-slate-700'}`}>58 mm</button>
+                      <button type="button" onClick={() => setPapelImpresion('80mm')} className={`flex-1 py-2.5 rounded-xl font-bold text-xs border transition-colors ${papelImpresion === '80mm' ? 'btn-primary text-white border-transparent' : 'bg-white dark:bg-slate-800 text-slate-600 border-gray-200 dark:border-slate-700 hover:bg-gray-50'}`}>80 mm</button>
+                      <button type="button" onClick={() => setPapelImpresion('58mm')} className={`flex-1 py-2.5 rounded-xl font-bold text-xs border transition-colors ${papelImpresion === '58mm' ? 'btn-primary text-white border-transparent' : 'bg-white dark:bg-slate-800 text-slate-600 border-gray-200 dark:border-slate-700 hover:bg-gray-50'}`}>58 mm</button>
                     </div>
                   </div>
-                  <div className="bg-white/50 dark:bg-slate-900/50 p-4 rounded-2xl border border-gray-200/50 dark:border-white/5 shadow-sm">
-                    <CreditCard className="text-emerald-500 mb-2 w-5 h-5"/>
-                    <label className="text-[9px] md:text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-2 block">Impuesto (IGV) %</label>
+                  <div className="bg-white/50 dark:bg-slate-900/50 p-6 rounded-3xl border border-gray-200/50 dark:border-white/5 shadow-sm">
+                    <CreditCard className="text-emerald-500 mb-3 w-7 h-7"/>
+                    <label className="text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-3 block">Impuesto (IGV) %</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">%</span>
-                      <input type="number" defaultValue="18" min="0" max="100" className="w-full border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-800/80 pl-8 pr-3 py-2 rounded-xl font-black text-sm text-slate-800 dark:text-white outline-none" />
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-base">%</span>
+                      <input type="number" defaultValue="18" min="0" max="100" className="w-full border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-800/80 pl-11 pr-4 py-3 rounded-xl font-black text-sm text-slate-800 dark:text-white outline-none focus:ring-2 ring-emerald-500/50 transition-all" />
                     </div>
                   </div>
                 </div>
 
                 <input type="file" id="logoUpload" className="hidden" accept="image/png, image/jpeg" onChange={handleLogoChange} />
-                <div className="flex flex-row items-center gap-4 p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-100/50 dark:border-blue-500/20 shadow-sm relative overflow-hidden">
-                  <label htmlFor="logoUpload" className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white dark:bg-slate-900 border-2 border-dashed border-blue-300 dark:border-blue-700/50 flex flex-col items-center justify-center text-blue-400 shrink-0 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950 overflow-hidden">
+                <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-primary-light rounded-3xl border border-gray-200/50 dark:border-white/5 shadow-sm relative overflow-hidden">
+                  <label htmlFor="logoUpload" className="w-28 h-28 rounded-2xl bg-white dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 flex flex-col items-center justify-center text-primary shrink-0 cursor-pointer hover:border-primary overflow-hidden transition-colors">
                     {logoPreview ? <img src={logoPreview} className="w-full h-full object-contain p-2"/> : (
-                      <><UploadCloud size={20} className="mb-1"/><span className="text-[7px] font-bold uppercase tracking-widest text-center">Subir Logo</span></>
+                      <><UploadCloud size={28} className="mb-2"/><span className="text-[9px] font-bold uppercase tracking-widest text-center">Subir Logo</span></>
                     )}
                   </label>
-                  <div className="relative z-10 w-full">
-                    <h3 className="text-xs md:text-sm font-black text-slate-800 dark:text-blue-100 mb-1">Logo Boleta</h3>
-                    <p className="text-[9px] md:text-[10px] font-bold text-slate-500 dark:text-blue-300/70 mb-2 leading-tight">Sube un logo 100% blanco y negro. Máx 1MB.</p>
-                    <label htmlFor="logoUpload" className="bg-white dark:bg-blue-600 border border-gray-200 dark:border-transparent text-slate-700 dark:text-white px-3 py-1.5 rounded-lg font-bold text-[9px] md:text-[10px] shadow-sm cursor-pointer inline-block text-center">
-                      Examinar
+                  <div className="relative z-10 w-full text-center sm:text-left">
+                    <h3 className="text-base font-black text-slate-800 dark:text-white mb-1.5">Logo Boleta Térmica</h3>
+                    <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">Sube un logo 100% blanco y negro.<br className="hidden sm:block"/> Recomendado: 384x100px.</p>
+                    <label htmlFor="logoUpload" className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-white/10 text-slate-700 dark:text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-sm cursor-pointer inline-block hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                      Examinar Archivos
                     </label>
                   </div>
                 </div>
 
-                <div className="bg-slate-50/50 dark:bg-slate-900/30 p-4 rounded-2xl border border-gray-200/50 dark:border-white/5 shadow-sm">
-                  <label className="text-[9px] md:text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block">Pie del Ticket</label>
-                  <textarea rows="2" placeholder="¡Gracias por su compra!..." className="w-full border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-800/80 p-2.5 rounded-xl font-bold text-slate-800 dark:text-white outline-none resize-none text-xs"></textarea>
+                <div className="bg-slate-50/50 dark:bg-slate-900/30 p-6 rounded-3xl border border-gray-200/50 dark:border-white/5 shadow-sm">
+                  <label className="text-[10px] font-extrabold text-slate-500 dark:text-blue-300/70 uppercase tracking-widest mb-3 block">Pie del Ticket (Agradecimiento)</label>
+                  <textarea rows="3" placeholder="¡Gracias por su compra! Vuelva pronto..." className="w-full border border-gray-200/80 dark:border-white/10 bg-white/80 dark:bg-slate-800/80 p-4 rounded-xl font-bold text-slate-800 dark:text-white outline-none resize-none text-sm focus:ring-2 ring-primary transition-all"></textarea>
+                </div>
+
+                <div className="flex justify-end pt-8 mt-8 border-t border-gray-200/50 dark:border-white/10">
+                  <button type="submit" className="w-full md:w-auto btn-primary text-white font-black px-10 py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 text-sm hover:-translate-y-0.5">
+                    <Save size={18}/> Guardar Configuración
+                  </button>
                 </div>
               </form>
             </div>
           )}
         </div>
       </div>
-
-      {/* ✨ BOTÓN FLOTANTE MÓVIL TIPO APP ✨ */}
-      {activeTab !== 'apariencia' && (
-        <div className="lg:hidden fixed bottom-0 left-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-t border-gray-200/80 dark:border-white/10 p-4 z-40 pb-safe">
-          <button 
-            type="submit" 
-            form={activeTab === 'perfil' ? 'perfilForm' : activeTab === 'negocio' ? 'negocioForm' : 'ticketsForm'} 
-            className="w-full bg-blue-600 text-white font-black py-3 rounded-xl shadow-lg shadow-blue-600/30 active:scale-95 flex items-center justify-center gap-2 text-xs"
-          >
-            <Save size={16}/> Guardar Cambios
-          </button>
-        </div>
-      )}
-      
-      {/* BOTÓN GUARDAR ESCRITORIO */}
-      {activeTab !== 'apariencia' && (
-        <div className="hidden lg:flex justify-end mt-4">
-          <button 
-            type="submit" 
-            form={activeTab === 'perfil' ? 'perfilForm' : activeTab === 'negocio' ? 'negocioForm' : 'ticketsForm'} 
-            className="bg-blue-600 text-white font-black px-8 py-3 rounded-xl shadow-lg shadow-blue-600/30 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2 text-sm"
-          >
-            <Save size={18}/> Guardar Configuración
-          </button>
-        </div>
-      )}
-
     </Layout>
   );
 };

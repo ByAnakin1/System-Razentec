@@ -41,12 +41,14 @@ const authController = {
     try {
       const { email, password } = req.body;
       
-      // ✨ INYECCIÓN: Agregamos u.sucursales_asignadas a la consulta
+      // ✨ INYECCIÓN: Agregamos emp.estado para saber si la empresa está suspendida
       const query = `
         SELECT u.id, u.empresa_id, u.email, u.password_hash, u.rol, u.categorias, u.area_cargo, u.sucursales_asignadas,
-               e.nombre_completo, e.avatar, e.dni, e.telefono, e.correo_personal 
+               e.nombre_completo, e.avatar, e.dni, e.telefono, e.correo_personal,
+               emp.estado AS empresa_estado
         FROM usuarios u
         LEFT JOIN empleados e ON u.empleado_id = e.id
+        LEFT JOIN empresas emp ON u.empresa_id = emp.id
         WHERE u.email = $1
       `;
       const { rows } = await pool.query(query, [email]);
@@ -54,11 +56,18 @@ const authController = {
       if (rows.length === 0) return res.status(401).json({ error: 'Credenciales inválidas' });
       
       const usuario = rows[0];
+
+      // ✨ EL FIX DEL BLOQUEO (SaaS) ✨
+      // Si la empresa existe y está suspendida (estado = false), lo rebotamos.
+      if (usuario.empresa_estado === false && usuario.rol !== 'SuperAdmin') {
+        return res.status(403).json({ error: 'ACCESO DENEGADO: El servicio de tu empresa se encuentra suspendido. Contacta a soporte.' });
+      }
+
       const validPassword = await bcrypt.compare(password, usuario.password_hash);
       if (!validPassword) return res.status(401).json({ error: 'Credenciales inválidas' });
 
       const catsLimpias = parseCategoriasSeguras(usuario.categorias);
-      const sucsLimpias = parseSucursalesSeguras(usuario.sucursales_asignadas); // ✨ Limpiamos las sucursales
+      const sucsLimpias = parseSucursalesSeguras(usuario.sucursales_asignadas);
 
       const token = jwt.sign(
         { id: usuario.id, empresa_id: usuario.empresa_id, rol: usuario.rol, categorias: catsLimpias },
@@ -75,7 +84,6 @@ const authController = {
         'El usuario inició sesión en el sistema.'
       );
 
-      // ✨ INYECCIÓN: Enviamos las sucursales asignadas al Frontend
       res.json({
         token,
         usuario: {
@@ -85,7 +93,7 @@ const authController = {
           email: usuario.email,
           rol: usuario.rol,
           categorias: catsLimpias, 
-          sucursales_asignadas: sucsLimpias, // ✨ Dato vital para el Layout.jsx
+          sucursales_asignadas: sucsLimpias, 
           avatar: usuario.avatar,
           dni: usuario.dni,
           telefono: usuario.telefono,
@@ -100,7 +108,6 @@ const authController = {
 
   me: async (req, res) => {
     try {
-      // ✨ INYECCIÓN: Agregamos u.sucursales_asignadas a la consulta
       const query = `
         SELECT u.id, u.email, u.rol, u.categorias, u.area_cargo, u.sucursales_asignadas,
                e.nombre_completo as nombre, e.avatar, e.dni, e.telefono, e.correo_personal 
@@ -116,7 +123,7 @@ const authController = {
       if (!usuario.nombre) usuario.nombre = 'Usuario';
       
       usuario.categorias = parseCategoriasSeguras(usuario.categorias);
-      usuario.sucursales_asignadas = parseSucursalesSeguras(usuario.sucursales_asignadas); // ✨ Dato vital
+      usuario.sucursales_asignadas = parseSucursalesSeguras(usuario.sucursales_asignadas);
       
       res.json(usuario);
     } catch (error) {
@@ -125,7 +132,6 @@ const authController = {
     }
   },
 
-  // ✨ NUEVA FUNCIÓN: LOGOUT
   logout: async (req, res) => {
     try {
       // REGISTRO DE AUDITORÍA: LOGOUT

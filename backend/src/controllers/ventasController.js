@@ -13,7 +13,7 @@ const ventasController = {
         LEFT JOIN usuarios u ON v.usuario_id = u.id
         LEFT JOIN empleados e ON u.empleado_id = e.id
         LEFT JOIN sucursales s ON v.sucursal_id = s.id
-        WHERE (v.empresa_id = $1 OR v.empresa_id IS NULL)
+        WHERE (v.empresa_id = $1)
       `;
       const params = [req.user.empresa_id];
 
@@ -61,7 +61,7 @@ const ventasController = {
         await client.query(insertDetalle, [ventaId, item.id, cantidad, precio, cantidad * precio]);
         
         await client.query(
-          'UPDATE inventario SET stock_actual = stock_actual - $1 WHERE producto_id = $2 AND sucursal_id = $3 AND (empresa_id = $4 OR empresa_id IS NULL)', 
+          'UPDATE inventario SET stock_actual = stock_actual - $1 WHERE producto_id = $2 AND sucursal_id = $3 AND empresa_id = $4', 
           [cantidad, item.id, sucursal_id, req.user.empresa_id]
         );
       }
@@ -96,7 +96,7 @@ const ventasController = {
         LEFT JOIN usuarios u ON v.usuario_id = u.id
         LEFT JOIN empleados e ON u.empleado_id = e.id
         LEFT JOIN sucursales s ON v.sucursal_id = s.id
-        WHERE v.id = $1 AND (v.empresa_id = $2 OR v.empresa_id IS NULL)
+        WHERE v.id = $1 AND v.empresa_id = $2
       `;
       const params = [id, req.user.empresa_id];
 
@@ -144,7 +144,7 @@ const ventasController = {
       }
 
       await client.query('DELETE FROM detalle_venta WHERE venta_id = $1', [ventaId]);
-      await client.query('DELETE FROM ventas WHERE id = $1 AND (empresa_id = $2 OR empresa_id IS NULL)', [ventaId, req.user.empresa_id]);
+      await client.query('DELETE FROM ventas WHERE id = $1 AND empresa_id = $2', [ventaId, req.user.empresa_id]);
       
       await client.query('COMMIT');
 
