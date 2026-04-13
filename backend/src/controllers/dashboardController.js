@@ -13,6 +13,9 @@ const dashboardController = {
       let comprasQueryFilter = "WHERE c.empresa_id = $1 AND c.estado = 'COMPLETADO'";
       let productosStatsQueryFilter = "WHERE p.empresa_id = $1 AND p.estado = true";
       let tp_queryFilter = "WHERE v.empresa_id = $1";
+      
+      // ✨ NUEVO: Filtro base para clientes (asumiendo que quieres clientes activos si tienes columna estado)
+      let clientesQueryFilter = "WHERE empresa_id = $1"; 
 
       // Si se proporciona una sucursal específica, filtrar por ella
       if (sucursal_id && sucursal_id !== 'general') {
@@ -22,6 +25,9 @@ const dashboardController = {
         comprasQueryFilter += " AND c.sucursal_id = $2";
         productosStatsQueryFilter += " AND i.sucursal_id = $2"; // Filtrar inventario por sucursal
         tp_queryFilter += " AND v.sucursal_id = $2";
+        
+        // ✨ APLICANDO FILTRO DE SUCURSAL PARA CLIENTES
+        clientesQueryFilter += " AND sucursal_id = $2"; 
       }
 
       // 1. Ventas del Mes
@@ -60,10 +66,10 @@ const dashboardController = {
       `;
       const productosStats = await pool.query(productosStatsQuery, queryParams);
 
-      // 5. Total de Clientes (Los clientes suelen ser globales por empresa)
+      // ✨ 5. Total de Clientes (Corregido con su filtro dinámico)
       const clientesTotales = await pool.query(`
-        SELECT COUNT(id) as total FROM clientes WHERE empresa_id = $1
-      `, [empresaId]);
+        SELECT COUNT(id) as total FROM clientes ${clientesQueryFilter}
+      `, queryParams);
 
       // 6. Últimas 5 Ventas Recientes
       const ultimasVentasQuery = `

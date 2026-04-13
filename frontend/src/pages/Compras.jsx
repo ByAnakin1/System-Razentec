@@ -83,6 +83,23 @@ const Compras = () => {
     return () => window.removeEventListener('sucursalCambiada', handleSucursalCambiada);
   }, []);
 
+  // ✨ FIX: Cerrar modales con ESC ✨
+  useEffect(() => {
+    const handleEsc = (event) => {
+      if (event.key === 'Escape') {
+        setIsModalOpen(false);
+        setDetalleCompraOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, []);
+
+  // ✨ FIX: Cerrar al dar clic afuera ✨
+  const handleOverlayClick = (e, closeFunc) => {
+    if (e.target === e.currentTarget) closeFunc();
+  };
+
   const openModal = async () => {
     setIsModalOpen(true);
     setProveedorId('');
@@ -204,7 +221,7 @@ const Compras = () => {
         ) : null}
       </div>
 
-      {/* ✨ VISTA TÁCTIL (Móvil y Tablet - Liquid Glass) ✨ */}
+      {/* VISTA TÁCTIL (Móvil y Tablet) */}
       <div className="lg:hidden flex flex-col gap-3">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-blue-300/70">
@@ -263,7 +280,7 @@ const Compras = () => {
         )}
       </div>
 
-      {/* ✨ VISTA PC: Tabla (Liquid Glass) ✨ */}
+      {/* VISTA PC: Tabla (Liquid Glass) */}
       <div className="hidden lg:block bg-white/60 dark:bg-blue-950/20 backdrop-blur-2xl rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/80 dark:border-white/5 overflow-hidden transition-colors duration-300">
         <div className={`overflow-x-auto ${hideScrollbar}`}>
           <table className="w-full text-left text-sm whitespace-nowrap">
@@ -331,10 +348,10 @@ const Compras = () => {
         </div>
       </div>
 
-      {/* ✨ MODAL DETALLE DE COMPRA (LIQUID GLASS) ✨ */}
+      {/* ✨ MODAL DETALLE DE COMPRA (LIQUID GLASS + SCROLL FIJO) ✨ */}
       {detalleCompraOpen && compraSeleccionada && (
-        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors animate-fade-in">
-          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl p-5 sm:p-8 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-3xl shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up flex flex-col max-h-[90vh] transition-colors">
+        <div onMouseDown={(e) => handleOverlayClick(e, () => setDetalleCompraOpen(false))} className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors animate-fade-in">
+          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl p-5 sm:p-8 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-3xl shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up flex flex-col h-[90vh] md:max-h-[85vh] transition-colors">
             
             <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-4 sm:hidden shrink-0"></div>
             
@@ -348,7 +365,7 @@ const Compras = () => {
               <button onClick={() => setDetalleCompraOpen(false)} className="text-gray-400 dark:text-slate-500 hover:text-gray-800 dark:hover:text-white bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700 p-2 rounded-full transition-colors border border-transparent dark:border-white/5"><X size={18}/></button>
             </div>
 
-            <div className={`overflow-y-auto flex-1 pb-4 ${hideScrollbar}`}>
+            <div className={`overflow-y-auto flex-1 pb-2 ${hideScrollbar}`}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-5">
                 <div className="p-4 border border-gray-100/50 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-xl transition-colors">
                   <h3 className="text-[9px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/30 border border-blue-100/50 dark:border-blue-500/20 px-2 py-0.5 rounded w-fit uppercase tracking-widest flex items-center gap-1 mb-2 transition-colors"><Building2 size={10}/> PROVEEDOR</h3>
@@ -370,27 +387,30 @@ const Compras = () => {
               </div>
 
               <h3 className="text-[11px] font-extrabold text-gray-800 dark:text-white mb-2 border-l-4 border-blue-600 dark:border-blue-500 pl-2 uppercase tracking-wider transition-colors">Mercadería Ingresada</h3>
-              <div className={`border border-gray-200/50 dark:border-white/5 rounded-xl overflow-hidden ${hideScrollbar}`}>
-                <table className="w-full text-left whitespace-nowrap">
-                  <thead className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-gray-200/50 dark:border-white/5 text-slate-600 dark:text-slate-300 sticky top-0 backdrop-blur-md transition-colors">
-                    <tr>
-                      <th className="py-2.5 px-3 font-black uppercase text-[8px] tracking-widest text-center">Cant.</th>
-                      <th className="py-2.5 px-3 font-black uppercase text-[8px] tracking-widest">Producto</th>
-                      <th className="py-2.5 px-3 font-black uppercase text-[8px] tracking-widest text-center">Costo U.</th>
-                      <th className="py-2.5 px-3 font-black uppercase text-[8px] tracking-widest text-right bg-gray-100/30 dark:bg-slate-900/30">Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100/50 dark:divide-white/5 text-gray-700 dark:text-slate-200 transition-colors">
-                    {compraSeleccionada.detalles?.map((item, index) => (
-                      <tr key={index} className="hover:bg-white/40 dark:hover:bg-slate-800/30 transition-colors">
-                        <td className="py-2 px-3 font-black text-blue-600 dark:text-blue-400 text-center bg-blue-50/30 dark:bg-blue-900/10 text-[10px] transition-colors">{item.cantidad}</td>
-                        <td className="py-2 px-3 font-bold text-[10px] leading-tight"><p className="truncate max-w-[120px] md:max-w-[250px]" title={item.producto_nombre}>{item.producto_nombre}</p></td>
-                        <td className="py-2 px-3 text-gray-600 dark:text-slate-300 font-medium text-center text-[10px] transition-colors">S/ {parseFloat(item.precio_unitario).toFixed(2)}</td>
-                        <td className="py-2 px-3 font-black text-gray-900 dark:text-white text-right bg-gray-50/30 dark:bg-slate-800/20 text-[10px] transition-colors">S/ {parseFloat(item.subtotal).toFixed(2)}</td>
+              {/* ✨ FIX: Contenedor con límite de altura para que los productos hagan scroll ✨ */}
+              <div className="border border-gray-200/50 dark:border-white/5 rounded-xl overflow-hidden flex flex-col max-h-[35vh]">
+                <div className={`overflow-y-auto ${hideScrollbar} flex-1`}>
+                  <table className="w-full text-left whitespace-nowrap">
+                    <thead className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-gray-200/50 dark:border-white/5 text-slate-600 dark:text-slate-300 sticky top-0 backdrop-blur-md transition-colors">
+                      <tr>
+                        <th className="py-2.5 px-3 font-black uppercase text-[8px] tracking-widest text-center">Cant.</th>
+                        <th className="py-2.5 px-3 font-black uppercase text-[8px] tracking-widest">Producto</th>
+                        <th className="py-2.5 px-3 font-black uppercase text-[8px] tracking-widest text-center">Costo U.</th>
+                        <th className="py-2.5 px-3 font-black uppercase text-[8px] tracking-widest text-right bg-gray-100/30 dark:bg-slate-900/30">Subtotal</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100/50 dark:divide-white/5 text-gray-700 dark:text-slate-200 transition-colors">
+                      {compraSeleccionada.detalles?.map((item, index) => (
+                        <tr key={index} className="hover:bg-white/40 dark:hover:bg-slate-800/30 transition-colors">
+                          <td className="py-2 px-3 font-black text-blue-600 dark:text-blue-400 text-center bg-blue-50/30 dark:bg-blue-900/10 text-[10px] transition-colors">{item.cantidad}</td>
+                          <td className="py-2 px-3 font-bold text-[10px] leading-tight"><p className="truncate max-w-[120px] md:max-w-[250px]" title={item.producto_nombre}>{item.producto_nombre}</p></td>
+                          <td className="py-2 px-3 text-gray-600 dark:text-slate-300 font-medium text-center text-[10px] transition-colors">S/ {parseFloat(item.precio_unitario).toFixed(2)}</td>
+                          <td className="py-2 px-3 font-black text-gray-900 dark:text-white text-right bg-gray-50/30 dark:bg-slate-800/20 text-[10px] transition-colors">S/ {parseFloat(item.subtotal).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
@@ -405,19 +425,21 @@ const Compras = () => {
         </div>
       )}
 
-      {/* ✨ MODAL GIGANTE DE NUEVA COMPRA (LIQUID GLASS) ✨ */}
+      {/* ✨ MODAL DE NUEVA COMPRA (LIQUID GLASS + SCROLL FIJO) ✨ */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-md p-0 md:p-4 transition-colors animate-fade-in">
-          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl md:rounded-[2.5rem] w-full h-full md:h-auto md:max-h-[90vh] md:max-w-5xl shadow-2xl flex flex-col animate-fade-in-up overflow-hidden border border-white/50 dark:border-white/10 transition-colors">
+        <div onMouseDown={(e) => handleOverlayClick(e, () => setIsModalOpen(false))} className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-md p-0 md:p-4 transition-colors animate-fade-in">
+          {/* ✨ FIX: Altura máxima definida para forzar el scroll interno ✨ */}
+          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl md:rounded-[2.5rem] w-full h-[95vh] md:h-[85vh] md:max-h-[800px] md:max-w-5xl shadow-2xl flex flex-col overflow-hidden border border-white/50 dark:border-white/10 transition-colors animate-fade-in-up">
             
             <div className="flex justify-between items-center p-4 md:p-5 border-b border-gray-100/50 dark:border-white/5 bg-transparent shrink-0 z-20 transition-colors">
                <h2 className="text-base md:text-lg font-black text-gray-800 dark:text-white flex items-center gap-2"><ShoppingCart className="text-blue-600 dark:text-blue-400" size={20}/> Ingreso de Mercadería</h2>
                <button onClick={() => setIsModalOpen(false)} className="text-gray-400 dark:text-slate-500 hover:text-gray-800 dark:hover:text-white bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700 p-2 rounded-full transition-colors border border-transparent dark:border-white/5"><X size={18}/></button>
             </div>
             
-            <div className="flex-1 overflow-y-auto flex flex-col md:flex-row bg-transparent">
+            <div className="flex-1 min-h-0 flex flex-col md:flex-row bg-transparent">
                
-               <div className="flex-1 flex flex-col border-r border-gray-100/50 dark:border-white/5 relative transition-colors">
+               {/* LADO IZQUIERDO: Buscador y Carrito */}
+               <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-100/50 dark:border-white/5 relative transition-colors min-h-0">
                  
                  <div className="p-3 md:p-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border-b border-gray-100/50 dark:border-white/5 shrink-0 relative z-10 shadow-sm transition-colors">
                    <div className="relative">
@@ -463,6 +485,7 @@ const Compras = () => {
                    )}
                  </div>
 
+                 {/* ✨ FIX: El Carrito ahora hace scroll internamente sin desformar el modal ✨ */}
                  <div className={`flex-1 overflow-y-auto p-3 md:p-4 space-y-2 ${hideScrollbar}`}>
                     {cart.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full min-h-[150px] md:min-h-[200px]">
@@ -523,8 +546,8 @@ const Compras = () => {
                  </div>
                </div>
 
-               {/* PANEL LATERAL DE CONFIRMACIÓN */}
-               <div className="w-full md:w-[300px] lg:w-[340px] bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border-t md:border-t-0 md:border-l border-gray-100/50 dark:border-white/5 flex flex-col shrink-0 transition-colors">
+               {/* LADO DERECHO: Proveedor y Checkout */}
+               <div className="w-full md:w-[300px] lg:w-[340px] bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border-t md:border-t-0 md:border-l border-gray-100/50 dark:border-white/5 flex flex-col shrink-0 transition-colors md:overflow-hidden h-full">
                  <div className={`p-4 md:p-5 space-y-3 md:space-y-4 flex-1 overflow-y-auto ${hideScrollbar}`}>
                    <div>
                      <label className="text-[9px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-widest block mb-1.5 flex items-center gap-1 bg-blue-50/80 dark:bg-blue-900/30 backdrop-blur-md border border-blue-100/50 dark:border-blue-500/20 w-fit px-2 py-0.5 rounded transition-colors"><Building2 size={10}/> Proveedor *</label>

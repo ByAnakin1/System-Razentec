@@ -1,93 +1,139 @@
-import React, { useState } from 'react';
-import { X, UserPlus, FileText, CheckCircle } from 'lucide-react';
-import api from '../../services/api';
+import React, { useState, useEffect } from 'react';
+import { UserPlus, X, CheckCircle } from 'lucide-react';
+import api from '../../services/api'; 
 
 const ClienteQuickRegisterModal = ({ open, onClose, onSave }) => {
-  const [dni, setDni] = useState('');
-  const [nombre, setNombre] = useState('');
-  const [direccion, setDireccion] = useState('');
-  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    nombre_completo: '',
+    documento_identidad: '',
+    telefono: '',
+  });
+
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const reset = () => {
-    setDni(''); setNombre(''); setDireccion(''); setError('');
+  useEffect(() => {
+    if (open) {
+      setFormData({ nombre_completo: '', documento_identidad: '', telefono: '' });
+      setError('');
+    }
+  }, [open]);
+
+  // ✨ FIX: Cerrar con Escape
+  useEffect(() => {
+    const handleEsc = (event) => {
+      if (event.key === 'Escape' && open) onClose();
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [open, onClose]);
+
+  // ✨ FIX: Cerrar al dar clic afuera
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) onClose();
   };
 
-  const handleClose = () => {
-    reset(); onClose();
-  };
+  if (!open) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const n = nombre.trim();
-    if (!n) { setError('El nombre es obligatorio.'); return; }
-    setLoading(true); setError('');
+    if (!formData.nombre_completo) {
+      setError('El nombre es obligatorio');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    
     try {
-      const usuarioLocal = JSON.parse(localStorage.getItem('usuario') || '{}');
+      // Tomar la sucursal actual del localStorage
+      const sucursalActiva = JSON.parse(localStorage.getItem('sucursalActiva'));
+      const sucursalId = sucursalActiva?.id && sucursalActiva.id !== 'ALL' ? sucursalActiva.id : null;
+
       const response = await api.post('/clientes', {
-        nombre_completo: n,
-        documento_identidad: dni.trim() || null,
-        direccion: direccion.trim() || null,
-        empresa_id: usuarioLocal.empresa_id || null
+        ...formData,
+        sucursal_id: sucursalId
       });
-      onSave({
-        id: response.data.id, 
-        nombre: response.data.nombre_completo,
-        dni: response.data.documento_identidad
-      });
-      reset(); onClose();
+      
+      onSave(response.data);
     } catch (err) {
-      setError('Hubo un error al guardar el cliente en el servidor.');
+      console.error(err);
+      setError('Error al registrar el cliente. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-md transition-colors animate-fade-in" onClick={handleClose}>
-      <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl rounded-t-3xl sm:rounded-[2.5rem] shadow-2xl border border-white/50 dark:border-white/10 w-full sm:max-w-sm flex flex-col animate-fade-in-up overflow-hidden max-h-[95vh] pb-6 sm:pb-0 transition-colors" onClick={(e) => e.stopPropagation()}>
-        <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mt-4 mb-2 sm:hidden shrink-0"></div>
-
-        <div className="px-6 py-4 border-b border-gray-100/50 dark:border-white/5 flex justify-between items-center bg-transparent shrink-0 transition-colors">
-          <h3 className="text-lg font-black text-gray-800 dark:text-white flex items-center gap-2 tracking-tight">
-            <UserPlus size={20} className="text-blue-600 dark:text-blue-400"/> Nuevo Cliente
-          </h3>
-          <button type="button" onClick={handleClose} className="p-2 text-gray-400 dark:text-slate-500 hover:text-gray-800 dark:hover:text-white bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors border border-transparent dark:border-white/5">
-            <X size={18} />
-          </button>
+    <div onMouseDown={handleOverlayClick} className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-md animate-fade-in transition-colors duration-300">
+      {/* ✨ FIX: Reducido a max-w-md para que no sea gigante */}
+      <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-sm shadow-2xl flex flex-col animate-fade-in-up overflow-hidden border border-white/50 dark:border-white/10 transition-colors duration-300">
+        
+        <div className="px-5 py-4 border-b border-gray-100/50 dark:border-white/5 flex justify-between items-center bg-transparent shrink-0">
+          <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mt-2 sm:hidden z-20 absolute top-2 left-1/2 -translate-x-1/2"></div>
+          <h2 className="text-lg font-black text-gray-800 dark:text-white flex items-center gap-2 mt-3 sm:mt-0">
+            <UserPlus className="text-blue-600 dark:text-blue-400" size={20}/> Nuevo Cliente
+          </h2>
+          <button type="button" onClick={onClose} className="text-gray-400 dark:text-slate-500 hover:text-gray-800 dark:hover:text-white bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700 p-2 rounded-full transition-colors border border-transparent dark:border-white/5"><X size={18}/></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 flex items-center gap-1.5 transition-colors"><FileText size={12}/> DNI / RUC</label>
-            <input type="text" value={dni} onChange={(e) => setDni(e.target.value.replace(/\D/g, '').slice(0, 11))} placeholder="Ej. 12345678" className="w-full px-4 py-3 bg-white/80 dark:bg-slate-900/50 backdrop-blur-md border border-gray-200/80 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 outline-none text-sm font-bold text-gray-800 dark:text-white transition-all shadow-sm" />
-          </div>
-          <div>
-            <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block transition-colors">Nombre Completo *</label>
-            <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''))} placeholder="Nombres y Apellidos" className="w-full px-4 py-3 bg-white/80 dark:bg-slate-900/50 backdrop-blur-md border border-gray-200/80 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 outline-none text-sm font-bold text-gray-800 dark:text-white transition-all shadow-sm" required />
-          </div>
-          <div>
-            <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block transition-colors">Dirección (Opcional)</label>
-            <input type="text" value={direccion} onChange={(e) => setDireccion(e.target.value)} placeholder="Ej. Av. Principal 123" className="w-full px-4 py-3 bg-white/80 dark:bg-slate-900/50 backdrop-blur-md border border-gray-200/80 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 outline-none text-sm font-bold text-gray-800 dark:text-white transition-all shadow-sm" />
-          </div>
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">
           
           {error && (
-            <div className="p-3 bg-red-50/80 dark:bg-red-900/30 backdrop-blur-md text-red-600 dark:text-red-400 rounded-xl text-[11px] font-bold flex items-center justify-center text-center animate-fade-in border border-red-100/50 dark:border-red-500/20 shadow-sm transition-colors">
+            <div className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[11px] font-bold p-3 rounded-xl border border-red-200 dark:border-red-500/30 text-center">
               {error}
             </div>
           )}
 
+          <div>
+            <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block">Nombre Completo *</label>
+            <input
+              type="text"
+              required
+              autoFocus
+              value={formData.nombre_completo}
+              onChange={(e) => setFormData({ ...formData, nombre_completo: e.target.value })}
+              className="w-full border border-gray-200/80 dark:border-white/10 bg-white/70 dark:bg-blue-950/30 p-3 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none text-sm font-bold text-gray-800 dark:text-white transition-all shadow-sm"
+              placeholder="Ej: Juan Pérez"
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block">DNI / RUC (Opcional)</label>
+            <input
+              type="text"
+              value={formData.documento_identidad}
+              onChange={(e) => setFormData({ ...formData, documento_identidad: e.target.value })}
+              className="w-full border border-gray-200/80 dark:border-white/10 bg-white/70 dark:bg-blue-950/30 p-3 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none text-sm font-bold text-gray-800 dark:text-white transition-all shadow-sm"
+              placeholder="Documento para la boleta"
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block">Teléfono (Opcional)</label>
+            <input
+              type="tel"
+              value={formData.telefono}
+              onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+              className="w-full border border-gray-200/80 dark:border-white/10 bg-white/70 dark:bg-blue-950/30 p-3 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none text-sm font-bold text-gray-800 dark:text-white transition-all shadow-sm"
+              placeholder="Ej: 987654321"
+            />
+          </div>
+
           <div className="flex gap-3 pt-4">
-            <button type="button" onClick={handleClose} className="flex-1 py-3.5 border border-gray-200/80 dark:border-white/5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-xl font-extrabold text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-sm shadow-sm">
+            <button type="button" onClick={onClose} className="flex-1 py-3.5 font-extrabold text-gray-600 dark:text-slate-300 bg-white/80 dark:bg-slate-800/80 border border-gray-200/80 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors text-sm shadow-sm backdrop-blur-md">
               Cancelar
             </button>
-            <button type="submit" disabled={loading} className="flex-1 py-3.5 bg-blue-600/90 dark:bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black rounded-xl transition-all shadow-lg shadow-blue-600/20 dark:shadow-blue-900/40 text-sm flex justify-center items-center gap-2 border border-transparent dark:border-white/10 backdrop-blur-md disabled:opacity-50">
-              {loading ? <span className="animate-pulse">Guardando...</span> : <><CheckCircle size={16} /> Guardar</>}
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="flex-1 py-3.5 font-black text-white bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:bg-slate-300 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm border border-transparent dark:border-white/10"
+            >
+              {loading ? 'Guardando...' : <><CheckCircle size={16}/> Guardar</>}
             </button>
           </div>
         </form>
+
       </div>
     </div>
   );

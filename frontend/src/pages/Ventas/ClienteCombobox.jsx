@@ -14,15 +14,16 @@ const ClienteCombobox = ({
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
 
+  // ✨ FIX: Mapeamos a nombre_completo y documento_identidad que es lo que manda el Backend
   const displayValue = selectedCliente
-    ? `${selectedCliente.nombre}${selectedCliente.dni ? ` (${selectedCliente.dni})` : ''}`
+    ? `${selectedCliente.nombre_completo || selectedCliente.nombre}${selectedCliente.documento_identidad || selectedCliente.dni ? ` (${selectedCliente.documento_identidad || selectedCliente.dni})` : ''}`
     : '';
 
   const filtered = clientes.filter((c) => {
     if (!c.id) return true;
     const q = (query || '').toLowerCase();
-    const matchNombre = (c.nombre || '').toLowerCase().includes(q);
-    const matchDni = (c.dni || '').toString().includes(q);
+    const matchNombre = (c.nombre_completo || c.nombre || '').toLowerCase().includes(q);
+    const matchDni = (c.documento_identidad || c.dni || '').toString().includes(q);
     return matchNombre || matchDni;
   });
 
@@ -91,9 +92,9 @@ const ClienteCombobox = ({
                   }`}
                 >
                   <span className="truncate mr-2">
-                    {c.nombre || 'Público General'}
+                    {c.nombre_completo || c.nombre || 'Público General'}
                   </span>
-                  {c.dni && <span className="text-[9px] text-gray-400 dark:text-slate-500 font-extrabold uppercase tracking-wider shrink-0 bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-gray-100 dark:border-slate-700">{c.dni}</span>}
+                  {(c.documento_identidad || c.dni) && <span className="text-[9px] text-gray-400 dark:text-slate-500 font-extrabold uppercase tracking-wider shrink-0 bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-gray-100 dark:border-slate-700">{c.documento_identidad || c.dni}</span>}
                 </button>
               </li>
             ))}
