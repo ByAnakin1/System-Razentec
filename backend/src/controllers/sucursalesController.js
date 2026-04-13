@@ -26,7 +26,6 @@ const sucursalesController = {
     try {
       console.log("🚀 ¡LLEGÓ LA PETICIÓN DESDE REACT! Datos:", req.body); 
       
-      // ✨ AHORA RECIBIMOS LATITUD Y LONGITUD
       const { nombre, direccion, latitud, longitud } = req.body;
       if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
 
@@ -34,7 +33,6 @@ const sucursalesController = {
       const lat = latitud ? parseFloat(latitud) : null;
       const lng = longitud ? parseFloat(longitud) : null;
 
-      // ✨ GUARDAMOS LAS COORDENADAS EN LA BASE DE DATOS
       const query = 'INSERT INTO sucursales (empresa_id, nombre, direccion, latitud, longitud) VALUES ($1, $2, $3, $4, $5) RETURNING *';
       const { rows } = await pool.query(query, [empresaId, nombre, direccion, lat, lng]);
       
@@ -50,6 +48,41 @@ const sucursalesController = {
     } catch (error) {
       console.error("❌ Error crítico en la Base de Datos:", error);
       res.status(500).json({ error: 'Error en la BD: ' + error.message });
+    }
+  },
+
+  // ✨ NUEVA FUNCIÓN: Actualizar Sucursal ✨
+  actualizar: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { nombre, direccion, latitud, longitud } = req.body;
+      const empresaId = req.user?.empresa_id || null;
+
+      if (!nombre) return res.status(400).json({ error: 'El nombre es obligatorio' });
+
+      const lat = latitud ? parseFloat(latitud) : null;
+      const lng = longitud ? parseFloat(longitud) : null;
+
+      const query = `
+        UPDATE sucursales 
+        SET nombre = $1, direccion = $2, latitud = $3, longitud = $4
+        WHERE id = $5 AND (empresa_id = $6 OR empresa_id IS NULL)
+        RETURNING *
+      `;
+      const { rows } = await pool.query(query, [nombre, direccion, lat, lng, id, empresaId]);
+
+      if (rows.length === 0) return res.status(404).json({ error: 'Sucursal no encontrada' });
+
+      try {
+        if (req.user?.id) {
+          await registrarLog(req.user.id, empresaId, 'ACTUALIZAR', 'Sucursales', `Editó los datos de la sucursal: "${nombre}".`);
+        }
+      } catch(e) { console.warn("Advertencia de Log:", e.message); }
+
+      res.json(rows[0]);
+    } catch (error) {
+      console.error("❌ Error al actualizar sucursal:", error);
+      res.status(500).json({ error: 'Error en la BD al actualizar.' });
     }
   },
 

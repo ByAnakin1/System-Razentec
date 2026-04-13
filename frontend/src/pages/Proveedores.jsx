@@ -66,6 +66,24 @@ const Proveedores = () => {
     return () => window.removeEventListener('sucursalCambiada', handleSucursalCambiada);
   }, [filtroEstado]);
 
+  // ✨ FIX: Cerrar modales con ESC ✨
+  useEffect(() => {
+    const handleEsc = (event) => {
+      if (event.key === 'Escape') {
+        setIsModalOpen(false);
+        setModalDetalles(null);
+        setDeleteModalOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, []);
+
+  // ✨ FIX: Cerrar al dar clic afuera ✨
+  const handleOverlayClick = (e, closeFunc) => {
+    if (e.target === e.currentTarget) closeFunc();
+  };
+
   const filtrados = proveedores.filter(prov => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
@@ -287,8 +305,9 @@ const Proveedores = () => {
 
       {/* ✨ MODAL DETALLES (Bottom Sheet - Liquid Glass) ✨ */}
       {modalDetalles && (
-        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors animate-fade-in">
-          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl p-6 sm:p-8 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-sm shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up pb-8 transition-colors">
+        <div onMouseDown={(e) => handleOverlayClick(e, () => setModalDetalles(null))} className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors animate-fade-in">
+          {/* ✨ FIX: Ancho máximo ajustado para que no sea gigante en PC */}
+          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl p-6 sm:p-8 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-md shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up pb-8 transition-colors">
             <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-4 sm:hidden shrink-0"></div>
             <div className="flex justify-between items-center mb-5 border-b border-gray-100/50 dark:border-white/5 pb-4 transition-colors">
               <h2 className="text-lg md:text-xl font-black text-gray-800 dark:text-white flex items-center gap-2"><Building2 className="text-blue-600 dark:text-blue-400"/> Ficha Proveedor</h2>
@@ -337,7 +356,8 @@ const Proveedores = () => {
 
       {/* ✨ MODAL CREAR / EDITAR PROVEEDOR (LIQUID GLASS) ✨ */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors animate-fade-in">
+        <div onMouseDown={(e) => handleOverlayClick(e, () => setIsModalOpen(false))} className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors animate-fade-in">
+          {/* ✨ FIX: Ancho máximo ajustado y padding interno balanceado */}
           <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl p-6 sm:p-8 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-md shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up flex flex-col max-h-[90vh] transition-colors">
             
             <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-4 sm:hidden shrink-0"></div>
@@ -403,8 +423,8 @@ const Proveedores = () => {
       
       {/* ✨ MODAL ELIMINAR (LIQUID GLASS) ✨ */}
       {deleteModalOpen && provToDelete && (
-        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors animate-fade-in">
-          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl p-6 sm:p-8 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-sm text-center shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up pb-8 transition-colors">
+        <div onMouseDown={(e) => handleOverlayClick(e, () => setDeleteModalOpen(false))} className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors animate-fade-in">
+          <div className="bg-white/90 dark:bg-blue-950/90 backdrop-blur-3xl p-6 sm:p-8 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-sm text-center shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up pb-8 transition-colors">
             <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
             <div className="mx-auto flex items-center justify-center h-16 w-16 bg-red-50/80 dark:bg-red-900/30 border border-red-100/50 dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-full mb-4 backdrop-blur-md shadow-sm transition-colors">
               <AlertTriangle size={28}/>

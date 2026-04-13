@@ -9,10 +9,9 @@ const MODULOS = Object.keys(CATEGORIA_A_RUTA);
 
 const hideScrollbar = "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]";
 
-// ✨ ToggleSwitch con soporte Liquid Glass y Dark Mode ✨
 const ToggleSwitch = ({ checked, onChange, disabled }) => (
-  <div onClick={() => !disabled && onChange()} className={`w-12 h-6 flex items-center rounded-full p-1 transition-all duration-300 ease-in-out ${disabled ? 'opacity-30 cursor-not-allowed grayscale' : 'cursor-pointer'} ${checked ? 'bg-emerald-500 shadow-inner' : 'bg-slate-200 dark:bg-slate-700/80 border border-slate-300/50 dark:border-white/5'}`}>
-    <div className={`bg-white dark:bg-slate-100 w-4 h-4 rounded-full shadow-sm transform transition-transform duration-300 ease-in-out ${checked ? 'translate-x-6' : 'translate-x-0'}`} />
+  <div onClick={() => !disabled && onChange()} className={`w-10 h-5 flex items-center rounded-full p-1 transition-all duration-300 ease-in-out ${disabled ? 'opacity-30 cursor-not-allowed grayscale' : 'cursor-pointer'} ${checked ? 'btn-primary shadow-inner' : 'bg-slate-200 dark:bg-slate-700 border border-slate-300/50 dark:border-slate-600'}`}>
+    <div className={`bg-white w-3 h-3 rounded-full shadow-sm transform transition-transform duration-300 ease-in-out ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
   </div>
 );
 
@@ -92,13 +91,29 @@ const Usuarios = () => {
     return () => window.removeEventListener('sucursalCambiada', handleSucursalCambiada);
   }, []);
 
+  useEffect(() => {
+    const handleEsc = (event) => {
+      if (event.key === 'Escape') {
+        setModalCrear(false);
+        setModalEditar(false);
+        setModalDetalles(false);
+        setModalEliminar(false);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, []);
+
+  const handleOverlayClick = (e, closeFunc) => {
+    if (e.target === e.currentTarget) closeFunc();
+  };
+
   const usuariosFiltrados = usuarios.filter(u => {
     const coincideTexto = (u.nombre_completo || '').toLowerCase().includes(busqueda.toLowerCase()) ||
                           (u.area_cargo || '').toLowerCase().includes(busqueda.toLowerCase()) ||
                           (u.email || '').toLowerCase().includes(busqueda.toLowerCase());
 
     if (!coincideTexto) return false;
-
     if (esVistaGlobal) return true; 
     if (!sucursalActiva) return false;
 
@@ -205,95 +220,106 @@ const Usuarios = () => {
     try { await api.delete(`/usuarios/${usuarioSeleccionado.id}`); setModalEliminar(false); fetchUsuarios(); } catch (err) { alert(err.response?.data?.error || 'Error al eliminar'); }
   };
 
-  const obtenerNombresSucursales = (arrStr) => {
+  const obtenerResumenSucursales = (arrStr) => {
+    const arr = parseJsonArray(arrStr);
+    if (arr.length === 0) return 'Ninguna';
+    if (arr.length === sucursales.length && sucursales.length > 0) return 'Todas las Sedes';
+    
+    const primerNombre = sucursales.find(s => s.id === parseInt(arr[0]))?.nombre || 'Sede Local';
+    if (arr.length === 1) return primerNombre;
+    
+    return `${primerNombre} +${arr.length - 1} más`;
+  };
+
+  const obtenerNombresSucursalesCompletos = (arrStr) => {
     const arr = parseJsonArray(arrStr);
     if (arr.length === 0) return 'Ninguna';
     const nombres = arr.map(id => sucursales.find(s => s.id === parseInt(id))?.nombre).filter(Boolean);
-    if (nombres.length === sucursales.length && sucursales.length > 0) return 'Todas las sucursales';
+    if (nombres.length === sucursales.length && sucursales.length > 0) return 'Todas las sedes';
     return nombres.join(', ') || 'Desconocida';
   };
 
   return (
     <Layout title="Cuentas de Acceso" moduleIcon={<UserPlus/>}>
       
-      {/* ✨ CABECERA ✨ */}
+      {/* CABECERA */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 md:mb-6 gap-3">
-        <p className="text-[11px] md:text-sm text-gray-500 dark:text-blue-300/70 font-extrabold px-1 uppercase tracking-widest transition-colors">
+        <p className="text-[11px] md:text-sm text-gray-500 dark:text-blue-300/70 font-extrabold px-1 uppercase tracking-widest">
            {esVistaGlobal ? 'Administración Global' : `Cuentas de Sede: ${sucursalActiva?.nombre || 'Ninguna'}`}
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-2 md:gap-3 w-full md:w-auto">
           <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-blue-400/70 transition-colors" size={16}/>
-            <input type="text" placeholder="Buscar usuario o correo..." className="w-full bg-white/80 dark:bg-blue-950/50 backdrop-blur-md border border-gray-200/80 dark:border-white/10 pl-9 pr-4 py-2.5 md:py-3 rounded-xl text-xs md:text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-blue-950 focus:border-blue-500 dark:focus:border-blue-400 font-bold text-gray-800 dark:text-white transition-all shadow-sm" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-blue-400/70" size={16}/>
+            <input type="text" placeholder="Buscar usuario o correo..." className="w-full bg-white/80 dark:bg-blue-950/50 backdrop-blur-md border border-gray-200/80 dark:border-white/10 pl-9 pr-4 py-2.5 md:py-3 rounded-xl text-xs md:text-sm outline-none focus:ring-2 ring-primary focus:bg-white dark:focus:bg-blue-950 font-bold text-gray-800 dark:text-white transition-all shadow-sm" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
           </div>
           {esAdmin() && (
-            <button onClick={handleOpenCrear} className="w-full sm:w-auto bg-blue-600/90 dark:bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-5 py-3 sm:py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all font-black shadow-lg shadow-blue-600/20 dark:shadow-blue-900/40 text-xs md:text-sm border border-transparent dark:border-white/10 backdrop-blur-md shrink-0">
+            <button onClick={handleOpenCrear} className="w-full sm:w-auto btn-primary text-white px-5 py-3 sm:py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all font-black shadow-lg hover:-translate-y-0.5 active:scale-95 text-xs md:text-sm border border-transparent dark:border-white/10 backdrop-blur-md shrink-0">
               <Plus size={16} /> <span className="hidden md:inline">Nueva Credencial</span><span className="md:hidden">Nuevo</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* ✨ VISTA MÓVIL Y TABLET HASTA lg (LIQUID GLASS) ✨ */}
+      {/* VISTA MÓVIL Y TABLET HASTA lg */}
       <div className="lg:hidden flex flex-col gap-3">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-blue-300/70 transition-colors">
-             <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3"></div>
-             <p className="text-[10px] font-extrabold uppercase tracking-widest transition-colors">Cargando cuentas...</p>
+          <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-blue-300/70">
+             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3"></div>
+             <p className="text-[10px] font-extrabold uppercase tracking-widest">Cargando cuentas...</p>
           </div>
         ) : !sucursalActiva ? (
-          <div className="text-center py-10 text-xs font-bold text-red-500 bg-red-50/80 dark:bg-red-900/20 rounded-2xl border border-red-100 dark:border-red-500/20 backdrop-blur-md transition-colors">
+          <div className="text-center py-10 text-xs font-bold text-red-500 bg-red-50/80 dark:bg-red-900/20 rounded-2xl border border-red-100 dark:border-red-500/20 backdrop-blur-md">
             ⚠️ Sin sucursal asignada.
           </div>
         ) : usuariosFiltrados.length === 0 ? (
-          <div className="text-center py-16 bg-white/60 dark:bg-blue-950/20 backdrop-blur-2xl rounded-[2rem] border border-gray-100/50 dark:border-white/5 shadow-sm flex flex-col items-center transition-colors">
+          <div className="text-center py-16 bg-white/60 dark:bg-blue-950/20 backdrop-blur-2xl rounded-[2rem] border border-gray-100/50 dark:border-white/5 shadow-sm flex flex-col items-center">
             <UserPlus size={48} className="text-gray-300 dark:text-slate-600 mb-3" strokeWidth={1.5}/>
-            <p className="text-sm font-black text-gray-600 dark:text-white transition-colors">No se encontraron cuentas</p>
+            <p className="text-sm font-black text-gray-600 dark:text-white">No se encontraron cuentas</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
             {usuariosFiltrados.map((u) => (
-              <div key={u.id} className="bg-white/60 dark:bg-blue-950/20 backdrop-blur-xl rounded-[1.5rem] border border-gray-100/50 dark:border-white/5 p-4 shadow-sm relative group overflow-hidden transition-colors">
-                 <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-200/50 dark:border-slate-700 pb-3 transition-colors">
+              <div key={u.id} className="bg-white/60 dark:bg-blue-950/20 backdrop-blur-xl rounded-[1.5rem] border border-gray-100/50 dark:border-white/5 p-4 shadow-sm relative group overflow-hidden">
+                 <div className="flex justify-between items-start mb-3 border-b border-dashed border-gray-200/50 dark:border-slate-700 pb-3">
                     <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 rounded-full bg-blue-50/80 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-black text-lg overflow-hidden shrink-0 border border-blue-100/50 dark:border-blue-500/20 backdrop-blur-md transition-colors">
+                       <div className="w-10 h-10 rounded-full bg-blue-50/80 dark:bg-blue-900/30 text-primary flex items-center justify-center font-black text-lg overflow-hidden shrink-0 border border-blue-100/50 dark:border-primary/20 backdrop-blur-md">
                           {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover"/> : (u.area_cargo || u.nombre_completo)?.charAt(0).toUpperCase()}
                        </div>
                        <div className="min-w-0">
-                         <p className="font-extrabold text-gray-800 dark:text-white text-sm leading-tight truncate transition-colors">{u.rol === 'Administrador' ? 'Administrador' : (u.area_cargo || 'Sin designar')}</p>
-                         <p className="text-[9px] md:text-[10px] font-bold text-gray-400 dark:text-slate-400 flex items-center gap-1 mt-0.5 uppercase tracking-wider truncate transition-colors">Vinculado a: {u.nombre_completo}</p>
+                         <p className="font-extrabold text-gray-800 dark:text-white text-sm leading-tight truncate">{u.rol === 'Administrador' ? 'Administrador' : (u.area_cargo || 'Sin designar')}</p>
+                         <p className="text-[9px] md:text-[10px] font-bold text-gray-400 dark:text-slate-400 flex items-center gap-1 mt-0.5 uppercase tracking-wider truncate">Vinculado a: {u.nombre_completo}</p>
                        </div>
                     </div>
                  </div>
 
-                 <div className="bg-white/50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-gray-100/50 dark:border-white/5 mb-3 flex flex-col gap-1.5 backdrop-blur-md transition-colors">
+                 <div className="bg-white/50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-gray-100/50 dark:border-white/5 mb-3 flex flex-col gap-1.5 backdrop-blur-md">
                     <div className="flex items-center justify-between">
-                       <span className={`px-2 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-widest backdrop-blur-md transition-colors ${u.rol === 'Administrador' ? 'bg-purple-100/80 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200/50 dark:border-purple-500/20' : 'bg-blue-50/80 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-100/50 dark:border-blue-500/20'}`}>
+                       <span className={`px-2 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-widest backdrop-blur-md ${u.rol === 'Administrador' ? 'bg-purple-100/80 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200/50 dark:border-purple-500/20' : 'bg-blue-50/80 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-100/50 dark:border-blue-500/20'}`}>
                           {u.rol}
                        </span>
-                       <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400 truncate max-w-[150px] transition-colors">{u.email}</span>
+                       <span className="text-[10px] font-bold text-gray-500 dark:text-slate-400 truncate max-w-[150px]">{u.email}</span>
                     </div>
                     {u.rol !== 'Administrador' && (
-                      <div className="flex items-center gap-1.5 overflow-hidden mt-1 pt-1.5 border-t border-gray-100/50 dark:border-white/5 transition-colors">
+                      <div className="flex items-center gap-1.5 overflow-hidden mt-1 pt-1.5 border-t border-gray-100/50 dark:border-white/5">
                         <Store size={12} className="text-emerald-500 dark:text-emerald-400 shrink-0"/>
-                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 truncate px-1.5 py-0.5 rounded bg-emerald-50/80 dark:bg-emerald-900/30 border border-emerald-100/50 dark:border-emerald-500/20 backdrop-blur-md transition-colors" title={obtenerNombresSucursales(u.sucursales_asignadas)}>
-                          Sedes: {obtenerNombresSucursales(u.sucursales_asignadas)}
+                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 truncate px-1.5 py-0.5 rounded bg-emerald-50/80 dark:bg-emerald-900/30 border border-emerald-100/50 dark:border-emerald-500/20 backdrop-blur-md" title={obtenerNombresSucursalesCompletos(u.sucursales_asignadas)}>
+                          Sedes: {obtenerResumenSucursales(u.sucursales_asignadas)}
                         </span>
                       </div>
                     )}
                  </div>
 
                  <div className="flex gap-2">
-                   <button onClick={() => openModalDetalles(u)} className="flex-1 py-2.5 bg-white/80 dark:bg-slate-800/80 border border-transparent dark:border-white/5 text-slate-600 dark:text-slate-300 rounded-lg font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors backdrop-blur-md active:scale-95">
+                   <button onClick={() => openModalDetalles(u)} className="flex-1 py-2.5 bg-white/80 dark:bg-slate-800/80 border border-transparent dark:border-white/5 text-slate-600 dark:text-slate-300 rounded-lg font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center backdrop-blur-md active:scale-95">
                      <Eye size={14}/>
                    </button>
                    {esAdmin() && usuarioActual?.id !== u.id && (
                      <>
-                       <button onClick={() => openModalEditar(u)} className="flex-1 py-2.5 bg-blue-50/80 dark:bg-blue-900/30 border border-transparent dark:border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg font-bold text-xs hover:bg-blue-100 dark:hover:bg-blue-900/50 flex items-center justify-center transition-colors backdrop-blur-md active:scale-95">
+                       <button onClick={() => openModalEditar(u)} className="flex-1 py-2.5 bg-blue-50/80 dark:bg-blue-900/30 border border-transparent dark:border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-lg font-bold text-xs hover:bg-blue-100 dark:hover:bg-blue-900/50 flex items-center justify-center backdrop-blur-md active:scale-95">
                          <Edit size={14}/>
                        </button>
-                       <button onClick={() => { setUsuarioSeleccionado(u); setModalEliminar(true); }} className="flex-1 py-2.5 bg-red-50/80 dark:bg-red-900/30 border border-transparent dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-lg flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors backdrop-blur-md active:scale-95">
+                       <button onClick={() => { setUsuarioSeleccionado(u); setModalEliminar(true); }} className="flex-1 py-2.5 bg-red-50/80 dark:bg-red-900/30 border border-transparent dark:border-red-500/20 text-red-600 dark:text-red-400 rounded-lg flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/50 backdrop-blur-md active:scale-95">
                          <Trash2 size={14}/>
                        </button>
                      </>
@@ -305,10 +331,10 @@ const Usuarios = () => {
         )}
       </div>
 
-      {/* ✨ VISTA PC (LIQUID GLASS) ✨ */}
+      {/* VISTA PC */}
       <div className="hidden lg:block bg-white/60 dark:bg-blue-950/20 backdrop-blur-2xl rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-white/80 dark:border-white/5 overflow-hidden transition-colors duration-300">
         <table className="w-full text-left text-sm whitespace-nowrap">
-          <thead className="bg-slate-50/50 dark:bg-blue-950/30 text-slate-500 dark:text-blue-300 uppercase font-extrabold tracking-widest text-[10px] border-b border-gray-200/50 dark:border-white/5 transition-colors">
+          <thead className="bg-slate-50/50 dark:bg-blue-950/30 text-slate-500 dark:text-blue-300 uppercase font-extrabold tracking-widest text-[10px] border-b border-gray-200/50 dark:border-white/5">
             <tr>
               <th className="px-6 py-5">Designación en Sistema</th>
               <th className="px-6 py-5">Correo Login</th>
@@ -318,47 +344,47 @@ const Usuarios = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100/50 dark:divide-white/5 relative">
-            {loading ? <tr><td colSpan="5" className="text-center py-12 text-gray-400 dark:text-slate-500 font-bold text-xs uppercase tracking-widest transition-colors">Cargando cuentas...</td></tr> : 
-             !sucursalActiva ? <tr><td colSpan="5" className="text-center py-12 text-red-500 font-bold transition-colors">⚠️ Sin sucursal asignada.</td></tr> :
-             usuariosFiltrados.length === 0 ? <tr><td colSpan="5" className="text-center py-12 font-medium text-gray-400 dark:text-slate-500 transition-colors">No hay cuentas asignadas a esta vista.</td></tr> :
+            {loading ? <tr><td colSpan="5" className="text-center py-12 text-gray-400 dark:text-slate-500 font-bold text-xs uppercase tracking-widest">Cargando cuentas...</td></tr> : 
+             !sucursalActiva ? <tr><td colSpan="5" className="text-center py-12 text-red-500 font-bold">⚠️ Sin sucursal asignada.</td></tr> :
+             usuariosFiltrados.length === 0 ? <tr><td colSpan="5" className="text-center py-12 font-medium text-gray-400 dark:text-slate-500">No hay cuentas asignadas a esta vista.</td></tr> :
              usuariosFiltrados.map((u) => (
               <tr key={u.id} className="hover:bg-white/40 dark:hover:bg-blue-900/10 transition-colors duration-200 group">
                 <td className="px-6 py-4">
                    <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 rounded-xl bg-blue-50/80 dark:bg-blue-900/30 border border-blue-100/50 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-black text-lg overflow-hidden flex-shrink-0 backdrop-blur-md transition-colors">
+                     <div className="w-10 h-10 rounded-xl bg-blue-50/80 dark:bg-blue-900/30 border border-blue-100/50 dark:border-blue-500/20 text-primary flex items-center justify-center font-black text-lg overflow-hidden flex-shrink-0 backdrop-blur-md">
                        {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover"/> : (u.area_cargo || u.nombre_completo)?.charAt(0).toUpperCase()}
                      </div>
                      <div>
-                       <p className="font-extrabold text-gray-900 dark:text-white transition-colors">{u.rol === 'Administrador' ? 'Administrador' : (u.area_cargo || 'Sin designar')}</p>
-                       <p className="text-[10px] font-bold text-gray-500 dark:text-blue-300/70 truncate mt-0.5 tracking-wider uppercase transition-colors">Vinc: {u.nombre_completo}</p>
+                       <p className="font-extrabold text-gray-900 dark:text-white">{u.rol === 'Administrador' ? 'Administrador' : (u.area_cargo || 'Sin designar')}</p>
+                       <p className="text-[10px] font-bold text-gray-500 dark:text-blue-300/70 truncate mt-0.5 tracking-wider uppercase">Vinc: {u.nombre_completo}</p>
                      </div>
                    </div>
                 </td>
-                <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-300 transition-colors">{u.email}</td>
+                <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-300">{u.email}</td>
                 
                 <td className="px-6 py-4">
                   {u.rol === 'Administrador' ? (
-                    <span className="text-[9px] font-black uppercase tracking-widest text-purple-700 dark:text-purple-400 bg-purple-50/80 dark:bg-purple-900/30 border border-purple-100/50 dark:border-purple-500/20 backdrop-blur-md px-2.5 py-1 rounded-md transition-colors">Global (Todas las sedes)</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-purple-700 dark:text-purple-400 bg-purple-50/80 dark:bg-purple-900/30 border border-purple-100/50 dark:border-purple-500/20 backdrop-blur-md px-2.5 py-1 rounded-md">Global (Todas las sedes)</span>
                   ) : (
-                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-900/20 border border-emerald-100/50 dark:border-emerald-500/20 backdrop-blur-md px-2.5 py-1 rounded-md line-clamp-1 max-w-[150px] transition-colors" title={obtenerNombresSucursales(u.sucursales_asignadas)}>
-                      {obtenerNombresSucursales(u.sucursales_asignadas)}
+                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 bg-emerald-50/80 dark:bg-emerald-900/20 border border-emerald-100/50 dark:border-emerald-500/20 backdrop-blur-md px-2.5 py-1 rounded-md line-clamp-1 max-w-[200px] cursor-help" title={obtenerNombresSucursalesCompletos(u.sucursales_asignadas)}>
+                      {obtenerResumenSucursales(u.sucursales_asignadas)}
                     </span>
                   )}
                 </td>
 
                 <td className="px-6 py-4 text-center">
-                  <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border backdrop-blur-md transition-colors ${u.rol === 'Administrador' ? 'bg-purple-50/80 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200/50 dark:border-purple-500/20' : 'bg-blue-50/80 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-100/50 dark:border-blue-500/20'}`}>
+                  <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border backdrop-blur-md ${u.rol === 'Administrador' ? 'bg-purple-50/80 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200/50 dark:border-purple-500/20' : 'bg-blue-50/80 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-100/50 dark:border-blue-500/20'}`}>
                     {u.rol}
                   </span>
                 </td>
 
                 <td className="px-6 py-4 text-center">
                   <div className="flex justify-center gap-1.5 transition-opacity">
-                    <button onClick={() => openModalDetalles(u)} className="p-2 text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-slate-800/80 border border-transparent dark:border-white/5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors backdrop-blur-md active:scale-95" title="Ver Permisos"><Eye size={16} /></button>
+                    <button onClick={() => openModalDetalles(u)} className="p-2 text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-slate-800/80 border border-transparent dark:border-white/5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg backdrop-blur-md active:scale-95" title="Ver Permisos"><Eye size={16} /></button>
                     {esAdmin() && usuarioActual?.id !== u.id && (
                       <>
-                        <button onClick={() => openModalEditar(u)} className="p-2 text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/30 border border-transparent dark:border-blue-500/20 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors backdrop-blur-md active:scale-95" title="Editar Accesos"><Edit size={16} /></button>
-                        <button onClick={() => { setUsuarioSeleccionado(u); setModalEliminar(true); }} className="p-2 text-red-500 dark:text-red-400 bg-red-50/80 dark:bg-red-900/30 border border-transparent dark:border-red-500/20 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors backdrop-blur-md active:scale-95" title="Revocar Acceso"><Trash2 size={16} /></button>
+                        <button onClick={() => openModalEditar(u)} className="p-2 text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/30 border border-transparent dark:border-blue-500/20 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg backdrop-blur-md active:scale-95" title="Editar Accesos"><Edit size={16} /></button>
+                        <button onClick={() => { setUsuarioSeleccionado(u); setModalEliminar(true); }} className="p-2 text-red-500 dark:text-red-400 bg-red-50/80 dark:bg-red-900/30 border border-transparent dark:border-red-500/20 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg backdrop-blur-md active:scale-95" title="Revocar Acceso"><Trash2 size={16} /></button>
                       </>
                     )}
                   </div>
@@ -369,112 +395,113 @@ const Usuarios = () => {
         </table>
       </div>
 
-      {/* ✨ MODAL DETALLES DE ACCESO (Bottom Sheet Móvil - LIQUID GLASS) ✨ */}
+      {/* ✨ MODAL DETALLES DE ACCESO (PERFORMANCE FIX) ✨ */}
       {modalDetalles && usuarioSeleccionado && (
-        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors duration-300 animate-fade-in">
-          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl p-6 sm:p-8 rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-md shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up pb-8 flex flex-col max-h-[90vh] transition-colors">
-            <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-4 sm:hidden shrink-0"></div>
-            <div className="flex justify-between items-center mb-5 border-b border-gray-100/50 dark:border-white/5 pb-3 shrink-0 transition-colors">
-              <h2 className="text-lg md:text-xl font-black text-gray-800 dark:text-white flex items-center gap-2"><ShieldCheck className="text-emerald-500 dark:text-emerald-400"/> Ficha de Acceso</h2>
-              <button onClick={() => setModalDetalles(false)} className="text-gray-400 dark:text-slate-500 hover:text-gray-800 dark:hover:text-white bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700 p-1.5 rounded-full transition-colors border border-transparent dark:border-white/5"><X size={18}/></button>
+        <div onMouseDown={(e) => handleOverlayClick(e, () => setModalDetalles(false))} className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-[#0F172A] rounded-[2rem] w-full sm:max-w-md shadow-2xl flex flex-col max-h-[85vh] border border-gray-200 dark:border-slate-800 animate-fade-in-up overflow-hidden">
+            
+            <div className="flex justify-between items-center p-5 md:p-6 border-b border-gray-100 dark:border-slate-800 shrink-0">
+              <h2 className="text-lg font-black text-gray-800 dark:text-white flex items-center gap-2"><ShieldCheck className="text-emerald-500 dark:text-emerald-400"/> Ficha de Acceso</h2>
+              <button onClick={() => setModalDetalles(false)} className="text-gray-400 hover:text-gray-800 dark:hover:text-white bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 p-1.5 rounded-full"><X size={18}/></button>
             </div>
             
-            <div className={`space-y-4 overflow-y-auto ${hideScrollbar} pr-1 pb-4`}>
-              <div className="flex items-center gap-4 bg-white/50 dark:bg-slate-900/50 p-3 rounded-2xl border border-gray-100/50 dark:border-white/5 backdrop-blur-md transition-colors">
-                <div className="w-12 h-12 rounded-xl bg-blue-50/80 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-black text-xl border border-blue-100/50 dark:border-blue-500/20 overflow-hidden shrink-0 backdrop-blur-md transition-colors">
+            <div className={`overflow-y-auto flex-1 p-5 md:p-6 space-y-4 ${hideScrollbar}`}>
+              <div className="flex items-center gap-4 bg-gray-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-gray-100 dark:border-slate-700/50">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-primary flex items-center justify-center font-black text-xl border border-blue-100 dark:border-primary/20 overflow-hidden shrink-0">
                    {usuarioSeleccionado.avatar ? <img src={usuarioSeleccionado.avatar} className="w-full h-full object-cover rounded-xl"/> : (usuarioSeleccionado.area_cargo || usuarioSeleccionado.nombre_completo)?.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                   <p className="font-black text-gray-800 dark:text-white text-sm truncate transition-colors">{usuarioSeleccionado.rol === 'Administrador' ? 'Administrador' : (usuarioSeleccionado.area_cargo || 'Sin designar')}</p>
-                   <p className="text-[10px] font-extrabold text-gray-500 dark:text-slate-400 mt-0.5 truncate uppercase tracking-widest transition-colors">Física: {usuarioSeleccionado.nombre_completo}</p>
+                   <p className="font-black text-gray-800 dark:text-white text-sm truncate">{usuarioSeleccionado.rol === 'Administrador' ? 'Administrador' : (usuarioSeleccionado.area_cargo || 'Sin designar')}</p>
+                   <p className="text-[10px] font-extrabold text-gray-500 dark:text-slate-400 mt-0.5 truncate uppercase tracking-widest">Física: {usuarioSeleccionado.nombre_completo}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                 <div className="bg-white/50 dark:bg-slate-900/50 p-3 rounded-xl border border-gray-100/50 dark:border-white/5 backdrop-blur-md transition-colors">
-                   <label className="text-[9px] font-extrabold text-gray-400 dark:text-blue-300/70 uppercase tracking-widest block mb-1.5 transition-colors">Nivel / Rol</label>
-                   <span className={`inline-block px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border backdrop-blur-md transition-colors ${usuarioSeleccionado.rol === 'Administrador' ? 'bg-purple-50/80 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-100/50 dark:border-purple-500/20' : 'bg-blue-50/80 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-100/50 dark:border-blue-500/20'}`}>
+                 <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700/50">
+                   <label className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest block mb-1.5">Nivel / Rol</label>
+                   <span className={`inline-block px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest border ${usuarioSeleccionado.rol === 'Administrador' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/20' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-500/20'}`}>
                      {usuarioSeleccionado.rol}
                    </span>
                  </div>
-                 <div className="bg-white/50 dark:bg-slate-900/50 p-3 rounded-xl border border-gray-100/50 dark:border-white/5 backdrop-blur-md transition-colors">
-                   <label className="text-[9px] font-extrabold text-gray-400 dark:text-blue-300/70 uppercase tracking-widest block mb-1 transition-colors">Sedes Activas</label>
-                   <p className="text-[11px] md:text-xs font-black text-emerald-600 dark:text-emerald-400 truncate uppercase tracking-wider transition-colors" title={usuarioSeleccionado.rol === 'Administrador' ? 'Global (Todas)' : obtenerNombresSucursales(usuarioSeleccionado.sucursales_asignadas)}>{usuarioSeleccionado.rol === 'Administrador' ? 'Global (Todas)' : obtenerNombresSucursales(usuarioSeleccionado.sucursales_asignadas)}</p>
+                 <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700/50">
+                   <label className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest block mb-1">Sedes Activas</label>
+                   <p className="text-[11px] md:text-xs font-black text-emerald-600 dark:text-emerald-400 truncate uppercase tracking-wider" title={usuarioSeleccionado.rol === 'Administrador' ? 'Global (Todas)' : obtenerNombresSucursalesCompletos(usuarioSeleccionado.sucursales_asignadas)}>{usuarioSeleccionado.rol === 'Administrador' ? 'Global (Todas)' : obtenerResumenSucursales(usuarioSeleccionado.sucursales_asignadas)}</p>
                  </div>
               </div>
 
-              <div className="bg-white/50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-100/50 dark:border-white/5 backdrop-blur-md transition-colors">
-                <label className="text-[9px] font-extrabold text-gray-400 dark:text-blue-300/70 uppercase tracking-widest block mb-1.5 transition-colors">Correo Login</label>
-                <p className="text-sm font-bold text-gray-800 dark:text-white transition-colors">{usuarioSeleccionado.email}</p>
+              <div className="bg-gray-50 dark:bg-slate-800/50 p-4 rounded-xl border border-gray-100 dark:border-slate-700/50">
+                <label className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest block mb-1.5">Correo Login</label>
+                <p className="text-sm font-bold text-gray-800 dark:text-white">{usuarioSeleccionado.email}</p>
               </div>
 
-              <div className="pt-2">
-                <label className="text-[10px] font-black text-gray-500 dark:text-blue-400 uppercase tracking-widest block mb-3 border-l-4 border-blue-500 pl-2 transition-colors">Módulos Autorizados</label>
+              <div className="pt-2 pb-2">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-3 border-l-4 border-blue-500 pl-2">Módulos Autorizados</label>
                 <div className="flex flex-wrap gap-2">
                   {MODULOS.filter(m => tieneView(usuarioSeleccionado, m)).length > 0 ? (
                     MODULOS.filter(m => tieneView(usuarioSeleccionado, m)).map(m => (
-                      <span key={m} className="bg-slate-800 dark:bg-slate-950 text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 shadow-sm border border-slate-700 dark:border-white/10 transition-colors"><Eye size={12}/> {m}</span>
+                      <span key={m} className="bg-slate-800 dark:bg-slate-900 text-white px-3 py-2 rounded-lg text-[10px] font-bold flex items-center gap-1.5 shadow-sm border border-slate-700 dark:border-slate-700/50"><Eye size={12}/> {m}</span>
                     ))
                   ) : (
-                    <span className="text-[11px] md:text-xs text-gray-400 dark:text-slate-500 italic font-medium bg-white/50 dark:bg-slate-900/30 px-4 py-3 rounded-xl w-full text-center border border-dashed border-gray-200 dark:border-slate-700 backdrop-blur-md transition-colors">No tiene permisos asignados.</span>
+                    <span className="text-[11px] md:text-xs text-gray-400 dark:text-slate-500 italic font-medium bg-gray-50 dark:bg-slate-800/30 px-4 py-3 rounded-xl w-full text-center border border-dashed border-gray-200 dark:border-slate-700">No tiene permisos asignados.</span>
                   )}
                 </div>
               </div>
             </div>
-            <button onClick={() => setModalDetalles(false)} className="w-full mt-4 shrink-0 bg-gray-100/80 dark:bg-slate-800/80 border border-transparent dark:border-white/5 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-800 dark:text-slate-300 py-3.5 rounded-xl font-extrabold transition-colors text-sm backdrop-blur-md active:scale-95">Cerrar Ficha</button>
+            
+            <div className="p-5 md:p-6 border-t border-gray-100 dark:border-slate-800 shrink-0">
+               <button onClick={() => setModalDetalles(false)} className="w-full bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-800 dark:text-slate-300 py-3.5 rounded-xl font-extrabold text-sm active:scale-95 transition-transform">Cerrar Ficha</button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ✨ MODAL EDITAR Y CREAR CREDENCIAL (LIQUID GLASS) ✨ */}
+      {/* ✨ MODAL EDITAR Y CREAR CREDENCIAL (PERFORMANCE FIX + PERFECT CENTERING) ✨ */}
       {(modalEditar || modalCrear) && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors duration-300 animate-fade-in">
-          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl rounded-t-[2.5rem] sm:rounded-[2.5rem] w-full sm:max-w-4xl max-h-[95vh] flex flex-col overflow-hidden border border-white/50 dark:border-white/10 shadow-2xl animate-fade-in-up transition-colors">
+        <div onMouseDown={(e) => handleOverlayClick(e, () => modalCrear ? setModalCrear(false) : setModalEditar(false))} className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-[#0F172A] rounded-[2rem] w-full max-w-3xl flex flex-col max-h-[85vh] shadow-2xl border border-gray-200 dark:border-slate-800 animate-fade-in-up overflow-hidden">
             
-            <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mt-4 sm:hidden shrink-0"></div>
-            
-            <div className="p-5 sm:p-6 border-b border-gray-100/50 dark:border-white/5 flex justify-between items-center bg-transparent z-10 shrink-0 transition-colors">
-              <h2 className="text-lg md:text-2xl font-black text-gray-800 dark:text-white flex items-center gap-2">
-                {modalCrear ? <UserPlus className="text-blue-600 dark:text-blue-400"/> : <Edit className="text-yellow-500 dark:text-yellow-400"/>}
-                {modalCrear ? 'Crear Credencial de Empleado' : 'Editar Accesos y Permisos'}
+            <div className="p-5 md:p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center shrink-0 bg-white dark:bg-[#0F172A]">
+              <h2 className="text-base md:text-lg font-black text-gray-800 dark:text-white flex items-center gap-2">
+                {modalCrear ? <UserPlus className="text-primary"/> : <Edit className="text-yellow-500 dark:text-yellow-400"/>}
+                {modalCrear ? 'Crear Credencial' : 'Editar Accesos y Permisos'}
               </h2>
-              <button onClick={() => modalCrear ? setModalCrear(false) : setModalEditar(false)} className="bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700 p-2 rounded-full text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-white transition-colors border border-transparent dark:border-white/5 backdrop-blur-md"><X size={18}/></button>
+              <button onClick={() => modalCrear ? setModalCrear(false) : setModalEditar(false)} className="bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 p-2 rounded-full text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-white transition-colors"><X size={18}/></button>
             </div>
             
-            <form onSubmit={modalCrear ? handleCrear : handleGuardarEditarCompleto} className={`overflow-y-auto p-4 md:p-8 bg-transparent space-y-6 md:space-y-8 flex-1 ${hideScrollbar}`}>
+            <form id="usuarioForm" onSubmit={modalCrear ? handleCrear : handleGuardarEditarCompleto} className={`overflow-y-auto flex-1 min-h-0 p-5 md:p-6 bg-transparent space-y-6 ${hideScrollbar}`}>
               
-              <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md p-5 md:p-6 rounded-[2rem] border border-gray-200/50 dark:border-white/5 shadow-sm transition-colors">
-                <h3 className="font-black text-gray-800 dark:text-white mb-4 md:mb-5 border-b border-dashed border-gray-100/50 dark:border-slate-700 pb-3 text-sm md:text-base transition-colors uppercase tracking-widest flex items-center gap-2">Identidad en el Sistema</h3>
+              <div className="bg-gray-50 dark:bg-slate-800/50 p-5 md:p-6 rounded-[1.5rem] border border-gray-100 dark:border-slate-700/50">
+                <h3 className="font-black text-gray-800 dark:text-white mb-4 border-b border-dashed border-gray-200 dark:border-slate-700 pb-2 text-xs md:text-sm uppercase tracking-widest flex items-center gap-2">Identidad</h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block transition-colors">Vincular a Empleado</label>
+                    <label className="text-[9px] font-extrabold text-gray-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block">Vincular a Empleado</label>
                     {modalCrear ? (
-                      <select className={`w-full bg-white/80 dark:bg-blue-950/50 backdrop-blur-md border p-3.5 rounded-xl outline-none font-bold text-gray-700 dark:text-slate-200 text-sm transition-all shadow-sm ${errores.empleado_id ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 focus:bg-white dark:focus:bg-blue-950'}`} value={formCrear.empleado_id} onChange={e => setFormCrear({...formCrear, empleado_id: e.target.value})}>
+                      <select className={`w-full bg-white dark:bg-slate-900 border p-3 rounded-xl outline-none font-bold text-gray-700 dark:text-slate-200 text-xs md:text-sm shadow-sm ${errores.empleado_id ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200 dark:border-slate-700 focus:ring-2 ring-primary'}`} value={formCrear.empleado_id} onChange={e => setFormCrear({...formCrear, empleado_id: e.target.value})}>
                         <option value="">-- Seleccione del Staff --</option>
                         {empleadosDisponibles.map(emp => <option key={emp.id} value={emp.id}>{emp.nombre_completo}</option>)}
                       </select>
                     ) : (
-                      <input className="w-full border border-gray-200/50 dark:border-white/5 p-3.5 rounded-xl bg-gray-50/50 dark:bg-slate-800/30 text-gray-500 dark:text-slate-400 font-bold text-sm backdrop-blur-md transition-colors" value={formEditar.nombre_completo} disabled />
+                      <input className="w-full border border-gray-200 dark:border-slate-700 p-3 rounded-xl bg-gray-100 dark:bg-slate-900/50 text-gray-500 dark:text-slate-400 font-bold text-xs md:text-sm" value={formEditar.nombre_completo} disabled />
                     )}
-                    {errores.empleado_id && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1.5 font-bold uppercase tracking-wider">{errores.empleado_id}</p>}
+                    {errores.empleado_id && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1 font-bold uppercase tracking-wider">{errores.empleado_id}</p>}
                   </div>
                   <div>
-                    <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block transition-colors">Área o Cargo</label>
-                    <input type="text" className={`w-full bg-blue-50/50 dark:bg-blue-900/10 backdrop-blur-md border p-3.5 rounded-xl outline-none font-bold text-blue-800 dark:text-blue-300 text-sm transition-all shadow-sm ${errores.area_cargo ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-blue-100/80 dark:border-blue-500/20 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:focus:border-blue-400 focus:bg-white dark:focus:bg-blue-950/40'}`} value={modalCrear ? formCrear.area_cargo : formEditar.area_cargo} onChange={e => modalCrear ? setFormCrear({...formCrear, area_cargo: e.target.value}) : setFormEditar({...formEditar, area_cargo: e.target.value})} placeholder="Ej: Cajero Turno Mañana"/>
-                    {errores.area_cargo && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1.5 font-bold uppercase tracking-wider">{errores.area_cargo}</p>}
+                    <label className="text-[9px] font-extrabold text-gray-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block">Área o Cargo</label>
+                    <input type="text" className={`w-full bg-white dark:bg-slate-900 border p-3 rounded-xl outline-none font-bold text-gray-800 dark:text-slate-200 text-xs md:text-sm shadow-sm ${errores.area_cargo ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200 dark:border-slate-700 focus:ring-2 ring-primary'}`} value={modalCrear ? formCrear.area_cargo : formEditar.area_cargo} onChange={e => modalCrear ? setFormCrear({...formCrear, area_cargo: e.target.value}) : setFormEditar({...formEditar, area_cargo: e.target.value})} placeholder="Ej: Cajero"/>
+                    {errores.area_cargo && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1 font-bold uppercase tracking-wider">{errores.area_cargo}</p>}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block transition-colors">Correo Corporativo (Login)</label>
-                    <input type="email" className={`w-full bg-white/80 dark:bg-blue-950/50 backdrop-blur-md border p-3.5 rounded-xl outline-none font-bold text-gray-700 dark:text-slate-200 text-sm transition-all shadow-sm ${errores.email ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 focus:bg-white dark:focus:bg-blue-950'}`} value={modalCrear ? formCrear.email : formEditar.email} onChange={e => modalCrear ? setFormCrear({...formCrear, email: e.target.value}) : setFormEditar({...formEditar, email: e.target.value})} placeholder="usuario@empresa.com"/>
-                    {errores.email && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1.5 font-bold uppercase tracking-wider">{errores.email}</p>}
+                    <label className="text-[9px] font-extrabold text-gray-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block">Correo (Login)</label>
+                    <input type="email" className={`w-full bg-white dark:bg-slate-900 border p-3 rounded-xl outline-none font-bold text-gray-700 dark:text-slate-200 text-xs md:text-sm shadow-sm ${errores.email ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200 dark:border-slate-700 focus:ring-2 ring-primary'}`} value={modalCrear ? formCrear.email : formEditar.email} onChange={e => modalCrear ? setFormCrear({...formCrear, email: e.target.value}) : setFormEditar({...formEditar, email: e.target.value})} placeholder="usuario@empresa.com"/>
+                    {errores.email && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1 font-bold uppercase tracking-wider">{errores.email}</p>}
                   </div>
                   <div>
-                    <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block transition-colors">Nivel de Privilegios (Rol)</label>
-                    <select className="w-full bg-white/80 dark:bg-blue-950/50 backdrop-blur-md border border-gray-200/80 dark:border-white/10 p-3.5 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 focus:bg-white dark:focus:bg-blue-950 font-bold text-gray-800 dark:text-slate-200 text-sm transition-all shadow-sm" value={modalCrear ? formCrear.rol : formEditar.rol} onChange={e => {
+                    <label className="text-[9px] font-extrabold text-gray-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block">Nivel (Rol)</label>
+                    <select className="w-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-3 rounded-xl outline-none focus:ring-2 ring-primary font-bold text-gray-800 dark:text-slate-200 text-xs md:text-sm shadow-sm" value={modalCrear ? formCrear.rol : formEditar.rol} onChange={e => {
                       const nuevoRol = e.target.value;
                       if(modalCrear) setFormCrear({...formCrear, rol: nuevoRol}); else setFormEditar({...formEditar, rol: nuevoRol});
                     }}>
@@ -483,19 +510,19 @@ const Usuarios = () => {
                   </div>
                 </div>
 
-                {/* ASIGNACIÓN DE SUCURSALES */}
+                {/* ASIGNACIÓN DE SUCURSALES (Más Compacto) */}
                 {(modalCrear ? formCrear.rol : formEditar.rol) !== 'Administrador' && (
-                  <div className="mt-6 md:mt-8 bg-purple-50/50 dark:bg-purple-900/10 p-4 md:p-5 rounded-2xl border border-purple-100/80 dark:border-purple-500/20 backdrop-blur-md transition-colors">
-                    <label className="text-[11px] md:text-xs font-black text-purple-700 dark:text-purple-400 uppercase tracking-widest flex items-center gap-2 mb-1.5 transition-colors"><Store size={16}/> Locales Autorizados</label>
-                    <p className="text-[10px] md:text-[11px] font-bold text-purple-600/80 dark:text-purple-300/70 mb-4 transition-colors">Selecciona las sucursales donde este usuario podrá operar.</p>
+                  <div className="mt-5 bg-purple-50 dark:bg-purple-900/10 p-4 rounded-xl border border-purple-100 dark:border-purple-500/20">
+                    <label className="text-[10px] md:text-[11px] font-black text-purple-700 dark:text-purple-400 uppercase tracking-widest flex items-center gap-1.5 mb-1"><Store size={14}/> Locales Autorizados</label>
+                    <p className="text-[9px] md:text-[10px] font-bold text-purple-600/80 dark:text-purple-300/70 mb-3">Selecciona las sucursales habilitadas.</p>
                     
-                    {sucursales.length === 0 ? <p className="text-xs italic text-gray-400 dark:text-slate-500 font-medium">No hay sucursales registradas aún.</p> : (
-                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 md:gap-3">
+                    {sucursales.length === 0 ? <p className="text-[10px] italic text-gray-400 dark:text-slate-500 font-medium">No hay sucursales registradas.</p> : (
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                         {sucursales.map(suc => {
                           const arregloActual = modalCrear ? formCrear.sucursales_asignadas : formEditar.sucursales_asignadas;
                           const isChecked = arregloActual.includes(suc.id);
                           return (
-                            <label key={suc.id} className={`flex items-center gap-2.5 p-2.5 md:p-3 rounded-xl border cursor-pointer transition-all backdrop-blur-md ${isChecked ? 'bg-purple-600/90 dark:bg-purple-600 text-white border-purple-700 dark:border-purple-500 shadow-md shadow-purple-600/20' : 'bg-white/80 dark:bg-slate-800/50 text-gray-600 dark:text-slate-300 border-gray-200/80 dark:border-white/10 hover:border-purple-300 dark:hover:border-purple-500/50 shadow-sm hover:bg-white dark:hover:bg-slate-800'}`}>
+                            <label key={suc.id} className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-all ${isChecked ? 'bg-purple-600 text-white border-purple-700 shadow-sm' : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-slate-300 border-gray-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-500/50'}`}>
                               <input 
                                 type="checkbox" 
                                 className="hidden" 
@@ -510,10 +537,10 @@ const Usuarios = () => {
                                   else setFormEditar({...formEditar, sucursales_asignadas: nuevoArreglo});
                                 }}
                               />
-                              <div className={`w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded border shrink-0 transition-colors ${isChecked ? 'bg-white border-white' : 'bg-gray-50 dark:bg-slate-900 border-gray-300 dark:border-slate-600'}`}>
-                                {isChecked && <CheckCircle size={14} className="text-purple-600" strokeWidth={3}/>}
+                              <div className={`w-3.5 h-3.5 flex items-center justify-center rounded border shrink-0 transition-colors ${isChecked ? 'bg-white border-white' : 'bg-gray-100 dark:bg-slate-800 border-gray-300 dark:border-slate-600'}`}>
+                                {isChecked && <CheckCircle size={10} className="text-purple-600" strokeWidth={3}/>}
                               </div>
-                              <span className="text-[10px] md:text-xs font-bold truncate select-none leading-none">{suc.nombre}</span>
+                              <span className="text-[9px] md:text-[10px] font-bold truncate select-none leading-tight">{suc.nombre}</span>
                             </label>
                           );
                         })}
@@ -524,21 +551,21 @@ const Usuarios = () => {
               </div>
 
               {/* PANEL DE PERMISOS */}
-              <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md p-5 md:p-6 rounded-[2rem] border border-gray-200/50 dark:border-white/5 shadow-sm transition-colors">
-                <h3 className="font-black text-gray-800 dark:text-white mb-4 md:mb-5 px-1 text-sm md:text-base border-l-4 border-blue-600 dark:border-blue-500 pl-3 uppercase tracking-widest transition-colors">Gestión de Permisos</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
+              <div className="bg-gray-50 dark:bg-slate-800/50 p-5 md:p-6 rounded-[1.5rem] border border-gray-100 dark:border-slate-700/50">
+                <h3 className="font-black text-gray-800 dark:text-white mb-4 px-1 text-xs md:text-sm border-l-4 border-blue-600 dark:border-blue-500 pl-2 uppercase tracking-widest">Permisos de Módulo</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {MODULOS.map(mod => (
-                    <div key={mod} className={`p-4 md:p-5 rounded-2xl border backdrop-blur-md transition-all duration-300 ${permisosLocales.view[mod] ? 'bg-white/90 dark:bg-slate-800/80 shadow-md border-blue-200 dark:border-blue-500/30' : 'bg-white/40 dark:bg-slate-900/30 border-gray-200/50 dark:border-white/5 opacity-80'}`}>
-                      <h4 className={`font-black mb-3 md:mb-4 text-xs md:text-sm flex items-center gap-2 uppercase tracking-widest transition-colors ${permisosLocales.view[mod] ? 'text-blue-700 dark:text-blue-400' : 'text-gray-500 dark:text-slate-500'}`}>
-                         <span className={`w-2 h-2 rounded-full transition-colors ${permisosLocales.view[mod] ? 'bg-blue-500 animate-pulse' : 'bg-gray-300 dark:bg-slate-600'}`}></span> {mod}
+                    <div key={mod} className={`p-3 rounded-xl border transition-all duration-300 ${permisosLocales.view[mod] ? 'bg-white dark:bg-slate-900 shadow-sm border-primary/50' : 'bg-gray-100 dark:bg-slate-900/30 border-gray-200 dark:border-slate-800 opacity-80'}`}>
+                      <h4 className={`font-black mb-3 text-[10px] md:text-xs flex items-center gap-1.5 uppercase tracking-widest ${permisosLocales.view[mod] ? 'text-primary' : 'text-gray-500 dark:text-slate-500'}`}>
+                         <span className={`w-1.5 h-1.5 rounded-full ${permisosLocales.view[mod] ? 'bg-primary' : 'bg-gray-300 dark:bg-slate-600'}`}></span> {mod}
                       </h4>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center bg-white/50 dark:bg-slate-950/50 p-2.5 md:p-3 rounded-xl border border-gray-100/50 dark:border-white/5 transition-colors">
-                           <span className="text-[9px] md:text-[10px] font-extrabold text-gray-700 dark:text-slate-300 uppercase tracking-widest">Ver Módulo</span>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center bg-gray-50 dark:bg-slate-800 p-2 rounded-lg border border-gray-100 dark:border-slate-700/50">
+                           <span className="text-[8px] md:text-[9px] font-extrabold text-gray-700 dark:text-slate-300 uppercase tracking-widest">Ver Módulo</span>
                            <ToggleSwitch checked={permisosLocales.view[mod]} onChange={() => togglePermiso('view', mod)} />
                         </div>
-                        <div className="flex justify-between items-center bg-white/50 dark:bg-slate-950/50 p-2.5 md:p-3 rounded-xl border border-gray-100/50 dark:border-white/5 transition-colors">
-                           <span className={`text-[9px] md:text-[10px] font-extrabold uppercase tracking-widest transition-colors ${permisosLocales.view[mod] ? 'text-gray-700 dark:text-slate-300' : 'text-gray-400 dark:text-slate-600'}`}>Editar / Crear</span>
+                        <div className="flex justify-between items-center bg-gray-50 dark:bg-slate-800 p-2 rounded-lg border border-gray-100 dark:border-slate-700/50">
+                           <span className={`text-[8px] md:text-[9px] font-extrabold uppercase tracking-widest ${permisosLocales.view[mod] ? 'text-gray-700 dark:text-slate-300' : 'text-gray-400 dark:text-slate-600'}`}>Editar / Crear</span>
                            <ToggleSwitch checked={permisosLocales.mod[mod]} onChange={() => togglePermiso('mod', mod)} disabled={!permisosLocales.view[mod]} />
                         </div>
                       </div>
@@ -548,31 +575,28 @@ const Usuarios = () => {
               </div>
 
               {/* CLAVES DE SEGURIDAD */}
-              <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md p-5 md:p-6 rounded-[2rem] border border-gray-200/50 dark:border-white/5 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 transition-colors">
+              <div className="bg-gray-50 dark:bg-slate-800/50 p-5 md:p-6 rounded-[1.5rem] border border-gray-100 dark:border-slate-700/50 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                 <div>
-                  <h3 className="font-black text-gray-800 dark:text-white mb-1 border-b border-dashed border-gray-200/80 dark:border-slate-700 pb-2 text-sm uppercase tracking-widest transition-colors">
-                    {modalCrear ? 'Contraseña Inicial' : 'Resetear Contraseña'}
+                  <h3 className="font-black text-gray-800 dark:text-white mb-1 text-[11px] md:text-xs uppercase tracking-widest">
+                    {modalCrear ? 'Clave Inicial' : 'Resetear Clave'}
                   </h3>
-                  <p className="text-[9px] md:text-[10px] font-bold text-gray-400 dark:text-slate-500 mb-3 transition-colors">{modalCrear ? 'Mínimo 6 caracteres requeridos.' : 'Déjalo en blanco si no deseas cambiarla.'}</p>
-                  <input type="password" placeholder={modalCrear ? "Contraseña requerida..." : "Nueva contraseña..."} className={`w-full bg-white/80 dark:bg-blue-950/50 backdrop-blur-md border p-3.5 rounded-xl outline-none font-bold text-gray-800 dark:text-white text-sm transition-all shadow-sm ${errores.password || errores.nueva_password ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 focus:bg-white dark:focus:bg-blue-950'}`} value={modalCrear ? formCrear.password : formEditar.nueva_password} onChange={e => modalCrear ? setFormCrear({...formCrear, password: e.target.value}) : setFormEditar({...formEditar, nueva_password: e.target.value})}/>
-                  {(errores.password || errores.nueva_password) && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1.5 font-bold uppercase tracking-wider leading-tight">{errores.password || errores.nueva_password}</p>}
+                  <input type="password" placeholder={modalCrear ? "Contraseña nueva..." : "Déjalo vacío si no cambia"} className={`w-full mt-1 bg-white dark:bg-slate-900 border p-3 rounded-xl outline-none font-bold text-gray-800 dark:text-white text-xs md:text-sm shadow-sm ${errores.password || errores.nueva_password ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200 dark:border-slate-700 focus:ring-2 ring-primary'}`} value={modalCrear ? formCrear.password : formEditar.nueva_password} onChange={e => modalCrear ? setFormCrear({...formCrear, password: e.target.value}) : setFormEditar({...formEditar, nueva_password: e.target.value})}/>
+                  {(errores.password || errores.nueva_password) && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1 font-bold uppercase tracking-wider">{errores.password || errores.nueva_password}</p>}
                 </div>
                 
-                <div className="bg-blue-50/80 dark:bg-blue-900/20 p-4 md:p-5 rounded-2xl border border-blue-100/50 dark:border-blue-500/20 relative overflow-hidden backdrop-blur-md transition-colors">
-                  <div className="absolute -right-4 -top-4 w-16 h-16 bg-blue-400/20 dark:bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
-                  <h3 className="font-black text-blue-800 dark:text-blue-400 mb-1 flex items-center gap-1.5 text-[11px] md:text-xs uppercase tracking-widest relative z-10 transition-colors"><ShieldCheck size={16}/> Confirmación Admin</h3>
-                  <p className="text-[9px] md:text-[10px] font-bold text-blue-600/80 dark:text-blue-300/70 mb-3 relative z-10 transition-colors">Ingresa TU contraseña para autorizar cambios.</p>
-                  <input type="password" placeholder="Tu clave maestra..." className={`w-full bg-white/90 dark:bg-slate-900/80 backdrop-blur-md border p-3.5 rounded-xl outline-none font-bold text-gray-800 dark:text-white text-sm transition-all relative z-10 shadow-sm ${errores.admin_password ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-blue-200/80 dark:border-blue-500/30 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'}`} value={modalCrear ? formCrear.admin_password : formEditar.admin_password} onChange={e => modalCrear ? setFormCrear({...formCrear, admin_password: e.target.value}) : setFormEditar({...formEditar, admin_password: e.target.value})}/>
-                  {errores.admin_password && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1.5 font-bold relative z-10 uppercase tracking-wider leading-tight">{errores.admin_password}</p>}
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-500/20 flex flex-col justify-center">
+                  <h3 className="font-black text-blue-800 dark:text-blue-400 mb-2 flex items-center gap-1.5 text-[10px] md:text-[11px] uppercase tracking-widest"><ShieldCheck size={14}/> Autorización Admin</h3>
+                  <input type="password" placeholder="Tu clave maestra..." className={`w-full bg-white dark:bg-slate-900 border p-3 rounded-xl outline-none font-bold text-gray-800 dark:text-white text-xs shadow-sm ${errores.admin_password ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-blue-200 dark:border-blue-500/30 focus:ring-2 ring-primary'}`} value={modalCrear ? formCrear.admin_password : formEditar.admin_password} onChange={e => modalCrear ? setFormCrear({...formCrear, admin_password: e.target.value}) : setFormEditar({...formEditar, admin_password: e.target.value})}/>
+                  {errores.admin_password && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1 font-bold uppercase tracking-wider">{errores.admin_password}</p>}
                 </div>
               </div>
 
             </form>
 
-            <div className="flex flex-col sm:flex-row gap-3 p-4 md:p-6 border-t border-gray-100/50 dark:border-white/5 bg-transparent shrink-0 transition-colors">
-              <button type="button" onClick={() => modalCrear ? setModalCrear(false) : setModalEditar(false)} className="w-full sm:w-1/3 border border-gray-200/80 dark:border-white/5 bg-white/50 dark:bg-slate-800/50 text-gray-600 dark:text-slate-300 py-3.5 md:py-4 rounded-xl font-extrabold hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-sm backdrop-blur-md shadow-sm active:scale-95">Cancelar</button>
-              <button type="submit" onClick={modalCrear ? handleCrear : handleGuardarEditarCompleto} disabled={modalCrear && empleadosDisponibles.length === 0} className="w-full sm:w-2/3 bg-blue-600/90 dark:bg-blue-600 text-white py-3.5 md:py-4 rounded-xl font-black hover:bg-blue-700 shadow-lg shadow-blue-600/20 dark:shadow-blue-900/40 disabled:bg-gray-300 disabled:dark:bg-slate-800 disabled:text-gray-500 disabled:dark:text-slate-500 disabled:shadow-none disabled:border-transparent transition-all active:scale-95 flex items-center justify-center gap-2 text-sm border border-transparent dark:border-white/10 backdrop-blur-md">
-                <CheckCircle size={18}/> {modalCrear ? 'Generar Credencial' : 'Guardar Cambios'}
+            <div className="flex gap-3 p-5 md:p-6 border-t border-gray-100 dark:border-slate-800 shrink-0 bg-white dark:bg-[#0F172A]">
+              <button type="button" onClick={() => modalCrear ? setModalCrear(false) : setModalEditar(false)} className="flex-1 border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-slate-300 py-3.5 rounded-xl font-extrabold hover:bg-gray-100 dark:hover:bg-slate-700 text-sm active:scale-95 transition-transform">Cancelar</button>
+              <button type="submit" form="usuarioForm" disabled={modalCrear && empleadosDisponibles.length === 0} className="flex-[2] btn-primary text-white py-3.5 rounded-xl font-black active:scale-95 transition-transform shadow-lg shadow-blue-600/20 text-sm flex items-center justify-center gap-1.5 hover:-translate-y-0.5">
+                <CheckCircle size={16}/> {modalCrear ? 'Generar' : 'Guardar'}
               </button>
             </div>
           </div>
@@ -581,19 +605,18 @@ const Usuarios = () => {
 
       {/* ✨ MODAL REVOCAR ACCESO (LIQUID GLASS) ✨ */}
       {modalEliminar && (
-        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-opacity animate-fade-in">
-          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 md:p-8 w-full sm:max-w-sm text-center shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up pb-8 transition-colors">
-            <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
-            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-50/80 dark:bg-red-900/30 border border-red-100/50 dark:border-red-500/20 mb-4 text-red-600 dark:text-red-400 backdrop-blur-md shadow-sm transition-colors">
+        <div onMouseDown={(e) => handleOverlayClick(e, () => setModalEliminar(false))} className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm transition-opacity animate-fade-in">
+          <div className="bg-white dark:bg-[#0F172A] rounded-[2rem] p-6 md:p-8 w-full sm:max-w-sm text-center shadow-2xl border border-gray-200 dark:border-slate-800 animate-fade-in-up">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-500/20 mb-4 text-red-600 dark:text-red-400">
               <AlertTriangle size={28}/>
             </div>
-            <h3 className="text-xl font-black text-gray-800 dark:text-white mb-2 transition-colors">¿Revocar Acceso?</h3>
-            <p className="text-xs md:text-sm text-gray-500 dark:text-blue-200/70 mb-8 font-medium leading-relaxed transition-colors">
-              El usuario ya no podrá ingresar al sistema. <strong className="text-gray-800 dark:text-blue-100 font-black">El empleado físico seguirá en el Directorio.</strong>
+            <h3 className="text-xl font-black text-gray-800 dark:text-white mb-2">¿Revocar Acceso?</h3>
+            <p className="text-xs md:text-sm text-gray-500 dark:text-slate-400 mb-8 font-medium leading-relaxed">
+              El usuario ya no podrá ingresar al sistema. <strong className="text-gray-800 dark:text-white font-black">El empleado físico seguirá en el Directorio.</strong>
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setModalEliminar(false)} className="flex-1 py-3.5 bg-gray-100/80 dark:bg-slate-800/80 border border-transparent dark:border-white/5 text-gray-700 dark:text-slate-300 rounded-xl font-extrabold hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors text-sm backdrop-blur-md shadow-sm active:scale-95">Cancelar</button>
-              <button onClick={handleEliminar} className="flex-1 py-3.5 bg-red-600/90 text-white rounded-xl font-black hover:bg-red-600 transition-all shadow-lg shadow-red-600/20 dark:shadow-red-900/40 border border-red-500/50 text-sm active:scale-95 backdrop-blur-md">Sí, Revocar</button>
+              <button onClick={() => setModalEliminar(false)} className="flex-1 py-3.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 rounded-xl font-extrabold hover:bg-gray-100 dark:hover:bg-slate-700 text-sm active:scale-95 transition-transform">Cancelar</button>
+              <button onClick={handleEliminar} className="flex-1 py-3.5 bg-red-600 text-white rounded-xl font-black hover:bg-red-700 shadow-lg shadow-red-600/20 text-sm active:scale-95 transition-transform">Sí, Revocar</button>
             </div>
           </div>
         </div>

@@ -10,7 +10,7 @@ const clientesController = {
         SELECT c.*, s.nombre as sucursal_nombre 
         FROM clientes c
         LEFT JOIN sucursales s ON c.sucursal_id = s.id
-        WHERE (c.empresa_id = $1 OR c.empresa_id IS NULL)
+        WHERE c.empresa_id = $1
       `;
       const params = [req.user.empresa_id];
 
@@ -61,7 +61,7 @@ const clientesController = {
       
       const query = `
         UPDATE clientes SET nombre_completo = $1, documento_identidad = $2, email = $3, telefono = $4, direccion = $5, sucursal_id = $6
-        WHERE id = $7 AND (empresa_id = $8 OR empresa_id IS NULL) RETURNING *
+        WHERE id = $7 AND empresa_id = $8 RETURNING *
       `;
       const { rows } = await pool.query(query, [nombre_completo, documento_identidad, email, telefono, direccion, finalSucId, id, req.user.empresa_id]);
       
@@ -78,7 +78,7 @@ const clientesController = {
   eliminar: async (req, res) => {
     try {
       const { id } = req.params;
-      const { rowCount } = await pool.query('DELETE FROM clientes WHERE id = $1 AND (empresa_id = $2 OR empresa_id IS NULL)', [id, req.user.empresa_id]);
+      const { rowCount } = await pool.query('DELETE FROM clientes WHERE id = $1 AND empresa_id = $2', [id, req.user.empresa_id]);
       if (rowCount === 0) return res.status(404).json({ error: 'Cliente no encontrado' });
       await registrarLog(req.user.id, req.user.empresa_id, 'ELIMINAR', 'Clientes', `Eliminó un cliente del sistema.`);
       res.json({ message: 'Cliente eliminado' });

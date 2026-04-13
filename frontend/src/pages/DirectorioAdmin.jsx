@@ -48,6 +48,22 @@ const DirectorioAdmin = () => {
     return () => window.removeEventListener('sucursalCambiada', handleSucursalCambiada);
   }, [isUnlocked]);
 
+  // ✨ FIX: Cerrar modales con ESC
+  useEffect(() => {
+    const handleEsc = (event) => {
+      if (event.key === 'Escape') {
+        cerrarModales();
+        setModalVer(null);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, []);
+
+  const handleOverlayClick = (e, closeFunc) => {
+    if (e.target === e.currentTarget) closeFunc();
+  };
+
   const handleUnlock = async (e) => {
     e.preventDefault();
     setErrorBoveda('');
@@ -116,7 +132,6 @@ const DirectorioAdmin = () => {
     return nombres.join(', ') || 'Desconocida';
   };
 
-  // ✨ PANTALLA DE BLOQUEO (LIQUID GLASS) ✨
   if (!isUnlocked) {
     return (
       <Layout title="Directorio Staff" moduleIcon={<Lock/>}>
@@ -132,14 +147,14 @@ const DirectorioAdmin = () => {
                   type="password" 
                   value={password} 
                   onChange={e => setPassword(e.target.value)} 
-                  className={`w-full border-2 p-3.5 rounded-xl outline-none focus:ring-2 text-center tracking-[0.5em] text-lg font-black transition-all shadow-sm ${errorBoveda ? 'border-red-400 dark:border-red-500/50 focus:ring-red-500/20 bg-red-50/80 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'border-gray-200/80 dark:border-white/10 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400 bg-white/70 dark:bg-blue-950/30 text-gray-800 dark:text-white'}`} 
+                  className={`w-full border p-3.5 rounded-xl outline-none focus:ring-2 text-center tracking-[0.5em] text-lg font-black transition-all shadow-sm ${errorBoveda ? 'border-red-400 dark:border-red-500/50 focus:ring-red-500/20 bg-red-50/80 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'border-gray-200/80 dark:border-white/10 focus:ring-primary focus:border-blue-500 dark:focus:border-blue-400 bg-white/70 dark:bg-blue-950/30 text-gray-800 dark:text-white'}`} 
                   placeholder="••••••••" 
                   required 
                   autoFocus
                 />
                 {errorBoveda && <p className="text-red-500 dark:text-red-400 text-[9px] font-extrabold uppercase tracking-widest mt-1.5 transition-colors">{errorBoveda}</p>}
               </div>
-              <button type="submit" className="w-full bg-slate-900 dark:bg-blue-600 text-white p-3.5 rounded-xl font-black hover:bg-slate-800 dark:hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-slate-900/20 dark:shadow-blue-900/40 flex items-center justify-center gap-2 text-xs border border-transparent dark:border-white/10 backdrop-blur-md">
+              <button type="submit" className="w-full btn-primary text-white p-3.5 rounded-xl font-black hover:bg-blue-700 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2 text-xs border border-transparent dark:border-white/10 backdrop-blur-md">
                 <ShieldAlert size={16} /> Desbloquear
               </button>
             </form>
@@ -149,7 +164,6 @@ const DirectorioAdmin = () => {
     );
   }
 
-  // ✨ VISTA PRINCIPAL (LIQUID GLASS) ✨
   return (
     <Layout title="Directorio Staff" moduleIcon={<Contact/>}>
       
@@ -161,7 +175,7 @@ const DirectorioAdmin = () => {
 
         {sucursalActiva && (
           <div className="flex w-full sm:w-auto gap-2">
-            <button onClick={() => { setFormData({nombre_completo:'', dni:'', telefono:'', correo_personal:''}); setErrores({}); setModalCrear(true); }} className="flex-1 sm:flex-none bg-blue-600/90 dark:bg-blue-600 text-white px-4 py-2.5 rounded-xl font-black flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/20 dark:shadow-blue-900/40 hover:bg-blue-700 transition-all active:scale-95 text-[11px] md:text-sm border border-transparent dark:border-white/10 backdrop-blur-md">
+            <button onClick={() => { setFormData({nombre_completo:'', dni:'', telefono:'', correo_personal:''}); setErrores({}); setModalCrear(true); }} className="flex-1 sm:flex-none btn-primary text-white px-4 py-2.5 rounded-xl font-black flex items-center justify-center gap-1.5 shadow-lg active:scale-95 text-[11px] md:text-sm border border-transparent dark:border-white/10 backdrop-blur-md transition-all hover:-translate-y-0.5">
               <UserPlus size={16}/> <span className="hidden md:inline">Agregar Empleado</span><span className="md:hidden">Nuevo Empleado</span>
             </button>
             <button onClick={() => { setIsUnlocked(false); setPassword(''); }} className="px-3.5 py-2.5 bg-red-50/80 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-100/50 dark:border-red-500/20 rounded-xl font-bold flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/50 active:scale-95 transition-all shadow-sm backdrop-blur-md" title="Bloquear Bóveda">
@@ -189,7 +203,7 @@ const DirectorioAdmin = () => {
             const tituloPrincipal = emp.rol === 'Administrador' ? 'Administrador' : (emp.area_cargo || emp.nombre_completo);
 
             return (
-              <div key={emp.id} className="bg-white/60 dark:bg-blue-950/20 backdrop-blur-xl rounded-[1.5rem] md:rounded-[2rem] shadow-sm border border-gray-100/50 dark:border-white/5 flex flex-col hover:shadow-lg dark:hover:shadow-[0_8px_30px_rgb(29,78,216,0.15)] hover:border-blue-300 dark:hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden group relative">
+              <div key={emp.id} className="bg-white/60 dark:bg-blue-950/20 backdrop-blur-xl rounded-[1.5rem] md:rounded-[2rem] shadow-sm border border-gray-100/50 dark:border-white/5 flex flex-col hover:shadow-lg dark:hover:shadow-[0_8px_30px_rgb(29,78,216,0.15)] hover:border-primary/50 transition-all duration-300 hover:-translate-y-1 overflow-hidden group relative">
                 
                 <div className={`${colors.header} p-3.5 md:p-4 flex items-center gap-3 relative overflow-hidden shrink-0 transition-colors backdrop-blur-md border-b ${colors.border}`}>
                   <div className="absolute -right-4 -top-4 w-16 h-16 bg-white opacity-10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500 pointer-events-none"></div>
@@ -235,113 +249,37 @@ const DirectorioAdmin = () => {
         </div>
       )}
 
-      {/* ✨ MODAL CREAR / EDITAR EMPLEADO (LIQUID GLASS) ✨ */}
-      {(modalCrear || modalEditar) && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors duration-300 animate-fade-in">
-          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl p-6 sm:p-8 rounded-t-3xl sm:rounded-[2.5rem] w-full sm:max-w-md shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up flex flex-col max-h-[90vh] transition-colors">
-            <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mb-4 sm:hidden shrink-0"></div>
-            
-            <div className="flex justify-between items-center mb-5 border-b border-gray-100/50 dark:border-white/5 pb-3 shrink-0 transition-colors">
-              <h2 className="text-base md:text-lg font-black text-gray-800 dark:text-white flex items-center gap-2">
-                {modalCrear ? <UserPlus className="text-blue-600 dark:text-blue-400" size={18}/> : <Edit className="text-yellow-500 dark:text-yellow-400" size={18}/>} 
-                {modalCrear ? 'Registrar Empleado' : 'Editar Personales'}
-              </h2>
-              <button type="button" onClick={cerrarModales} className="text-gray-400 dark:text-slate-500 hover:text-gray-800 dark:hover:text-white bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700 p-1.5 rounded-full transition-colors border border-transparent dark:border-white/5"><X size={16}/></button>
-            </div>
-            
-            <form onSubmit={handleSave} className={`space-y-4 overflow-y-auto ${hideScrollbar} pb-4 px-1`}>
-              <div>
-                <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block transition-colors">Nombres y Apellidos *</label>
-                <input 
-                  placeholder="Ej: Juan Pérez" 
-                  value={formData.nombre_completo} 
-                  onChange={e => setFormData({...formData, nombre_completo: e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')})} 
-                  className={`w-full bg-white/70 dark:bg-blue-950/30 backdrop-blur-md border p-3.5 rounded-xl focus:bg-white dark:focus:bg-blue-950 outline-none font-bold text-gray-800 dark:text-white text-xs md:text-sm transition-all shadow-sm ${errores.nombre_completo ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'}`} 
-                  required
-                  autoFocus
-                />
-                {errores.nombre_completo && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1.5 font-bold uppercase tracking-wider">{errores.nombre_completo}</p>}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block transition-colors">DNI / Doc.</label>
-                  <input 
-                    type="text" inputMode="numeric"
-                    placeholder="8 dígitos" 
-                    value={formData.dni} 
-                    onChange={e => setFormData({...formData, dni: e.target.value.replace(/\D/g, '').slice(0, 8)})} 
-                    className={`w-full bg-white/70 dark:bg-blue-950/30 backdrop-blur-md border p-3.5 rounded-xl focus:bg-white dark:focus:bg-blue-950 outline-none font-bold text-gray-800 dark:text-white text-xs md:text-sm tracking-wider transition-all shadow-sm ${errores.dni ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'}`}
-                  />
-                  {errores.dni && <p className="text-[8px] text-red-500 dark:text-red-400 mt-1 font-bold uppercase tracking-wider leading-tight">{errores.dni}</p>}
-                </div>
-                <div>
-                  <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block transition-colors">Celular</label>
-                  <input 
-                    type="text" inputMode="numeric"
-                    placeholder="9 dígitos" 
-                    value={formData.telefono} 
-                    onChange={e => setFormData({...formData, telefono: e.target.value.replace(/\D/g, '').slice(0, 9)})} 
-                    className={`w-full bg-white/70 dark:bg-blue-950/30 backdrop-blur-md border p-3.5 rounded-xl focus:bg-white dark:focus:bg-blue-950 outline-none font-bold text-gray-800 dark:text-white text-xs md:text-sm tracking-wider transition-all shadow-sm ${errores.telefono ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'}`}
-                  />
-                  {errores.telefono && <p className="text-[8px] text-red-500 dark:text-red-400 mt-1 font-bold uppercase tracking-wider leading-tight">{errores.telefono}</p>}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block transition-colors">Correo Personal</label>
-                <input 
-                  type="email" 
-                  placeholder="usuario@gmail.com" 
-                  value={formData.correo_personal} 
-                  onChange={e => setFormData({...formData, correo_personal: e.target.value})} 
-                  className={`w-full bg-white/70 dark:bg-blue-950/30 backdrop-blur-md border p-3.5 rounded-xl focus:bg-white dark:focus:bg-blue-950 outline-none font-bold text-gray-700 dark:text-white text-xs md:text-sm transition-all shadow-sm ${errores.correo_personal ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:border-blue-400'}`}
-                />
-                {errores.correo_personal && <p className="text-[8px] text-red-500 dark:text-red-400 mt-1 font-bold uppercase tracking-wider">{errores.correo_personal}</p>}
-              </div>
-              
-              <div className="bg-blue-50/80 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300/70 text-[9px] md:text-[10px] p-3 rounded-xl border border-blue-100/50 dark:border-blue-500/20 flex items-start gap-1.5 mt-3 font-medium backdrop-blur-md transition-colors">
-                <ShieldCheck size={14} className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400 transition-colors" />
-                <p>Las credenciales se otorgan en <strong>"Cuentas de Acceso"</strong> después de guardar.</p>
-              </div>
-
-              <div className="flex gap-3 pt-5 border-t border-gray-100/50 dark:border-white/5 mt-5 transition-colors">
-                <button type="button" onClick={cerrarModales} className="flex-1 py-3.5 border border-gray-200/80 dark:border-white/5 bg-white/50 dark:bg-slate-800/50 text-gray-600 dark:text-slate-300 rounded-xl font-extrabold hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-sm backdrop-blur-md shadow-sm active:scale-95">Cancelar</button>
-                <button type="submit" className="flex-1 bg-blue-600/90 dark:bg-blue-600 text-white py-3.5 rounded-xl font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 dark:shadow-blue-900/40 text-sm flex items-center justify-center gap-1.5 active:scale-95 border border-transparent dark:border-white/10 backdrop-blur-md"><CheckCircle size={16}/> Guardar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ✨ MODAL FICHA DETALLES (Súper Compacto - LIQUID GLASS) ✨ */}
+      {/* ✨ MODAL FICHA DETALLES (LIQUID GLASS + FIXED SIZE) ✨ */}
       {modalVer && (
-        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors duration-300 animate-fade-in">
-          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl rounded-t-3xl sm:rounded-[2.5rem] w-full sm:max-w-sm overflow-hidden shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up pb-6 sm:pb-8 flex flex-col max-h-[90vh] transition-colors">
-            <div className="w-12 h-1.5 bg-white/50 rounded-full mx-auto mt-4 sm:hidden z-20 relative"></div>
+        <div onMouseDown={(e) => handleOverlayClick(e, () => setModalVer(null))} className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors duration-300 animate-fade-in">
+          {/* ✨ FIX: Reducido max-w-sm para evitar que se vea ancho y forzado a max-h-[90vh] para que no se salga de la pantalla */}
+          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl rounded-t-3xl sm:rounded-[2.5rem] w-full sm:max-w-md shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up flex flex-col max-h-[90vh] overflow-hidden transition-colors">
             
-            <div className={`${getRoleColors(modalVer.rol).header} px-6 py-6 md:py-8 flex flex-col items-center relative shrink-0 transition-colors backdrop-blur-md border-b ${getRoleColors(modalVer.rol).border}`}>
-               <button onClick={() => setModalVer(null)} className="absolute top-4 right-4 sm:top-5 sm:right-5 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full backdrop-blur-sm transition-colors"><X size={16}/></button>
+            <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mt-4 sm:hidden shrink-0 relative z-20"></div>
+            
+            <div className={`${getRoleColors(modalVer.rol).header} px-6 py-5 md:py-6 flex flex-col items-center relative shrink-0 transition-colors backdrop-blur-md border-b ${getRoleColors(modalVer.rol).border}`}>
+               <button onClick={() => setModalVer(null)} className="absolute top-4 right-4 sm:top-5 sm:right-5 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-1.5 rounded-full backdrop-blur-sm transition-colors"><X size={16}/></button>
                
-               <div className="w-20 h-20 md:w-24 md:h-24 bg-white/20 dark:bg-white/10 rounded-xl flex items-center justify-center font-black text-3xl md:text-4xl shadow-lg border-2 border-white/30 dark:border-white/20 mb-3 overflow-hidden z-10 backdrop-blur-md transition-colors">
+               <div className="w-16 h-16 md:w-20 md:h-20 bg-white/20 dark:bg-white/10 rounded-xl flex items-center justify-center font-black text-2xl md:text-3xl shadow-lg border border-white/30 dark:border-white/20 mb-3 overflow-hidden z-10 backdrop-blur-md transition-colors">
                  {modalVer.avatar ? <img src={modalVer.avatar} className="w-full h-full object-cover"/> : modalVer.nombre_completo.charAt(0).toUpperCase()}
                </div>
                
-               <h2 className="text-xl md:text-2xl font-black text-center drop-shadow-md px-4 leading-tight transition-colors">
+               <h2 className="text-lg md:text-xl font-black text-center drop-shadow-md px-4 leading-tight transition-colors">
                  {modalVer.rol === 'Administrador' ? 'Administrador' : (modalVer.area_cargo || 'Empleado Sin Cargo')}
                </h2>
-               <span className={`px-2.5 py-1 rounded-md text-[9px] md:text-[10px] font-black mt-2 tracking-widest uppercase shadow-sm border backdrop-blur-md transition-colors ${getRoleColors(modalVer.rol).tag}`}>{modalVer.rol || 'Sin Acceso'}</span>
+               <span className={`px-2 py-0.5 rounded-md text-[9px] font-black mt-2 tracking-widest uppercase shadow-sm border backdrop-blur-md transition-colors ${getRoleColors(modalVer.rol).tag}`}>{modalVer.rol || 'Sin Acceso'}</span>
             </div>
             
-            <div className={`p-6 overflow-y-auto ${hideScrollbar} bg-transparent`}>
-              <h3 className="text-[10px] font-extrabold text-gray-400 dark:text-blue-300/70 uppercase tracking-widest border-b border-gray-200/50 dark:border-slate-700 pb-1.5 mb-4 transition-colors">Información Física</h3>
+            {/* Scrollable body */}
+            <div className={`p-5 md:p-6 overflow-y-auto ${hideScrollbar} flex-1 bg-transparent space-y-4`}>
+              <h3 className="text-[10px] font-extrabold text-gray-400 dark:text-blue-300/70 uppercase tracking-widest border-b border-gray-200/50 dark:border-slate-700 pb-1.5 transition-colors">Información Física</h3>
               
-              <div className="bg-white/50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-100/50 dark:border-white/5 shadow-sm mb-4 backdrop-blur-md transition-colors">
+              <div className="bg-white/50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-100/50 dark:border-white/5 shadow-sm backdrop-blur-md transition-colors">
                 <p className="text-[9px] md:text-[10px] text-gray-500 dark:text-blue-300/70 font-extrabold uppercase tracking-widest flex items-center gap-1.5 mb-1 transition-colors"><User size={12}/> Nombres Completos</p>
                 <p className="font-black text-gray-800 dark:text-white text-sm md:text-base leading-tight transition-colors">{modalVer.nombre_completo}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
                 <div className="bg-white/50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-100/50 dark:border-white/5 shadow-sm backdrop-blur-md transition-colors">
                   <p className="text-[9px] md:text-[10px] text-gray-500 dark:text-blue-300/70 font-extrabold uppercase tracking-widest flex items-center gap-1.5 mb-1 transition-colors"><CreditCard size={12}/> DNI</p>
                   <p className="font-bold text-gray-800 dark:text-slate-200 text-xs md:text-sm transition-colors">{modalVer.dni || 'No registrado'}</p>
@@ -356,16 +294,98 @@ const DirectorioAdmin = () => {
                 </div>
               </div>
 
-              <h3 className="text-[10px] font-extrabold text-gray-400 dark:text-blue-300/70 uppercase tracking-widest border-b border-gray-200/50 dark:border-slate-700 pb-1.5 mt-6 mb-4 transition-colors">Acceso al Sistema ERP</h3>
+              <h3 className="text-[10px] font-extrabold text-gray-400 dark:text-blue-300/70 uppercase tracking-widest border-b border-gray-200/50 dark:border-slate-700 pb-1.5 mt-2 transition-colors">Acceso al Sistema ERP</h3>
               <div className="bg-white/50 dark:bg-slate-900/50 p-4 rounded-xl border border-gray-100/50 dark:border-white/5 shadow-sm backdrop-blur-md transition-colors">
                 <p className="text-[9px] md:text-[10px] text-gray-500 dark:text-blue-300/70 font-extrabold uppercase tracking-widest flex items-center gap-1.5 mb-1.5 transition-colors"><ShieldCheck size={12} className="text-blue-500 dark:text-blue-400"/> Correo Corporativo (Login)</p>
                 <p className={`font-bold text-xs md:text-sm transition-colors ${modalVer.correo_corporativo ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-slate-500 italic'}`}>{modalVer.correo_corporativo || 'Este empleado no tiene acceso al ERP'}</p>
               </div>
             </div>
             
-            <div className="p-4 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border-t border-gray-100/50 dark:border-white/5 sm:hidden shrink-0 transition-colors">
-               <button onClick={() => setModalVer(null)} className="w-full bg-white/80 dark:bg-slate-800/80 border border-gray-200/80 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300 py-3.5 rounded-xl font-extrabold text-sm shadow-sm transition-colors active:scale-95">Cerrar Ficha</button>
+            {/* Cabecera Inferior (Siempre visible) */}
+            <div className="p-4 md:p-5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border-t border-gray-100/50 dark:border-white/5 shrink-0 transition-colors">
+               <button onClick={() => setModalVer(null)} className="w-full bg-white/80 dark:bg-slate-800/80 border border-gray-200/80 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300 py-3 rounded-xl font-extrabold text-sm shadow-sm transition-colors active:scale-95">Cerrar Ficha</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✨ MODAL CREAR / EDITAR EMPLEADO (LIQUID GLASS + FIXED SIZE) ✨ */}
+      {(modalCrear || modalEditar) && (
+        <div onMouseDown={(e) => handleOverlayClick(e, cerrarModales)} className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-md transition-colors duration-300 animate-fade-in">
+          <div className="bg-white/95 dark:bg-blue-950/90 backdrop-blur-3xl rounded-t-3xl sm:rounded-[2.5rem] w-full sm:max-w-md shadow-2xl border border-white/50 dark:border-white/10 animate-fade-in-up flex flex-col max-h-[90vh] overflow-hidden transition-colors">
+            
+            <div className="w-12 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full mx-auto mt-4 sm:hidden shrink-0"></div>
+            
+            <div className="flex justify-between items-center p-5 border-b border-gray-100/50 dark:border-white/5 shrink-0 transition-colors">
+              <h2 className="text-base md:text-lg font-black text-gray-800 dark:text-white flex items-center gap-2">
+                {modalCrear ? <UserPlus className="text-primary" size={18}/> : <Edit className="text-yellow-500 dark:text-yellow-400" size={18}/>} 
+                {modalCrear ? 'Registrar Empleado' : 'Editar Datos'}
+              </h2>
+              <button type="button" onClick={cerrarModales} className="text-gray-400 dark:text-slate-500 hover:text-gray-800 dark:hover:text-white bg-gray-50/50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-700 p-1.5 rounded-full transition-colors border border-transparent dark:border-white/5"><X size={16}/></button>
+            </div>
+            
+            <form id="empleadoForm" onSubmit={handleSave} className={`space-y-4 overflow-y-auto flex-1 ${hideScrollbar} p-5`}>
+              <div>
+                <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block transition-colors">Nombres y Apellidos *</label>
+                <input 
+                  placeholder="Ej: Juan Pérez" 
+                  value={formData.nombre_completo} 
+                  onChange={e => setFormData({...formData, nombre_completo: e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')})} 
+                  className={`w-full bg-white/70 dark:bg-blue-950/30 backdrop-blur-md border p-3 rounded-xl focus:bg-white dark:focus:bg-blue-950 outline-none font-bold text-gray-800 dark:text-white text-xs md:text-sm transition-all shadow-sm ${errores.nombre_completo ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-2 ring-primary'}`} 
+                  required
+                  autoFocus
+                />
+                {errores.nombre_completo && <p className="text-[9px] text-red-500 dark:text-red-400 mt-1.5 font-bold uppercase tracking-wider">{errores.nombre_completo}</p>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block transition-colors">DNI / Doc.</label>
+                  <input 
+                    type="text" inputMode="numeric"
+                    placeholder="8 dígitos" 
+                    value={formData.dni} 
+                    onChange={e => setFormData({...formData, dni: e.target.value.replace(/\D/g, '').slice(0, 8)})} 
+                    className={`w-full bg-white/70 dark:bg-blue-950/30 backdrop-blur-md border p-3 rounded-xl focus:bg-white dark:focus:bg-blue-950 outline-none font-bold text-gray-800 dark:text-white text-xs md:text-sm tracking-wider transition-all shadow-sm ${errores.dni ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-2 ring-primary'}`}
+                  />
+                  {errores.dni && <p className="text-[8px] text-red-500 dark:text-red-400 mt-1 font-bold uppercase tracking-wider leading-tight">{errores.dni}</p>}
+                </div>
+                <div>
+                  <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block transition-colors">Celular</label>
+                  <input 
+                    type="text" inputMode="numeric"
+                    placeholder="9 dígitos" 
+                    value={formData.telefono} 
+                    onChange={e => setFormData({...formData, telefono: e.target.value.replace(/\D/g, '').slice(0, 9)})} 
+                    className={`w-full bg-white/70 dark:bg-blue-950/30 backdrop-blur-md border p-3 rounded-xl focus:bg-white dark:focus:bg-blue-950 outline-none font-bold text-gray-800 dark:text-white text-xs md:text-sm tracking-wider transition-all shadow-sm ${errores.telefono ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-2 ring-primary'}`}
+                  />
+                  {errores.telefono && <p className="text-[8px] text-red-500 dark:text-red-400 mt-1 font-bold uppercase tracking-wider leading-tight">{errores.telefono}</p>}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-extrabold text-gray-500 dark:text-blue-300/70 uppercase tracking-widest mb-1.5 block transition-colors">Correo Personal</label>
+                <input 
+                  type="email" 
+                  placeholder="usuario@gmail.com" 
+                  value={formData.correo_personal} 
+                  onChange={e => setFormData({...formData, correo_personal: e.target.value})} 
+                  className={`w-full bg-white/70 dark:bg-blue-950/30 backdrop-blur-md border p-3 rounded-xl focus:bg-white dark:focus:bg-blue-950 outline-none font-bold text-gray-700 dark:text-white text-xs md:text-sm transition-all shadow-sm ${errores.correo_personal ? 'border-red-400 dark:border-red-500/50 focus:ring-2 focus:ring-red-500/20' : 'border-gray-200/80 dark:border-white/10 focus:ring-2 ring-primary'}`}
+                />
+                {errores.correo_personal && <p className="text-[8px] text-red-500 dark:text-red-400 mt-1 font-bold uppercase tracking-wider">{errores.correo_personal}</p>}
+              </div>
+              
+              <div className="bg-blue-50/80 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300/70 text-[9px] md:text-[10px] p-3 rounded-xl border border-blue-100/50 dark:border-blue-500/20 flex items-start gap-1.5 mt-3 font-medium backdrop-blur-md transition-colors">
+                <ShieldCheck size={14} className="mt-0.5 shrink-0 text-blue-600 dark:text-blue-400 transition-colors" />
+                <p>Las credenciales se otorgan en <strong>"Cuentas de Acceso"</strong> después de guardar.</p>
+              </div>
+            </form>
+
+            <div className="flex gap-2 p-4 md:p-5 border-t border-gray-100/50 dark:border-white/5 shrink-0 transition-colors bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl">
+              <button type="button" onClick={cerrarModales} className="flex-1 py-3 border border-gray-200/80 dark:border-white/5 bg-white/50 dark:bg-slate-800/50 text-gray-600 dark:text-slate-300 rounded-xl font-extrabold hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-xs sm:text-sm backdrop-blur-md shadow-sm active:scale-95">Cancelar</button>
+              <button type="submit" form="empleadoForm" className="flex-[2] btn-primary text-white py-3 rounded-xl font-black hover:-translate-y-0.5 transition-all shadow-lg text-xs sm:text-sm flex items-center justify-center gap-1.5 active:scale-95 border border-transparent dark:border-white/10 backdrop-blur-md"><CheckCircle size={16}/> {modalEditar ? 'Actualizar' : 'Guardar'}</button>
+            </div>
+
           </div>
         </div>
       )}
