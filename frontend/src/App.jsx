@@ -1,6 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
+// ✨ PÁGINAS PÚBLICAS (SaaS Comercial) ✨
+import Landing from './pages/Landing'; 
+// import Registro from './pages/Auth/Registro'; // Lo crearemos en el siguiente paso
+
 import AdminSaaS from './pages/AdminSaaS';
 import SuscripcionesSaaS from './pages/SuscripcionesSaaS';
 import Login from './pages/Auth/Login'; 
@@ -24,7 +28,6 @@ import HistorialVentas from './pages/Ventas/HistorialVentas';
 import Sucursales from './pages/Sucursales';
 
 // ✅ Guardia Único y Central: Verifica si está logueado.
-// La seguridad por módulos y sucursales ya la maneja tu Layout y tu Backend.
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
   if (!token) return <Navigate to="/login" replace />;
@@ -35,7 +38,12 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* ✨ EL ESCAPARATE COMERCIAL ✨ */}
+        <Route path="/" element={<Landing />} />
+        
+        {/* En el próximo paso crearemos el componente Registro real */}
+        <Route path="/registro" element={<div className="flex h-screen items-center justify-center font-black text-2xl">Creando magia de onboarding... 🚀</div>} />
+        
         <Route path="/login" element={<Login />} />
 
         {/* RUTA EXCLUSIVA PARA EL SUPERADMIN */}
@@ -56,7 +64,7 @@ const App = () => {
         <Route path="/historial-ventas" element={<ProtectedRoute><HistorialVentas /></ProtectedRoute>} />
         <Route path="/sucursales" element={<ProtectedRoute><Sucursales /></ProtectedRoute>} /> 
         
-        {/* ✨ RUTAS DESBLOQUEADAS: Ahora el empleado puede entrar si el Layout le muestra el botón */}
+        {/* RUTAS DESBLOQUEADAS */}
         <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
         <Route path="/directorio" element={<ProtectedRoute><DirectorioAdmin /></ProtectedRoute>} />
         <Route path="/logs" element={<ProtectedRoute><Auditoria /></ProtectedRoute>} />
